@@ -1,0 +1,6 @@
+gymnasium
+mujoco
+stable-baselines3
+tensorboard
+numpy
+moviepy
