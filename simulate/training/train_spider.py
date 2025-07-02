@@ -1,17 +1,16 @@
 import os
-import gymnasium as gym
 from stable_baselines3 import PPO
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import DummyVecEnv, VecVideoRecorder, VecNormalize
-from training.spider_torque_env import SpiderTorqueEnv
+from training.spider_env import SpiderEnv
 
 # Path to your MJCF XML
-XML_PATH = "../robot/SpiderBot.xml"
+XML_PATH = "./robot/SpiderBot.xml"
 
 
 def make_env():
     def _init():
-        env = SpiderTorqueEnv(XML_PATH, render_mode="rgb_array")
+        env = SpiderEnv(XML_PATH, render_mode="rgb_array")
         env = Monitor(env)
         return env
 

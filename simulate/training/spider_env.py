@@ -2,11 +2,10 @@ import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
 import mujoco
-from mujoco import viewer
 from training.joint_config import JOINT_LIMITS
 
 
-class SpiderTorqueEnv(gym.Env):
+class SpiderEnv(gym.Env):
     metadata = {"render_modes": ["rgb_array"], "render_fps": 60}
 
     def __init__(self, xml_path, render_mode=None):

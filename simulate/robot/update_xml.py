@@ -9,8 +9,10 @@ ACTUATOR_TORQUE_RANGE = "-10 10"
 
 def main(tree):
     tree = simplify_names(tree)
+    tree = fix_leg_order(tree)
     tree = update_hip_join_ranges(tree)
     tree = ground_plain(tree)
+    tree = visual_settings(tree)
     tree = add_defaults(tree)
     tree = actuator_definitions(tree)
     tree = main_body(tree)
@@ -19,6 +21,39 @@ def main(tree):
     # Pretty print and output
     ET.indent(tree, space="  ")
     tree.write(OUT_PATH, encoding="utf-8")
+
+
+def fix_leg_order(tree):
+    """
+    Put the leg 1 body first in the worldbody
+    """
+    root_body = tree.find("./worldbody/body[@name='Body']")
+    if root_body is None:
+        print("No root body element found.")
+        exit(1)
+
+    # Find the leg 1 body
+    leg1_body = root_body.find(
+        "./body[@name='Leg1_Hip-actuator-assembly_Body-Bracket']"
+    )
+    if leg1_body is None:
+        print("Could not find Leg1_Hip-actuator-assembly_Body-Bracket")
+        exit(1)
+
+    # Find leg 2 body
+    leg2_body = root_body.find(
+        "./body[@name='Leg2_Hip-actuator-assembly_Body-Bracket']"
+    )
+    if leg2_body is None:
+        print("Could not find Leg2_Hip-actuator-assembly_Body-Bracket")
+        exit(1)
+    insert_at = list(root_body).index(leg2_body)
+
+    # Insert before leg 2
+    root_body.remove(leg1_body)  # remove first, otherwise indenting gets weird
+    root_body.insert(insert_at, leg1_body)
+
+    return tree
 
 
 def simplify_names(tree):
@@ -56,16 +91,16 @@ def update_hip_join_ranges(tree):
     hip_range = (
         "",
         "-0.3 1.570796",  # Leg1
-        "-0.7 1.25",  # Leg2
-        "-1.25 0.6",  # Leg3
+        "-0.7 1.2",  # Leg2
+        "-1.2 0.6",  # Leg3
         "-1.570796 0.3",  # Leg4
         "-1.570796 0.3",  # Leg5
-        "-1.25 0.7",  # Leg6
-        "-0.6 1.25",  # Leg7
+        "-1.2 0.7",  # Leg6
+        "-0.6 1.2",  # Leg7
         "-0.3 1.570796",  # Leg8
     )
     for i in range(1, 9):
-        joint_name = f"Leg{i}_Hip-actuator-assembly_Hip-Bracket_Hip"
+        joint_name = f"Leg{i}_Hip"
         joint = tree.find(f".//joint[@name='{joint_name}']")
         if joint is not None:
             joint.set("range", hip_range[i])
@@ -151,6 +186,25 @@ def add_defaults(tree):
 
     # Add geom defaults
     ET.SubElement(default, "geom", {"contype": "1", "conaffinity": "0"})
+
+    return tree
+
+
+def visual_settings(tree):
+    """
+    Add visual settings to the XML tree.
+    """
+    # Insert visual element after compiler, if it exists
+    visual = tree.find("./visual")
+    if visual is None:
+        compiler = tree.find("./compiler")
+        visual = ET.Element("visual")
+        insert_at = 0
+        if compiler is not None:
+            insert_at = list(tree.getroot()).index(compiler) + 1
+        tree.getroot().insert(insert_at, visual)
+
+    ET.SubElement(visual, "global", {"offwidth": "800", "offheight": "600"})
 
     return tree
 
@@ -249,7 +303,7 @@ def add_leg_sensors(tree):
             tibia,
             "site",
             {
-                "name": f"Leg{i}_Tibia_bad_touch1",
+                "name": f"Leg{i}_Tibia_bad_touch1_site",
                 "pos": "0.04 0.048 0.148",
                 "size": "0.005",
                 "type": "sphere",
@@ -260,7 +314,7 @@ def add_leg_sensors(tree):
             tibia,
             "site",
             {
-                "name": f"Leg{i}_Tibia_bad_touch2",
+                "name": f"Leg{i}_Tibia_bad_touch2_site",
                 "pos": "0.04 -0.05 0.195",
                 "size": "0.005",
                 "type": "sphere",
@@ -271,7 +325,7 @@ def add_leg_sensors(tree):
             tibia,
             "site",
             {
-                "name": f"Leg{i}_Tibia_foot",
+                "name": f"Leg{i}_Tibia_foot_site",
                 "pos": "0.04 -0.1191 0.2015",
                 "size": "0.007",
                 "type": "cylinder",
@@ -281,9 +335,27 @@ def add_leg_sensors(tree):
         )
 
         # Add sensors
-        ET.SubElement(sensor, "touch", {"site": f"Leg{i}_Tibia_bad_touch1"})
-        ET.SubElement(sensor, "touch", {"site": f"Leg{i}_Tibia_bad_touch2"})
-        ET.SubElement(sensor, "touch", {"site": f"Leg{i}_Tibia_foot"})
+        ET.SubElement(
+            sensor,
+            "touch",
+            {
+                "name": f"Leg{i}_Tibia_bad_touch1",
+                "site": f"Leg{i}_Tibia_bad_touch1_site",
+            },
+        )
+        ET.SubElement(
+            sensor,
+            "touch",
+            {
+                "name": f"Leg{i}_Tibia_bad_touch2",
+                "site": f"Leg{i}_Tibia_bad_touch2_site",
+            },
+        )
+        ET.SubElement(
+            sensor,
+            "touch",
+            {"name": f"Leg{i}_Tibia_foot", "site": f"Leg{i}_Tibia_foot_site"},
+        )
 
     return tree
 
