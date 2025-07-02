@@ -63,6 +63,17 @@ class SpiderEnv(gym.Env):
         qvel = self.data.qvel[6:]
         return np.concatenate([gyro, accelerometer, qpos, qvel])
 
+    def _actuator_limit_proximity_penalty(self, qpos):
+        lower_limits = self.joint_limits[:, 0]
+        upper_limits = self.joint_limits[:, 1]
+        joint_ranges = upper_limits - lower_limits
+        threshold = np.maximum(0.05, 0.05 * joint_ranges)  # 5% of range or 0.05 radians
+        close_to_lower = (qpos - lower_limits) < threshold
+        close_to_upper = (upper_limits - qpos) < threshold
+        num_close = np.sum(close_to_lower | close_to_upper)
+        penalty = -0.5 * num_close
+        return penalty, num_close
+
     def _compute_reward(self, sensors):
         # forward velocity
         forward_velocity = self.data.qvel[0]
@@ -73,12 +84,26 @@ class SpiderEnv(gym.Env):
         # How much energy is being used
         energy_penalty = -np.sum(np.square(self.data.ctrl)) * 0.0001
 
-        # Reward based on number of feet in contact with the ground
-        if sensors["foot_contact"] >= 3:
+        # Reward for having 4-6 feet in contact (stable but moving)
+        if 4 <= sensors["foot_contact"] <= 6:
             foot_contact_reward = 1
         else:
-            foot_contact_reward = -2.0  # penalize unstable stance
-        return foot_contact_reward + forward_velocity + upright_bonus + energy_penalty
+            foot_contact_reward = 0.5
+
+        # Penalty for actuators very close to their joint limits
+        qpos = self.data.qpos[7:]  # exclude base pos/orient
+        actuator_limit_penalty, num_close = self._actuator_limit_proximity_penalty(qpos)
+        # Optional: small reward if all actuators are comfortably away from limits
+        within_all_limits_bonus = 0.5 if num_close == 0 else 0.0
+
+        return (
+            foot_contact_reward
+            + forward_velocity
+            + upright_bonus
+            + energy_penalty
+            + actuator_limit_penalty
+            + within_all_limits_bonus
+        )
 
     def _is_terminated(self, sensors):
         # Terminate if it fell over or left the arena
