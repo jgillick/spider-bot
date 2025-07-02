@@ -1,5 +1,5 @@
 gymnasium
-mujoco
+mujoco>=2.3.0
 stable-baselines3
 tensorboard
 numpy
