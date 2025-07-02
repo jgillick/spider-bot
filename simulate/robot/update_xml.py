@@ -185,7 +185,7 @@ def add_defaults(tree):
         tree.getroot().insert(insert_at, default)
 
     # Add geom defaults
-    ET.SubElement(default, "geom", {"contype": "1", "conaffinity": "0"})
+    ET.SubElement(default, "geom", {"contype": "1", "conaffinity": "1"})
 
     return tree
 

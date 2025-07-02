@@ -1,7 +1,7 @@
 <mujoco model="SpiderBody">
   <compiler angle="radian" eulerseq="XYZ" />
   <default>
-    <geom contype="1" conaffinity="0" />
+    <geom contype="1" conaffinity="1" />
   </default>
   <visual>
     <global offwidth="800" offheight="600" />
