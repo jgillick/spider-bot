@@ -278,8 +278,10 @@ def main_body(tree):
     body.insert(0, camera)
 
     # Add IMU sensor
-    ET.SubElement(sensor, "gyro", {"site": "imu_site"})
-    ET.SubElement(sensor, "accelerometer", {"site": "imu_site"})
+    ET.SubElement(sensor, "gyro", {"name": "gyro_sensor", "site": "imu_site"})
+    ET.SubElement(
+        sensor, "accelerometer", {"name": "accelerometer_sensor", "site": "imu_site"}
+    )
 
     return tree
 
@@ -299,40 +301,36 @@ def add_leg_sensors(tree):
             exit(1)
 
         #  Add touch sites
-        ET.SubElement(
-            tibia,
-            "site",
-            {
-                "name": f"Leg{i}_Tibia_bad_touch1_site",
-                "pos": "0.04 0.048 0.148",
-                "size": "0.005",
-                "type": "sphere",
-                "rgba": "1 0 0 1",
-            },
-        )
-        ET.SubElement(
-            tibia,
-            "site",
-            {
-                "name": f"Leg{i}_Tibia_bad_touch2_site",
-                "pos": "0.04 -0.05 0.195",
-                "size": "0.005",
-                "type": "sphere",
-                "rgba": "1 0 0 1",
-            },
-        )
-        ET.SubElement(
-            tibia,
-            "site",
-            {
-                "name": f"Leg{i}_Tibia_foot_site",
-                "pos": "0.04 -0.1191 0.2015",
-                "size": "0.007",
-                "type": "cylinder",
-                "rgba": "0 1 0 1",
-                "euler": "0 1.5708 0",
-            },
-        )
+        bad1 = {
+            "name": f"Leg{i}_Tibia_bad_touch1_site",
+            "pos": "0.04 0.048 0.148",
+            "size": "0.005",
+            "type": "sphere",
+            "rgba": "1 0 0 1",
+        }
+        ET.SubElement(tibia, "site", bad1)
+        ET.SubElement(tibia, "geom", bad1)
+
+        bad2 = {
+            "name": f"Leg{i}_Tibia_bad_touch2_site",
+            "pos": "0.04 -0.05 0.195",
+            "size": "0.005",
+            "type": "sphere",
+            "rgba": "1 0 0 1",
+        }
+        ET.SubElement(tibia, "site", bad2)
+        ET.SubElement(tibia, "geom", bad2)
+
+        foot = {
+            "name": f"Leg{i}_Tibia_foot_site",
+            "pos": "0.04 -0.12 0.2015",
+            "size": "0.007 0.005",
+            "type": "cylinder",
+            "rgba": "0 1 0 1",
+            "euler": "0 1.5708 0",
+        }
+        ET.SubElement(tibia, "site", foot)
+        ET.SubElement(tibia, "geom", foot)
 
         # Add sensors
         ET.SubElement(
