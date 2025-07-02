@@ -24,6 +24,7 @@ class SpiderEnv(MujocoEnv):
             frame_skip=5,
             observation_space=observation_space,
             render_mode=render_mode,
+            camera_name="bodycam",
         )
 
     def _get_obs(self):
@@ -127,15 +128,3 @@ class SpiderEnv(MujocoEnv):
 
     def close(self):
         super().close()
-
-    def viewer_setup(self):
-        # Set the default camera to "bodycam" if it exists
-        if self.viewer is not None and hasattr(self.viewer, "cam"):
-            cam_id = None
-            for i in range(self.model.ncam):
-                if self.model.cam(i).name == "bodycam":
-                    cam_id = i
-                    break
-            if cam_id is not None:
-                self.viewer.cam.fixedcamid = cam_id
-                self.viewer.cam.type = 2  # 2 = fixed camera
