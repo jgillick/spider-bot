@@ -1,67 +1,55 @@
-import gymnasium as gym
+from gymnasium.envs.mujoco.mujoco_env import MujocoEnv
 from gymnasium import spaces
 import numpy as np
-import mujoco
 from training.joint_config import JOINT_LIMITS
 
 
-class SpiderEnv(gym.Env):
-    metadata = {"render_modes": ["rgb_array"], "render_fps": 60}
+class SpiderEnv(MujocoEnv):
+    metadata = {"render_modes": ["rgb_array"], "render_fps": 100}
 
     def __init__(self, xml_path, render_mode=None):
-        super().__init__()
-        self.model = mujoco.MjModel.from_xml_path(xml_path)
-        self.data = mujoco.MjData(self.model)
-        self.viewer = None
-        self.render_mode = render_mode
-
         self.joint_names = [name for name, _ in JOINT_LIMITS]
         self.joint_limits = np.array([rng for _, rng in JOINT_LIMITS])
-        self.num_actuators = self.model.nu
-
-        # Touch sensor names
         self.foot_touch_sensor_names = [f"Leg{i}_Tibia_foot" for i in range(1, 9)]
         self.bad_touch_sensor_names = [
             f"Leg{i}_Tibia_bad_touch1" for i in range(1, 9)
         ] + [f"Leg{i}_Tibia_bad_touch2" for i in range(1, 9)]
-
-        self.action_space = spaces.Box(
-            low=-1.0, high=1.0, shape=(self.num_actuators,), dtype=np.float32
-        )
-
-        obs_dim = self._get_obs().shape[0]
-        self.observation_space = spaces.Box(
+        self.render_mode = render_mode
+        obs_dim = 6 + len(self.joint_names) * 2  # 3 gyro, 3 accel, qpos, qvel
+        observation_space = spaces.Box(
             low=-np.inf, high=np.inf, shape=(obs_dim,), dtype=np.float32
         )
+        super().__init__(
+            xml_path,
+            frame_skip=5,
+            observation_space=observation_space,
+            render_mode=render_mode,
+        )
 
-    def reset(self, seed=None, options=None):
-        mujoco.mj_resetData(self.model, self.data)
-        mujoco.mj_forward(self.model, self.data)
-        obs = self._get_obs()
-        return obs, {}
-
-    def step(self, action):
-        # Scale normalized actuator action to [-10, 10]
-        scaled_torque = 10.0 * np.clip(action, -1.0, 1.0)
-        self.data.ctrl[:] = scaled_torque
-
-        for _ in range(5):
-            mujoco.mj_step(self.model, self.data)
-
-        sensors = self._read_sensors()
-        obs = self._get_obs(sensors)
-        reward = self._compute_reward(sensors)
-        terminated = self._is_terminated(sensors)
-        truncated = False
-        info = {}
-        return obs, reward, terminated, truncated, info
-
-    def _get_obs(self, sensors=None):
+    def _get_obs(self):
+        sensors = getattr(self, "_last_sensors", None)
         gyro = sensors["gyro"] if sensors else [0, 0, 0]
         accelerometer = sensors["accelerometer"] if sensors else [0, 0, 0]
         qpos = self.data.qpos[7:]  # exclude base pos/orient
         qvel = self.data.qvel[6:]
         return np.concatenate([gyro, accelerometer, qpos, qvel])
+
+    def reset_model(self):
+        self.set_state(self.init_qpos, self.init_qvel)
+        self._last_sensors = self._read_sensors()
+        return self._get_obs()
+
+    def step(self, action):
+        # Apply the action using the base class helper
+        self.do_simulation(action, self.frame_skip)
+        sensors = self._read_sensors()
+        self._last_sensors = sensors
+        obs = self._get_obs()
+        reward = self._compute_reward(sensors)
+        terminated = self._is_terminated(sensors)
+        truncated = False
+        info = {}
+        return obs, reward, terminated, truncated, info
 
     def _actuator_limit_proximity_penalty(self, qpos):
         lower_limits = self.joint_limits[:, 0]
@@ -75,27 +63,16 @@ class SpiderEnv(gym.Env):
         return penalty, num_close
 
     def _compute_reward(self, sensors):
-        # forward velocity
         forward_velocity = self.data.qvel[0]
-
-        # The robot is off the ground
         upright_bonus = 1.0 if self.data.qpos[2] > 0.1 else 0.0
-
-        # How much energy is being used
         energy_penalty = -np.sum(np.square(self.data.ctrl)) * 0.0001
-
-        # Reward for having 4-6 feet in contact (stable but moving)
-        if 4 <= sensors["foot_contact"] <= 6:
+        if sensors["foot_contact"] >= 3:
             foot_contact_reward = 1
         else:
-            foot_contact_reward = 0.5
-
-        # Penalty for actuators very close to their joint limits
-        qpos = self.data.qpos[7:]  # exclude base pos/orient
+            foot_contact_reward = -2.0
+        qpos = self.data.qpos[7:]
         actuator_limit_penalty, num_close = self._actuator_limit_proximity_penalty(qpos)
-        # Optional: small reward if all actuators are comfortably away from limits
         within_all_limits_bonus = 0.5 if num_close == 0 else 0.0
-
         return (
             foot_contact_reward
             + forward_velocity
@@ -106,7 +83,6 @@ class SpiderEnv(gym.Env):
         )
 
     def _is_terminated(self, sensors):
-        # Terminate if it fell over or left the arena
         z = self.data.qpos[2]
         x, y = self.data.qpos[0], self.data.qpos[1]
         if np.isnan(self.data.qpos).any() or np.isnan(self.data.qvel).any():
@@ -115,8 +91,6 @@ class SpiderEnv(gym.Env):
             return True
         if abs(x) > 10.0 or abs(y) > 10.0:
             return True
-
-        # Terminate if any bad touch sensor is active
         if sensors["has_bad_touch"]:
             return True
         return False
@@ -131,37 +105,37 @@ class SpiderEnv(gym.Env):
         for i in range(self.model.nsensor):
             idx = self.model.sensor_adr[i]
             sensor_type = self.model.sensor_type[i]
-            if sensor_type == mujoco.mjtSensor.mjSENS_GYRO:
+            # 2: GYRO, 3: ACCELEROMETER, 6: TOUCH (from mujoco enums)
+            if sensor_type == 2:
                 sensors["gyro"] = self.data.sensordata[idx : idx + 3]
-            elif sensor_type == mujoco.mjtSensor.mjSENS_ACCELEROMETER:
+            elif sensor_type == 3:
                 sensors["accelerometer"] = self.data.sensordata[idx : idx + 3]
-            elif sensor_type == mujoco.mjtSensor.mjSENS_TOUCH:
+            elif sensor_type == 6:
                 value = self.data.sensordata[idx]
                 positive_value = True if value > 0.0 else False
-                sensor_name = mujoco.mj_id2name(
-                    self.model, mujoco.mjtObj.mjOBJ_SENSOR, i
-                )
-                if positive_value:
+                # sensor name: self.model.sensor(i).name (if available)
+                try:
+                    sensor_name = self.model.sensor(i).name
+                except Exception:
+                    sensor_name = None
+                if positive_value and sensor_name:
                     if sensor_name in self.foot_touch_sensor_names:
                         sensors["foot_contact"] += 1
                     elif sensor_name in self.bad_touch_sensor_names:
                         sensors["has_bad_touch"] = True
         return sensors
 
-    def render(self):
-        if self.render_mode == "human":
-            if self.viewer is None:
-                self.viewer = mujoco.viewer.launch_passive(self.model, self.data)
-            self.viewer.sync()
-        elif self.render_mode == "rgb_array":
-            width, height = 800, 600
-            if not hasattr(self, "rgb_renderer"):
-                self.rgb_renderer = mujoco.Renderer(
-                    self.model, height=height, width=width
-                )
-            self.rgb_renderer.update_scene(self.data, camera="bodycam")
-            return self.rgb_renderer.render()
-
     def close(self):
-        if self.viewer:
-            self.viewer.close()
+        super().close()
+
+    def viewer_setup(self):
+        # Set the default camera to "bodycam" if it exists
+        if self.viewer is not None and hasattr(self.viewer, "cam"):
+            cam_id = None
+            for i in range(self.model.ncam):
+                if self.model.cam(i).name == "bodycam":
+                    cam_id = i
+                    break
+            if cam_id is not None:
+                self.viewer.cam.fixedcamid = cam_id
+                self.viewer.cam.type = 2  # 2 = fixed camera
