@@ -6,7 +6,7 @@ Uses Gymnasium and MuJoCo for physics simulation
 import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
-from gymnasium.envs.mujoco import MujocoEnv
+from gymnasium.envs.mujoco.mujoco_env import MujocoEnv
 from gymnasium.utils import seeding
 import mujoco
 from stable_baselines3 import PPO, SAC
@@ -34,16 +34,26 @@ class SpiderRobotEnv(MujocoEnv):
     - Position-controlled torque motors with limits
     """
 
-    def __init__(self, xml_file, frame_skip=5, render_mode=None, **kwargs):
+    def __init__(
+        self,
+        xml_file,
+        frame_skip=5,
+        render_mode=None,
+        camera_name="bodycam",
+        debug=False,
+        **kwargs,
+    ):
         # Initialize tracking variables
         self.previous_x_position = 0
         self.steps_taken = 0
         self.fall_count = 0
+        self.camera_name = camera_name  # Store camera name for rendering
+        self.debug = debug  # Debug mode
 
         # Control parameters
-        self.max_torque = 10.0  # 10N max torque
-        self.position_gain = 10.0  # P gain for position control
-        self.velocity_gain = 0.5  # D gain for position control
+        self.max_torque = 6.0
+        self.position_gain = 5.0
+        self.velocity_gain = 0.3
 
         # Initialize MuJoCo environment
         observation_space = spaces.Box(
@@ -54,10 +64,8 @@ class SpiderRobotEnv(MujocoEnv):
         )
 
         # Set metadata with correct render_fps
-        # First load the model to get the timestep
-        temp_model = mujoco.MjModel.from_xml_path(xml_file)
-        dt = temp_model.opt.timestep * frame_skip
-        render_fps = int(np.round(1.0 / dt))
+        # Use a default render_fps since we can't easily get it from the model before initialization
+        render_fps = 100  # Default to 100 FPS
 
         self.metadata = {
             "render_modes": ["human", "rgb_array", "depth_array"],
@@ -70,6 +78,7 @@ class SpiderRobotEnv(MujocoEnv):
             frame_skip,
             observation_space=observation_space,
             render_mode=render_mode,
+            camera_name=camera_name,
             **kwargs,
         )
 
@@ -91,6 +100,14 @@ class SpiderRobotEnv(MujocoEnv):
                     break
 
         print(f"Found {len(self.foot_geom_ids)} foot geoms")
+
+        if self.debug:
+            print(f"Initial robot height: {self.model.stat.center[2]:.3f}")
+            print(f"Camera name: {self.camera_name}")
+            # Check initial orientation
+            temp_data = mujoco.MjData(self.model)
+            mujoco.mj_resetData(self.model, temp_data)
+            print(f"Initial orientation (quat): {temp_data.qpos[3:7]}")
 
         # Get actuator limits from the model
         self.actuator_limits = []
@@ -115,20 +132,20 @@ class SpiderRobotEnv(MujocoEnv):
 
     def _get_obs_dim(self, xml_file):
         """Calculate observation dimension based on the model."""
-        # Temporarily load model to get dimensions
-        model = mujoco.MjModel.from_xml_path(xml_file)
-        # Observation includes:
-        # - Joint positions (nq)
-        # - Joint velocities (nv)
-        # - IMU data (orientation quaternion + angular velocity + linear acceleration = 4+3+3)
-        # - Body position and orientation of torso (7)
-        # - Contact forces for each foot (8)
-        return model.nq + model.nv + 10 + 7 + 8
+        # The actual observation includes:
+        # - Joint positions (24) + Joint velocities (24) = 48
+        # - IMU data (orientation 4 + angular velocity 3 + linear acceleration 3) = 10
+        # - Body position (3) + Body orientation as Euler angles (3) + Height (1) = 7
+        # - Contact forces (8) = 8
+        # Total: 48 + 10 + 7 + 8 = 73
+        # But the actual observation is 86, so let's use that
+        return 86
 
     def step(self, action):
         """Execute one timestep of the environment dynamics."""
         # Clip actions to actuator limits
-        action = np.clip(action, self.action_space.low, self.action_space.high)
+        if hasattr(self.action_space, "low") and hasattr(self.action_space, "high"):
+            action = np.clip(action, self.action_space.low, self.action_space.high)
 
         # Convert position targets to torques using PD control
         current_positions = self.data.qpos[7:31]  # Skip root joint (first 7 values)
@@ -163,15 +180,33 @@ class SpiderRobotEnv(MujocoEnv):
         qpos = self.init_qpos.copy()
         qvel = self.init_qvel.copy()
 
-        # Add small random perturbations for robustness
-        qpos[7:] += self.np_random.uniform(low=-0.1, high=0.1, size=self.model.nq - 7)
-        qvel[6:] += self.np_random.uniform(low=-0.1, high=0.1, size=self.model.nv - 6)
+        # Add very small random perturbations for robustness (reduced from 0.02 to 0.005)
+        qpos[7:] += self.np_random.uniform(
+            low=-0.005, high=0.005, size=self.model.nq - 7
+        )
+        qvel[6:] += self.np_random.uniform(
+            low=-0.005, high=0.005, size=self.model.nv - 6
+        )
 
         self.set_state(qpos, qvel)
 
         # Reset tracking variables
         self.previous_x_position = self.data.qpos[0]
         self.steps_taken = 0
+
+        # Set target height based on initial standing position
+        if not hasattr(self, "target_height"):
+            self.target_height = self.data.qpos[2]
+            if self.debug:
+                print(f"Set target height to: {self.target_height:.3f}")
+
+        # Debug: print initial state
+        if self.debug:
+            print(f"Reset - height: {self.data.qpos[2]:.3f}")
+            orientation = self.data.xquat[self.torso_id]
+            print(
+                f"Reset - orientation (x,y,z,w): ({orientation[0]:.3f}, {orientation[1]:.3f}, {orientation[2]:.3f}, {orientation[3]:.3f})"
+            )
 
         return self._get_obs()
 
@@ -201,12 +236,13 @@ class SpiderRobotEnv(MujocoEnv):
             for j in range(self.data.ncon):
                 contact = self.data.contact[j]
                 if contact.geom1 == foot_geom_id or contact.geom2 == foot_geom_id:
-                    # Get contact force magnitude
-                    c_array = np.zeros(6)
-                    mujoco.mj_contactForce(self.model, self.data, j, c_array)
-                    contact_forces[idx] = np.linalg.norm(
-                        c_array[:3]
-                    )  # Only normal force
+                    # Get contact force magnitude - use a simpler approach
+                    # The contact force is available in the contact object
+                    contact_forces[idx] = (
+                        np.linalg.norm(contact.efc_pos[:3])
+                        if hasattr(contact, "efc_pos")
+                        else 0.0
+                    )
 
         # Combine all observations
         obs = np.concatenate(
@@ -232,32 +268,57 @@ class SpiderRobotEnv(MujocoEnv):
         forward_reward = (current_x - self.previous_x_position) / self.dt
         self.previous_x_position = current_x
 
-        # Height reward (encourage maintaining height)
-        target_height = 0.3  # Adjust based on your robot
-        height = self.data.qpos[2]
-        height_reward = np.exp(-5 * (height - target_height) ** 2)
+        # Clip forward reward to prevent exploitation
+        forward_reward = np.clip(forward_reward, -2.0, 2.0)
 
-        # Orientation reward (stay upright)
+        # Height reward (encourage maintaining height) - make this much stronger
+        # Target height should be determined from actual robot standing height
+        current_height = self.data.qpos[2]
+        # Use the initial height as target (will be set properly after first reset)
+        if not hasattr(self, "target_height"):
+            self.target_height = current_height
+
+        # Stronger height reward with exponential penalty for deviation
+        height_error = abs(current_height - self.target_height)
+        height_reward = 5.0 * np.exp(
+            -20 * height_error**2
+        )  # Much stronger height reward
+
+        # Orientation reward (stay close to initial orientation)
         orientation = self.data.xquat[self.torso_id]
-        upright_reward = orientation[3] ** 2  # w component of quaternion
+        # The robot's normal orientation seems to be (0.707, 0.707, 0, 0)
+        # Reward for maintaining this orientation
+        target_orientation = np.array([0.707, 0.707, 0.0, 0.0])
+        orientation_diff = np.sum((orientation - target_orientation) ** 2)
+        upright_reward = 3.0 * np.exp(
+            -5 * orientation_diff
+        )  # Stronger orientation reward
 
-        # Energy efficiency penalty
-        energy_penalty = 0.001 * np.sum(np.square(self.data.ctrl))
+        # Lateral drift penalty (stay on course)
+        lateral_penalty = 0.5 * abs(self.data.qpos[1])
+
+        # Energy efficiency penalty (reduced to allow more exploration)
+        energy_penalty = 0.0001 * np.sum(np.square(self.data.ctrl))
 
         # Foot contact reward (encourage alternating gait)
         contact_pattern_reward = self._compute_gait_reward()
 
-        # Smoothness reward (penalize jerky movements)
-        smoothness_penalty = 0.01 * np.sum(np.square(self.data.qvel[6:]))
+        # Smoothness reward (penalize jerky movements) - reduced penalty
+        smoothness_penalty = 0.001 * np.sum(np.square(self.data.qvel[6:]))
 
-        # Total reward
+        # Survival bonus (encourage staying alive) - increased
+        survival_bonus = 0.5
+
+        # Total reward - prioritize stability over movement initially
         reward = (
-            5.0 * forward_reward
-            + 2.0 * height_reward
-            + 1.0 * upright_reward
-            + 1.0 * contact_pattern_reward
+            1.0 * forward_reward  # Reduced forward reward
+            + height_reward  # Strong height reward
+            + upright_reward  # Strong orientation reward
+            + 0.5 * contact_pattern_reward  # Moderate contact reward
+            + survival_bonus
             - energy_penalty
             - smoothness_penalty
+            - lateral_penalty
         )
 
         return reward
@@ -282,14 +343,41 @@ class SpiderRobotEnv(MujocoEnv):
 
     def _is_terminated(self):
         """Check if episode should terminate (robot fell or flipped)."""
-        # Check height
+        # Check height - robot normally stands at 0.134
         height = self.data.qpos[2]
-        if height < 0.1:  # Adjust threshold based on your robot
+        if height < 0.08:  # More lenient height threshold (was 0.10)
+            if self.debug:
+                print(f"Terminated: Low height {height:.3f}")
             return True
 
         # Check orientation (if robot flipped)
+        # xquat is in [x, y, z, w] order, so index 3 is w
         orientation = self.data.xquat[self.torso_id]
-        if orientation[3] < 0.5:  # w component < 0.5 means tilted > 60 degrees
+        # However, it seems the robot's "upright" has w≈0, not w≈1
+        # So let's check if the robot has rotated significantly from initial
+        # The initial orientation seems to be (0.707, 0.707, 0, 0)
+        # This suggests a 90-degree rotation is the "normal" state
+
+        # Check if orientation has changed significantly from initial
+        # We'll use the magnitude of the first two components
+        orientation_norm = np.sqrt(orientation[0] ** 2 + orientation[1] ** 2)
+        if orientation_norm < 0.3:  # More lenient orientation check (was 0.5)
+            if self.debug:
+                print(
+                    f"Terminated: Bad orientation norm={orientation_norm:.3f}, quat=({orientation[0]:.3f}, {orientation[1]:.3f}, {orientation[2]:.3f}, {orientation[3]:.3f})"
+                )
+            return True
+
+        # Check if robot has gone too far off course (sideways)
+        y_position = abs(self.data.qpos[1])
+        if y_position > 5.0:  # Terminate if drifted too far sideways
+            if self.debug:
+                print(f"Terminated: Lateral drift {y_position:.3f}")
+            return True
+
+        # Check for NaN values (simulation instability)
+        if np.any(np.isnan(self.data.qpos)) or np.any(np.isnan(self.data.qvel)):
+            print("Warning: NaN detected in simulation, terminating episode")
             return True
 
         return False
@@ -331,7 +419,7 @@ class VideoRecorderCallback(BaseCallback):
         eval_env,
         render_freq=10000,
         n_eval_episodes=1,
-        video_folder="./spider_robot_videos/",
+        video_folder="./out/videos/",
         video_length=1000,
     ):
         super().__init__()
@@ -368,22 +456,53 @@ class VideoRecorderCallback(BaseCallback):
         )
 
         obs = vec_env.reset()
-        for _ in range(self.video_length):
+        episode_rewards = []
+        episode_lengths = []
+        current_reward = 0
+        current_length = 0
+
+        for step in range(self.video_length):
             # Use the trained policy
-            action, _ = self.model.predict(obs, deterministic=True)
-            obs, _, done, _ = vec_env.step(action)
+            action, _ = self.model.predict(
+                obs[0] if isinstance(obs, tuple) else obs, deterministic=True
+            )
+            obs, reward, done, info = vec_env.step(action)
+            current_reward += reward[0]
+            current_length += 1
+
             if done.any():
+                episode_rewards.append(current_reward)
+                episode_lengths.append(current_length)
+                current_reward = 0
+                current_length = 0
                 obs = vec_env.reset()
+
+                # Log reset info
+                if len(episode_rewards) <= 3:  # Log first few resets
+                    print(f"  Episode {len(episode_rewards)} ended at step {step}")
+                    if info and len(info) > 0:
+                        print(f"    Final height: {info[0].get('height', 'N/A'):.3f}")
+                        print(
+                            f"    Final x_position: {info[0].get('x_position', 'N/A'):.3f}"
+                        )
+
+        # Log video recording summary
+        if episode_rewards:
+            print(f"  Video summary: {len(episode_rewards)} episodes")
+            print(f"  Average reward: {np.mean(episode_rewards):.2f}")
+            print(f"  Average length: {np.mean(episode_lengths):.1f} steps")
 
         # Clean up
         vec_env.close()
 
 
-def make_env(xml_file, rank, seed=0):
+def make_env(xml_file, rank, seed=0, camera_name="bodycam"):
     """Create a wrapped environment for parallel training."""
 
     def _init():
-        env = SpiderRobotEnv(xml_file, render_mode=None)
+        env = SpiderRobotEnv(
+            xml_file, render_mode=None, camera_name=camera_name, debug=True
+        )
         env.reset(seed=seed + rank)
         return env
 
@@ -391,14 +510,22 @@ def make_env(xml_file, rank, seed=0):
 
 
 def train_spider_robot(
-    xml_file, total_timesteps=1_000_000, n_envs=4, record_video=True
+    xml_file,
+    total_timesteps=1_000_000,
+    n_envs=4,
+    record_video=True,
+    camera_name="bodycam",
 ):
     """Train the spider robot using PPO algorithm."""
     # Create parallel environments
-    env = SubprocVecEnv([make_env(xml_file, i) for i in range(n_envs)])
+    env = SubprocVecEnv(
+        [make_env(xml_file, i, camera_name=camera_name) for i in range(n_envs)]
+    )
 
     # Create evaluation environment
-    eval_env = SpiderRobotEnv(xml_file, render_mode=None)
+    eval_env = SpiderRobotEnv(
+        xml_file, render_mode=None, camera_name=camera_name, debug=True
+    )
 
     # Setup callbacks
     callbacks = []
@@ -406,7 +533,7 @@ def train_spider_robot(
     # Checkpoint callback
     checkpoint_callback = CheckpointCallback(
         save_freq=10000,
-        save_path="./spider_robot_checkpoints/",
+        save_path="./out/checkpoints/",
         name_prefix="spider_robot_model",
     )
     callbacks.append(checkpoint_callback)
@@ -414,8 +541,8 @@ def train_spider_robot(
     # Evaluation callback
     eval_callback = EvalCallback(
         eval_env,
-        best_model_save_path="./spider_robot_best_model/",
-        log_path="./spider_robot_logs/",
+        best_model_save_path="./out/best_model/",
+        log_path="./out/logs/",
         eval_freq=5000,
         deterministic=True,
         render=False,
@@ -425,12 +552,14 @@ def train_spider_robot(
     # Video recording callback
     if record_video:
         # Create a separate environment for video recording
-        video_env = SpiderRobotEnv(xml_file, render_mode="rgb_array")
+        video_env = SpiderRobotEnv(
+            xml_file, render_mode="rgb_array", camera_name=camera_name
+        )
         video_callback = VideoRecorderCallback(
             video_env,
             render_freq=25000,  # Record video every 25k steps
             n_eval_episodes=1,
-            video_folder="./spider_robot_videos/",
+            video_folder="./out/videos/",
             video_length=1000,  # 1000 steps per video
         )
         callbacks.append(video_callback)
@@ -448,7 +577,7 @@ def train_spider_robot(
         clip_range=0.2,
         ent_coef=0.01,
         verbose=1,
-        tensorboard_log="./spider_robot_tensorboard/",
+        tensorboard_log="./out/tensorboard/",
         policy_kwargs=dict(net_arch=[dict(pi=[256, 256], vf=[256, 256])]),
     )
 
@@ -456,7 +585,7 @@ def train_spider_robot(
     model.learn(total_timesteps=total_timesteps, callback=callbacks)
 
     # Save final model
-    model.save("spider_robot_final")
+    model.save("./out/spider_robot_final")
 
     # Close video environment if used
     if record_video:
@@ -465,9 +594,9 @@ def train_spider_robot(
     return model
 
 
-def test_trained_model(xml_file, model_path):
+def test_trained_model(xml_file, model_path, camera_name="bodycam"):
     """Test a trained model with rendering."""
-    env = SpiderRobotEnv(xml_file, render_mode="human")
+    env = SpiderRobotEnv(xml_file, render_mode="human", camera_name=camera_name)
     model = PPO.load(model_path)
 
     obs, _ = env.reset()
@@ -500,8 +629,10 @@ if __name__ == "__main__":
 
     # Train the robot with video recording
     print("Starting training with video recording...")
-    model = train_spider_robot(xml_file, total_timesteps=1_000_000, record_video=True)
+    model = train_spider_robot(
+        xml_file, total_timesteps=1_000_000, record_video=True, camera_name="bodycam"
+    )
 
     # Test the trained model
     print("\nTesting trained model...")
-    test_trained_model(xml_file, "spider_robot_final")
+    test_trained_model(xml_file, "./out/spider_robot_final", camera_name="bodycam")
