@@ -138,7 +138,7 @@
                   <site name="Leg1_Tibia_bad_touch2_site" pos="0.04 -0.05 0.195" size="0.005" type="sphere" rgba="1 0 0 1" />
                   <geom name="Leg1_Tibia_bad_touch2_site" pos="0.04 -0.05 0.195" size="0.005" type="sphere" rgba="1 0 0 1" />
                   <site name="Leg1_Tibia_foot_site" pos="0.04 -0.1195 0.2018" size="0.007 0.005" type="cylinder" rgba="0 1 0 1" euler="0 1.5708 0" />
-                  <geom name="Leg1_Tibia_foot_site" pos="0.04 -0.1195 0.2018" size="0.007 0.005" type="cylinder" rgba="0 1 0 1" euler="0 1.5708 0" />
+                  <geom name="Leg1_Tibia_foot_site" pos="0.04 -0.1195 0.2018" size="0.007 0.005" type="cylinder" rgba="0 1 0 1" euler="0 1.5708 0" friction="2.0 0.1 0.01" />
                 </body>
                 <body name="Leg1_Knee-actuator-assembly_Motor" pos="0.0765000000000036 -3.552713678800501e-17 0.0" euler="-0.0820304748437336 -1.3034353007344026e-16 3.141592653589792">
                   <geom name="Leg1_Knee-actuator-assembly_Motor_geom" type="mesh" mesh="Leg1_Knee-actuator-assembly_Motor" pos="0 0 0" euler="0 0 0" />
@@ -191,7 +191,7 @@
                   <site name="Leg2_Tibia_bad_touch2_site" pos="0.04 -0.05 0.195" size="0.005" type="sphere" rgba="1 0 0 1" />
                   <geom name="Leg2_Tibia_bad_touch2_site" pos="0.04 -0.05 0.195" size="0.005" type="sphere" rgba="1 0 0 1" />
                   <site name="Leg2_Tibia_foot_site" pos="0.04 -0.1195 0.2018" size="0.007 0.005" type="cylinder" rgba="0 1 0 1" euler="0 1.5708 0" />
-                  <geom name="Leg2_Tibia_foot_site" pos="0.04 -0.1195 0.2018" size="0.007 0.005" type="cylinder" rgba="0 1 0 1" euler="0 1.5708 0" />
+                  <geom name="Leg2_Tibia_foot_site" pos="0.04 -0.1195 0.2018" size="0.007 0.005" type="cylinder" rgba="0 1 0 1" euler="0 1.5708 0" friction="2.0 0.1 0.01" />
                 </body>
                 <body name="Leg2_Knee-actuator-assembly_Motor" pos="0.07650000000000365 -3.552713678800501e-17 0.0" euler="-0.0820304748437336 -1.3034353007344026e-16 3.141592653589792">
                   <geom name="Leg2_Knee-actuator-assembly_Motor_geom" type="mesh" mesh="Leg2_Knee-actuator-assembly_Motor" pos="0 0 0" euler="0 0 0" />
@@ -244,7 +244,7 @@
                   <site name="Leg3_Tibia_bad_touch2_site" pos="0.04 -0.05 0.195" size="0.005" type="sphere" rgba="1 0 0 1" />
                   <geom name="Leg3_Tibia_bad_touch2_site" pos="0.04 -0.05 0.195" size="0.005" type="sphere" rgba="1 0 0 1" />
                   <site name="Leg3_Tibia_foot_site" pos="0.04 -0.1195 0.2018" size="0.007 0.005" type="cylinder" rgba="0 1 0 1" euler="0 1.5708 0" />
-                  <geom name="Leg3_Tibia_foot_site" pos="0.04 -0.1195 0.2018" size="0.007 0.005" type="cylinder" rgba="0 1 0 1" euler="0 1.5708 0" />
+                  <geom name="Leg3_Tibia_foot_site" pos="0.04 -0.1195 0.2018" size="0.007 0.005" type="cylinder" rgba="0 1 0 1" euler="0 1.5708 0" friction="2.0 0.1 0.01" />
                 </body>
                 <body name="Leg3_Knee-actuator-assembly_Motor" pos="0.07650000000000368 -3.552713678800501e-17 0.0" euler="-0.0820304748437336 -1.3034353007344026e-16 3.141592653589792">
                   <geom name="Leg3_Knee-actuator-assembly_Motor_geom" type="mesh" mesh="Leg3_Knee-actuator-assembly_Motor" pos="0 0 0" euler="0 0 0" />
@@ -297,7 +297,7 @@
                   <site name="Leg4_Tibia_bad_touch2_site" pos="0.04 -0.05 0.195" size="0.005" type="sphere" rgba="1 0 0 1" />
                   <geom name="Leg4_Tibia_bad_touch2_site" pos="0.04 -0.05 0.195" size="0.005" type="sphere" rgba="1 0 0 1" />
                   <site name="Leg4_Tibia_foot_site" pos="0.04 -0.1195 0.2018" size="0.007 0.005" type="cylinder" rgba="0 1 0 1" euler="0 1.5708 0" />
-                  <geom name="Leg4_Tibia_foot_site" pos="0.04 -0.1195 0.2018" size="0.007 0.005" type="cylinder" rgba="0 1 0 1" euler="0 1.5708 0" />
+                  <geom name="Leg4_Tibia_foot_site" pos="0.04 -0.1195 0.2018" size="0.007 0.005" type="cylinder" rgba="0 1 0 1" euler="0 1.5708 0" friction="2.0 0.1 0.01" />
                 </body>
                 <body name="Leg4_Knee-actuator-assembly_Motor" pos="0.07650000000000366 -3.552713678800501e-17 0.0" euler="-0.0820304748437336 -1.3034353007344026e-16 3.141592653589792">
                   <geom name="Leg4_Knee-actuator-assembly_Motor_geom" type="mesh" mesh="Leg4_Knee-actuator-assembly_Motor" pos="0 0 0" euler="0 0 0" />
@@ -350,7 +350,7 @@
                   <site name="Leg5_Tibia_bad_touch2_site" pos="0.04 -0.05 0.195" size="0.005" type="sphere" rgba="1 0 0 1" />
                   <geom name="Leg5_Tibia_bad_touch2_site" pos="0.04 -0.05 0.195" size="0.005" type="sphere" rgba="1 0 0 1" />
                   <site name="Leg5_Tibia_foot_site" pos="0.04 -0.1195 0.2018" size="0.007 0.005" type="cylinder" rgba="0 1 0 1" euler="0 1.5708 0" />
-                  <geom name="Leg5_Tibia_foot_site" pos="0.04 -0.1195 0.2018" size="0.007 0.005" type="cylinder" rgba="0 1 0 1" euler="0 1.5708 0" />
+                  <geom name="Leg5_Tibia_foot_site" pos="0.04 -0.1195 0.2018" size="0.007 0.005" type="cylinder" rgba="0 1 0 1" euler="0 1.5708 0" friction="2.0 0.1 0.01" />
                 </body>
                 <body name="Leg5_Knee-actuator-assembly_Motor" pos="0.07650000000000368 -3.9968028886505634e-17 0.0" euler="-0.08203047484373362 -1.303435300734403e-16 3.141592653589792">
                   <geom name="Leg5_Knee-actuator-assembly_Motor_geom" type="mesh" mesh="Leg5_Knee-actuator-assembly_Motor" pos="0 0 0" euler="0 0 0" />
@@ -403,7 +403,7 @@
                   <site name="Leg6_Tibia_bad_touch2_site" pos="0.04 -0.05 0.195" size="0.005" type="sphere" rgba="1 0 0 1" />
                   <geom name="Leg6_Tibia_bad_touch2_site" pos="0.04 -0.05 0.195" size="0.005" type="sphere" rgba="1 0 0 1" />
                   <site name="Leg6_Tibia_foot_site" pos="0.04 -0.1195 0.2018" size="0.007 0.005" type="cylinder" rgba="0 1 0 1" euler="0 1.5708 0" />
-                  <geom name="Leg6_Tibia_foot_site" pos="0.04 -0.1195 0.2018" size="0.007 0.005" type="cylinder" rgba="0 1 0 1" euler="0 1.5708 0" />
+                  <geom name="Leg6_Tibia_foot_site" pos="0.04 -0.1195 0.2018" size="0.007 0.005" type="cylinder" rgba="0 1 0 1" euler="0 1.5708 0" friction="2.0 0.1 0.01" />
                 </body>
                 <body name="Leg6_Knee-actuator-assembly_Motor" pos="0.07650000000000368 -3.9968028886505634e-17 0.0" euler="-0.08203047484373362 -1.303435300734403e-16 3.141592653589792">
                   <geom name="Leg6_Knee-actuator-assembly_Motor_geom" type="mesh" mesh="Leg6_Knee-actuator-assembly_Motor" pos="0 0 0" euler="0 0 0" />
@@ -456,7 +456,7 @@
                   <site name="Leg7_Tibia_bad_touch2_site" pos="0.04 -0.05 0.195" size="0.005" type="sphere" rgba="1 0 0 1" />
                   <geom name="Leg7_Tibia_bad_touch2_site" pos="0.04 -0.05 0.195" size="0.005" type="sphere" rgba="1 0 0 1" />
                   <site name="Leg7_Tibia_foot_site" pos="0.04 -0.1195 0.2018" size="0.007 0.005" type="cylinder" rgba="0 1 0 1" euler="0 1.5708 0" />
-                  <geom name="Leg7_Tibia_foot_site" pos="0.04 -0.1195 0.2018" size="0.007 0.005" type="cylinder" rgba="0 1 0 1" euler="0 1.5708 0" />
+                  <geom name="Leg7_Tibia_foot_site" pos="0.04 -0.1195 0.2018" size="0.007 0.005" type="cylinder" rgba="0 1 0 1" euler="0 1.5708 0" friction="2.0 0.1 0.01" />
                 </body>
                 <body name="Leg7_Knee-actuator-assembly_Motor" pos="0.07650000000000365 -3.9968028886505634e-17 -3.552713678800501e-17" euler="-0.08203047484373362 -1.303435300734403e-16 3.141592653589792">
                   <geom name="Leg7_Knee-actuator-assembly_Motor_geom" type="mesh" mesh="Leg7_Knee-actuator-assembly_Motor" pos="0 0 0" euler="0 0 0" />
@@ -509,7 +509,7 @@
                   <site name="Leg8_Tibia_bad_touch2_site" pos="0.04 -0.05 0.195" size="0.005" type="sphere" rgba="1 0 0 1" />
                   <geom name="Leg8_Tibia_bad_touch2_site" pos="0.04 -0.05 0.195" size="0.005" type="sphere" rgba="1 0 0 1" />
                   <site name="Leg8_Tibia_foot_site" pos="0.04 -0.1195 0.2018" size="0.007 0.005" type="cylinder" rgba="0 1 0 1" euler="0 1.5708 0" />
-                  <geom name="Leg8_Tibia_foot_site" pos="0.04 -0.1195 0.2018" size="0.007 0.005" type="cylinder" rgba="0 1 0 1" euler="0 1.5708 0" />
+                  <geom name="Leg8_Tibia_foot_site" pos="0.04 -0.1195 0.2018" size="0.007 0.005" type="cylinder" rgba="0 1 0 1" euler="0 1.5708 0" friction="2.0 0.1 0.01" />
                 </body>
                 <body name="Leg8_Knee-actuator-assembly_Motor" pos="0.07650000000000368 -3.9968028886505634e-17 0.0" euler="-0.08203047484373362 -1.303435300734403e-16 3.141592653589792">
                   <geom name="Leg8_Knee-actuator-assembly_Motor_geom" type="mesh" mesh="Leg8_Knee-actuator-assembly_Motor" pos="0 0 0" euler="0 0 0" />

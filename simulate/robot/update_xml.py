@@ -15,7 +15,7 @@ def main(tree):
     tree = add_defaults(tree)
     tree = actuator_definitions(tree)
     tree = main_body(tree)
-    tree = add_leg_sensors(tree)
+    tree = add_feet_and_sensors(tree)
 
     # Pretty print and output
     ET.indent(tree, space="  ")
@@ -255,9 +255,9 @@ def main_body(tree):
     return tree
 
 
-def add_leg_sensors(tree):
+def add_feet_and_sensors(tree):
     """
-    Add touch sensors to each leg
+    Add feet and touch sensors to each leg
     """
     sensor = tree.find("./sensor")
     if sensor is None:
@@ -299,7 +299,7 @@ def add_leg_sensors(tree):
             "euler": "0 1.5708 0",
         }
         ET.SubElement(tibia, "site", foot)
-        ET.SubElement(tibia, "geom", foot)
+        ET.SubElement(tibia, "geom", foot | {"friction": "2.0 0.1 0.01"})
 
         # Add sensors
         ET.SubElement(
