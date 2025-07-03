@@ -4,17 +4,11 @@ Uses Gymnasium and MuJoCo for physics simulation
 """
 
 import numpy as np
-import gymnasium as gym
 from gymnasium import spaces
 from gymnasium.envs.mujoco.mujoco_env import MujocoEnv
 from stable_baselines3 import PPO
-from stable_baselines3.common.vec_env import (
-    DummyVecEnv,
-    VecNormalize,
-    VecVideoRecorder,
-)
+
 from stable_baselines3.common.monitor import Monitor
-from stable_baselines3.common.evaluation import evaluate_policy
 
 
 class SpiderRobotEnv(MujocoEnv):
@@ -44,10 +38,18 @@ class SpiderRobotEnv(MujocoEnv):
         self.camera_name = camera_name  # Store camera name for rendering
         self.debug = debug  # Debug mode
 
-        # Control parameters
-        self.max_torque = 15.0
-        self.position_gain = 20.0
-        self.velocity_gain = 1.0
+        # Gait phase tracking
+        self.gait_phase = 0.0
+        self.gait_frequency = 0.5  # Hz
+
+        # Contact history for gait reward
+        self.contact_history = []
+        self.max_contact_history = 50
+
+        # Control parameters - reduced gains for stability
+        self.max_torque = 8.0
+        self.position_gain = 10.0  # Reduced from 20.0
+        self.velocity_gain = 0.5  # Reduced from 1.0
 
         # Initialize MuJoCo environment
         observation_space = spaces.Box(
@@ -115,19 +117,21 @@ class SpiderRobotEnv(MujocoEnv):
             else:
                 self.actuator_limits.append((-np.pi, np.pi))  # Default limits
 
-        # Action space: MIT mode (position, velocity, torque) for each actuator
-        # For 24 actuators: 24*3 = 72
+        # Simplified action space: just target positions for each actuator
         pos_lows = np.array([lim[0] for lim in self.actuator_limits])
         pos_highs = np.array([lim[1] for lim in self.actuator_limits])
-        vel_lows = np.full_like(pos_lows, -10.0)  # Reasonable velocity limits (rad/s)
-        vel_highs = np.full_like(pos_highs, 10.0)
-        torque_lows = np.full_like(pos_lows, -self.max_torque)
-        torque_highs = np.full_like(pos_highs, self.max_torque)
         self.action_space = spaces.Box(
-            low=np.concatenate([pos_lows, vel_lows, torque_lows]),
-            high=np.concatenate([pos_highs, vel_highs, torque_highs]),
+            low=pos_lows,
+            high=pos_highs,
             dtype=np.float32,
         )
+
+        # Define leg groups for gait patterns
+        # Tripod gait: two groups that alternate
+        self.leg_groups = {
+            "group_a": [0, 2, 5, 7],  # Legs 1, 3, 6, 8
+            "group_b": [1, 3, 4, 6],  # Legs 2, 4, 5, 7
+        }
 
         # Debug: print joint limits for each leg
         if self.debug:
@@ -141,65 +145,47 @@ class SpiderRobotEnv(MujocoEnv):
     def _get_obs_dim(self, xml_file):
         """Calculate observation dimension based on the model."""
         # The actual observation includes:
-        # - Joint positions (24) + Joint velocities (24) = 48
+        # - Joint positions (full qpos) = 31
+        # - Joint velocities (full qvel) = 30
         # - IMU data (orientation 4 + angular velocity 3 + linear acceleration 3) = 10
         # - Body position (3) + Body orientation as Euler angles (3) + Height (1) = 7
         # - Contact forces (8) = 8
-        # Total: 48 + 10 + 7 + 8 = 73
-        # But the actual observation is 86, so let's use that
-        return 86
+        # - Gait phase (1) = 1
+        # Total: 31 + 30 + 10 + 7 + 8 + 1 = 87
+        return 87
 
     def step(self, action):
-        """Execute one timestep of the environment dynamics (MIT mode: pos, vel, torque per joint)."""
-        # MIT mode: action = [pos(24), vel(24), torque(24)]
-        n = len(self.actuator_limits)
-        pos = action[:n]
-        vel = action[n : 2 * n]
-        torque_ff = action[2 * n :]
-        # Clip each component
+        """Execute one timestep of the environment dynamics (position control only)."""
+        # Simplified control: just position targets
         pos = np.clip(
-            pos,
+            action,
             [lim[0] for lim in self.actuator_limits],
             [lim[1] for lim in self.actuator_limits],
         )
-        vel = np.clip(vel, -10.0, 10.0)
-        torque_ff = np.clip(torque_ff, -self.max_torque, self.max_torque)
+
+        # Get current joint states
+        current_positions = self.data.qpos[7:31]
+        current_velocities = self.data.qvel[6:30]
+
+        # PD control law: tau = Kp*(q_des - q) + Kd*(-qd)
+        torques = (
+            self.position_gain * (pos - current_positions)
+            - self.velocity_gain * current_velocities
+        )
+        torques = np.clip(torques, -self.max_torque, self.max_torque)
 
         # Debug: print action statistics occasionally
         if self.debug and self.steps_taken % 100 == 0:
             print(
-                f"Step {self.steps_taken}: pos range [{pos.min():.3f}, {pos.max():.3f}], vel range [{vel.min():.3f}, {vel.max():.3f}], torque_ff range [{torque_ff.min():.3f}, {torque_ff.max():.3f}]"
+                f"Step {self.steps_taken}: pos range [{pos.min():.3f}, {pos.max():.3f}]"
             )
-            for i in range(8):
-                leg_start = i * 3
-                print(
-                    f"  Leg {i+1}: Hip (p={pos[leg_start]:.3f}, v={vel[leg_start]:.3f}, t={torque_ff[leg_start]:.3f}), "
-                    f"Femur (p={pos[leg_start+1]:.3f}, v={vel[leg_start+1]:.3f}, t={torque_ff[leg_start+1]:.3f}), "
-                    f"Tibia (p={pos[leg_start+2]:.3f}, v={vel[leg_start+2]:.3f}, t={torque_ff[leg_start+2]:.3f})"
-                )
-
-        current_positions = self.data.qpos[7:31]
-        current_velocities = self.data.qvel[6:30]
-        # MIT control law: tau = Kp*(q_des - q) + Kd*(qd_des - qd) + tau_ff
-        torques = (
-            self.position_gain * (pos - current_positions)
-            + self.velocity_gain * (vel - current_velocities)
-            + torque_ff
-        )
-        torques = np.clip(torques, -self.max_torque, self.max_torque)
-
-        # Debug: print torque statistics occasionally
-        if self.debug and self.steps_taken % 100 == 0:
-            print(
-                f"Step {self.steps_taken}: torque range [{torques.min():.3f}, {torques.max():.3f}], mean {torques.mean():.3f}"
-            )
-            for i in range(8):
-                leg_start = i * 3
-                print(
-                    f"  Leg {i+1}: Hip {torques[leg_start]:.3f}, Femur {torques[leg_start+1]:.3f}, Tibia {torques[leg_start+2]:.3f}"
-                )
 
         self.do_simulation(torques, self.frame_skip)
+
+        # Update gait phase
+        self.gait_phase += self.dt * self.frame_skip * self.gait_frequency * 2 * np.pi
+        self.gait_phase = self.gait_phase % (2 * np.pi)
+
         observation = self._get_obs()
         reward = self._compute_reward()
         terminated = self._is_terminated()
@@ -223,6 +209,8 @@ class SpiderRobotEnv(MujocoEnv):
         # Reset tracking variables
         self.previous_x_position = self.data.qpos[0]
         self.steps_taken = 0
+        self.gait_phase = 0.0
+        self.contact_history = []
 
         # Set target height based on initial standing position
         if not hasattr(self, "target_height"):
@@ -236,13 +224,6 @@ class SpiderRobotEnv(MujocoEnv):
             print(
                 f"Reset - orientation (x,y,z,w): ({orientation[0]:.3f}, {orientation[1]:.3f}, {orientation[2]:.3f}, {orientation[3]:.3f})"
             )
-            # Print initial joint positions for each leg
-            print("Initial joint positions:")
-            for i in range(8):
-                leg_start = 7 + i * 3
-                print(
-                    f"Leg {i+1}: Hip {qpos[leg_start]:.3f}, Femur {qpos[leg_start+1]:.3f}, Tibia {qpos[leg_start+2]:.3f}"
-                )
 
         return self._get_obs()
 
@@ -274,11 +255,7 @@ class SpiderRobotEnv(MujocoEnv):
                 if contact.geom1 == foot_geom_id or contact.geom2 == foot_geom_id:
                     # Get contact force magnitude - use a simpler approach
                     # The contact force is available in the contact object
-                    contact_forces[idx] = (
-                        np.linalg.norm(contact.efc_pos[:3])
-                        if hasattr(contact, "efc_pos")
-                        else 0.0
-                    )
+                    contact_forces[idx] = 1.0  # Binary contact
 
         # Combine all observations
         obs = np.concatenate(
@@ -290,8 +267,9 @@ class SpiderRobotEnv(MujocoEnv):
                 linear_acc,  # IMU linear acceleration (3)
                 body_pos,  # Body position (3)
                 body_euler,  # Body orientation as Euler angles (3)
-                [self.data.qpos[2]],  # Height
+                [self.data.qpos[2]],  # Height (1)
                 contact_forces,  # Foot contact forces (8)
+                [np.sin(self.gait_phase)],  # Gait phase (1)
             ]
         )
 
@@ -299,112 +277,169 @@ class SpiderRobotEnv(MujocoEnv):
 
     def _compute_reward(self):
         """Compute reward based on forward progress, stability, and efficiency."""
-        # Forward progress reward - make this much stronger
+        # Forward progress reward - moderate
         current_x = self.data.qpos[0]
         forward_reward = (current_x - self.previous_x_position) / self.dt
         self.previous_x_position = current_x
 
-        # Clip forward reward to prevent exploitation but allow more movement
-        forward_reward = np.clip(
-            forward_reward, -1.0, 5.0
-        )  # Allow more positive reward
+        # Clip forward reward to prevent exploitation
+        forward_reward = np.clip(forward_reward, -1.0, 2.0)
 
-        # Height reward (encourage maintaining height) - much stronger
+        # Height reward (encourage maintaining height) - critical for stability
         current_height = self.data.qpos[2]
         if not hasattr(self, "target_height"):
             self.target_height = current_height
 
-        # Strong height reward to prevent collapsing
+        # Strong height reward with tight tolerance
         height_error = abs(current_height - self.target_height)
-        height_reward = 10.0 * np.exp(
-            -5 * height_error**2
-        )  # Much stronger height reward
+        height_reward = 5.0 * np.exp(-20 * height_error**2)
 
-        # Orientation reward (stay close to initial orientation) - stronger
+        # Orientation reward (stay upright) - critical
         orientation = self.data.xquat[self.torso_id]
+        # The robot's upright orientation has specific quaternion values
+        # Based on the initial orientation (0.707, 0.707, 0, 0)
         target_orientation = np.array([0.707, 0.707, 0.0, 0.0])
-        orientation_diff = np.sum((orientation - target_orientation) ** 2)
-        upright_reward = 3.0 * np.exp(
-            -3 * orientation_diff
-        )  # Stronger orientation reward
+        orientation_error = np.sum((orientation - target_orientation) ** 2)
+        upright_reward = 3.0 * np.exp(-5 * orientation_error)
 
-        # Lateral drift penalty (stay on course) - moderate penalty
-        lateral_penalty = 0.2 * abs(self.data.qpos[1])  # Moderate penalty
+        # Body stability (minimize angular velocity)
+        angular_vel = self.data.cvel[self.torso_id][3:6]
+        stability_reward = 1.0 * np.exp(-0.5 * np.sum(angular_vel**2))
 
-        # Energy efficiency penalty - reduce to allow more movement
-        energy_penalty = 0.00001 * np.sum(np.square(self.data.ctrl))
+        # Lateral drift penalty (stay on course)
+        lateral_penalty = -0.5 * abs(self.data.qpos[1])
 
-        # Foot contact reward (encourage alternating gait)
-        contact_pattern_reward = self._compute_gait_reward()
+        # Energy efficiency penalty - reduced to allow movement
+        energy_penalty = -0.00005 * np.sum(np.square(self.data.ctrl))
 
-        # Smoothness reward (penalize jerky movements) - reduce penalty
-        smoothness_penalty = 0.0001 * np.sum(np.square(self.data.qvel[6:]))
+        # Foot contact and gait pattern reward
+        contact_pattern_reward, gait_quality = self._compute_gait_reward()
 
-        # Survival bonus (encourage staying alive)
-        survival_bonus = 0.5
+        # Joint limit penalty
+        joint_positions = self.data.qpos[7:31]
+        joint_limit_penalty = 0
+        for i, (pos, (low, high)) in enumerate(
+            zip(joint_positions, self.actuator_limits)
+        ):
+            margin = 0.1 * (high - low)  # 10% margin
+            if pos < low + margin or pos > high - margin:
+                joint_limit_penalty -= 0.1
 
-        # Total reward - prioritize stability and movement
+        # Survival bonus
+        survival_bonus = 1.0
+
+        # Total reward with emphasis on stability
         reward = (
-            2.0 * forward_reward  # Strong forward reward
-            + 3.0 * height_reward  # Very strong height reward
-            + upright_reward  # Strong orientation reward
-            + 2.0 * contact_pattern_reward  # Strong contact reward
+            1.0 * forward_reward  # Moderate forward reward
+            + height_reward  # Critical height maintenance
+            + upright_reward  # Critical orientation
+            + stability_reward  # Body stability
+            + 2.0 * contact_pattern_reward  # Gait pattern
+            + 0.5 * gait_quality  # Gait coordination
             + survival_bonus
             - energy_penalty
-            - smoothness_penalty
             - lateral_penalty
+            + joint_limit_penalty
         )
 
         return reward
 
     def _compute_gait_reward(self):
-        """Reward for maintaining a good walking gait pattern."""
-        # Check which feet are in contact
-        feet_in_contact = 0
-
-        for foot_geom_id in self.foot_geom_ids:
+        """Reward for maintaining a coordinated gait pattern."""
+        # Get current foot contacts
+        feet_in_contact = []
+        for idx, foot_geom_id in enumerate(self.foot_geom_ids):
+            in_contact = False
             for j in range(self.data.ncon):
                 contact = self.data.contact[j]
                 if contact.geom1 == foot_geom_id or contact.geom2 == foot_geom_id:
-                    feet_in_contact += 1
+                    in_contact = True
                     break
+            feet_in_contact.append(in_contact)
 
-        # Reward for having 4-6 feet in contact (stable but moving)
-        if 4 <= feet_in_contact <= 6:
-            return 1.0
+        # Update contact history
+        self.contact_history.append(feet_in_contact)
+        if len(self.contact_history) > self.max_contact_history:
+            self.contact_history.pop(0)
+
+        # Count feet in contact
+        num_feet_in_contact = sum(feet_in_contact)
+
+        # Basic contact reward (4-6 feet ideal for stability)
+        if 4 <= num_feet_in_contact <= 6:
+            contact_reward = 1.0
+        elif num_feet_in_contact == 3 or num_feet_in_contact == 7:
+            contact_reward = 0.5
         else:
-            return 0.5
+            contact_reward = 0.0
+
+        # Gait coordination reward based on tripod pattern
+        gait_quality = 0.0
+        if len(self.contact_history) >= 10:
+            # Check if legs in each group move together
+            group_a_sync = 0
+            group_b_sync = 0
+
+            for contact_state in self.contact_history[-10:]:
+                # Group A coordination
+                group_a_contacts = [
+                    contact_state[i] for i in self.leg_groups["group_a"]
+                ]
+                if all(group_a_contacts) or not any(group_a_contacts):
+                    group_a_sync += 0.1
+
+                # Group B coordination
+                group_b_contacts = [
+                    contact_state[i] for i in self.leg_groups["group_b"]
+                ]
+                if all(group_b_contacts) or not any(group_b_contacts):
+                    group_b_sync += 0.1
+
+            # Reward alternating pattern between groups
+            if len(self.contact_history) >= 2:
+                current_a = [feet_in_contact[i] for i in self.leg_groups["group_a"]]
+                current_b = [feet_in_contact[i] for i in self.leg_groups["group_b"]]
+                prev_a = [
+                    self.contact_history[-2][i] for i in self.leg_groups["group_a"]
+                ]
+                prev_b = [
+                    self.contact_history[-2][i] for i in self.leg_groups["group_b"]
+                ]
+
+                # Check for alternation
+                if (sum(current_a) > sum(prev_a) and sum(current_b) < sum(prev_b)) or (
+                    sum(current_a) < sum(prev_a) and sum(current_b) > sum(prev_b)
+                ):
+                    gait_quality += 0.5
+
+            gait_quality += (group_a_sync + group_b_sync) * 0.5
+
+        return contact_reward, gait_quality
 
     def _is_terminated(self):
         """Check if episode should terminate (robot fell or flipped)."""
         # Check height - robot normally stands at 0.134
         height = self.data.qpos[2]
-        if height < 0.04:  # More lenient height threshold
+        if height < 0.05:  # Slightly more lenient
             if self.debug:
                 print(f"Terminated: Low height {height:.3f}")
             return True
 
         # Check orientation (if robot flipped)
-        # xquat is in [x, y, z, w] order, so index 3 is w
         orientation = self.data.xquat[self.torso_id]
-        # However, it seems the robot's "upright" has w≈0, not w≈1
-        # So let's check if the robot has rotated significantly from initial
-        # The initial orientation seems to be (0.707, 0.707, 0, 0)
-        # This suggests a 90-degree rotation is the "normal" state
-
-        # Check if orientation has changed significantly from initial
-        # We'll use the magnitude of the first two components
-        orientation_norm = np.sqrt(orientation[0] ** 2 + orientation[1] ** 2)
-        if orientation_norm < 0.2:  # More lenient orientation check (was 0.3)
+        # Check if orientation has deviated too much from upright
+        target_orientation = np.array([0.707, 0.707, 0.0, 0.0])
+        orientation_error = np.sum((orientation - target_orientation) ** 2)
+        if orientation_error > 1.0:  # Significant deviation
             if self.debug:
                 print(
-                    f"Terminated: Bad orientation norm={orientation_norm:.3f}, quat=({orientation[0]:.3f}, {orientation[1]:.3f}, {orientation[2]:.3f}, {orientation[3]:.3f})"
+                    f"Terminated: Bad orientation error={orientation_error:.3f}, quat=({orientation[0]:.3f}, {orientation[1]:.3f}, {orientation[2]:.3f}, {orientation[3]:.3f})"
                 )
             return True
 
         # Check if robot has gone too far off course (sideways)
         y_position = abs(self.data.qpos[1])
-        if y_position > 10.0:  # More lenient lateral drift (was 5.0)
+        if y_position > 5.0:
             if self.debug:
                 print(f"Terminated: Lateral drift {y_position:.3f}")
             return True
@@ -443,103 +478,14 @@ class SpiderRobotEnv(MujocoEnv):
         return np.array([x, y, z])
 
 
-def make_env(xml_file, camera_name="bodycam"):
+def make_env(xml_file, debug=False):
     """Create a wrapped environment for parallel training."""
 
     def _init():
-        env = SpiderRobotEnv(xml_file, render_mode="rgb_array", camera_name=camera_name)
+        env = SpiderRobotEnv(
+            xml_file, render_mode="rgb_array", camera_name="bodycam", debug=debug
+        )
         env = Monitor(env)
         return env
 
     return _init
-
-
-def train_spider_robot(
-    xml_file,
-    total_timesteps=1_000_000,
-    record_video=True,  # Re-enable video recording
-    camera_name="bodycam",
-):
-    """Train the spider robot using PPO algorithm."""
-    env = DummyVecEnv([make_env(xml_file, camera_name=camera_name)])
-    env = VecNormalize(env, norm_obs=True, norm_reward=True, clip_obs=10.0)
-
-    # Video recording
-    if record_video:
-        env = VecVideoRecorder(
-            env,
-            video_folder="out/videos/",
-            record_video_trigger=lambda x: x % 25000 == 0,
-            video_length=1000,
-            name_prefix="spider-walk",
-        )
-
-    # Create PPO model with custom network architecture
-    model = PPO(
-        "MlpPolicy",
-        env,
-        learning_rate=3e-4,
-        n_steps=2048,
-        batch_size=64,
-        n_epochs=10,
-        gamma=0.99,
-        gae_lambda=0.95,
-        clip_range=0.2,
-        ent_coef=0.01,
-        verbose=1,
-        tensorboard_log="./out/tensorboard/",
-        policy_kwargs=dict(net_arch=dict(pi=[256, 256], vf=[256, 256])),
-    )
-
-    # Train the model
-    model.learn(total_timesteps=total_timesteps)
-
-    # Save final model
-    model.save("./out/spider_robot_final")
-    env.close()
-
-    return model
-
-
-def test_trained_model(xml_file, model_path, camera_name="bodycam"):
-    """Test a trained model with rendering."""
-    env = SpiderRobotEnv(xml_file, render_mode="human", camera_name=camera_name)
-    model = PPO.load(model_path)
-
-    obs, _ = env.reset()
-    total_reward = 0
-    steps = 0
-
-    while True:
-        action, _ = model.predict(obs, deterministic=True)
-        obs, reward, terminated, truncated, info = env.step(action)
-        total_reward += reward
-        steps += 1
-
-        env.render()
-
-        if terminated or truncated or steps > 1000:
-            print(
-                f"Episode finished: Total reward = {total_reward:.2f}, Steps = {steps}"
-            )
-            print(
-                f"Final position: x={info['x_position']:.2f}, height={info['height']:.2f}"
-            )
-            break
-
-    env.close()
-
-
-if __name__ == "__main__":
-    # Example usage
-    xml_file = "../robot/SpiderBot.xml"  # Path to your MuJoCo XML file
-
-    # Train the robot with video recording
-    print("Starting training with video recording...")
-    model = train_spider_robot(
-        xml_file, total_timesteps=1_000_000, record_video=True, camera_name="bodycam"
-    )
-
-    # Test the trained model
-    print("\nTesting trained model...")
-    test_trained_model(xml_file, "./out/spider_robot_final", camera_name="bodycam")
