@@ -7,20 +7,18 @@ import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
 from gymnasium.envs.mujoco.mujoco_env import MujocoEnv
-from gymnasium.utils import seeding
-import mujoco
-from stable_baselines3 import PPO, SAC
+from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import (
     DummyVecEnv,
-    SubprocVecEnv,
+    VecNormalize,
     VecVideoRecorder,
 )
 from stable_baselines3.common.callbacks import (
-    EvalCallback,
-    CheckpointCallback,
     BaseCallback,
 )
+from stable_baselines3.common.monitor import Monitor
 import os
+from stable_baselines3.common.evaluation import evaluate_policy
 
 
 class SpiderRobotEnv(MujocoEnv):
@@ -51,9 +49,9 @@ class SpiderRobotEnv(MujocoEnv):
         self.debug = debug  # Debug mode
 
         # Control parameters
-        self.max_torque = 6.0
-        self.position_gain = 5.0
-        self.velocity_gain = 0.3
+        self.max_torque = 15.0
+        self.position_gain = 20.0
+        self.velocity_gain = 1.0
 
         # Initialize MuJoCo environment
         observation_space = spaces.Box(
@@ -104,10 +102,8 @@ class SpiderRobotEnv(MujocoEnv):
         if self.debug:
             print(f"Initial robot height: {self.model.stat.center[2]:.3f}")
             print(f"Camera name: {self.camera_name}")
-            # Check initial orientation
-            temp_data = mujoco.MjData(self.model)
-            mujoco.mj_resetData(self.model, temp_data)
-            print(f"Initial orientation (quat): {temp_data.qpos[3:7]}")
+            # Print initial orientation using current data
+            print(f"Initial orientation (quat): {self.data.qpos[3:7]}")
 
         # Get actuator limits from the model
         self.actuator_limits = []
@@ -130,6 +126,15 @@ class SpiderRobotEnv(MujocoEnv):
             dtype=np.float32,
         )
 
+        # Debug: print joint limits for each leg
+        if self.debug:
+            print("Joint limits for each leg:")
+            for i in range(8):
+                leg_start = i * 3
+                print(
+                    f"Leg {i+1}: Hip {self.actuator_limits[leg_start]}, Femur {self.actuator_limits[leg_start+1]}, Tibia {self.actuator_limits[leg_start+2]}"
+                )
+
     def _get_obs_dim(self, xml_file):
         """Calculate observation dimension based on the model."""
         # The actual observation includes:
@@ -143,9 +148,22 @@ class SpiderRobotEnv(MujocoEnv):
 
     def step(self, action):
         """Execute one timestep of the environment dynamics."""
-        # Clip actions to actuator limits
-        if hasattr(self.action_space, "low") and hasattr(self.action_space, "high"):
+        if isinstance(self.action_space, gym.spaces.Box):
             action = np.clip(action, self.action_space.low, self.action_space.high)
+        else:
+            action = action  # or handle other space types if needed
+
+        # Debug: print action statistics occasionally
+        if self.debug and self.steps_taken % 100 == 0:
+            print(
+                f"Step {self.steps_taken}: action range [{action.min():.3f}, {action.max():.3f}], mean {action.mean():.3f}"
+            )
+            # Print individual leg actions
+            for i in range(8):
+                leg_start = i * 3
+                print(
+                    f"  Leg {i+1}: Hip {action[leg_start]:.3f}, Femur {action[leg_start+1]:.3f}, Tibia {action[leg_start+2]:.3f}"
+                )
 
         # Convert position targets to torques using PD control
         current_positions = self.data.qpos[7:31]  # Skip root joint (first 7 values)
@@ -159,6 +177,18 @@ class SpiderRobotEnv(MujocoEnv):
 
         # Clip torques to maximum
         torques = np.clip(torques, -self.max_torque, self.max_torque)
+
+        # Debug: print torque statistics occasionally
+        if self.debug and self.steps_taken % 100 == 0:
+            print(
+                f"Step {self.steps_taken}: torque range [{torques.min():.3f}, {torques.max():.3f}], mean {torques.mean():.3f}"
+            )
+            # Print individual leg torques
+            for i in range(8):
+                leg_start = i * 3
+                print(
+                    f"  Leg {i+1}: Hip {torques[leg_start]:.3f}, Femur {torques[leg_start+1]:.3f}, Tibia {torques[leg_start+2]:.3f}"
+                )
 
         # Apply torques
         self.do_simulation(torques, self.frame_skip)
@@ -180,13 +210,9 @@ class SpiderRobotEnv(MujocoEnv):
         qpos = self.init_qpos.copy()
         qvel = self.init_qvel.copy()
 
-        # Add very small random perturbations for robustness (reduced from 0.02 to 0.005)
-        qpos[7:] += self.np_random.uniform(
-            low=-0.005, high=0.005, size=self.model.nq - 7
-        )
-        qvel[6:] += self.np_random.uniform(
-            low=-0.005, high=0.005, size=self.model.nv - 6
-        )
+        # Add very small random perturbations for robustness
+        qpos[7:] += self.np_random.uniform(low=-0.01, high=0.01, size=self.model.nq - 7)
+        qvel[6:] += self.np_random.uniform(low=-0.01, high=0.01, size=self.model.nv - 6)
 
         self.set_state(qpos, qvel)
 
@@ -197,8 +223,7 @@ class SpiderRobotEnv(MujocoEnv):
         # Set target height based on initial standing position
         if not hasattr(self, "target_height"):
             self.target_height = self.data.qpos[2]
-            if self.debug:
-                print(f"Set target height to: {self.target_height:.3f}")
+            print(f"Set target height to: {self.target_height:.3f}")
 
         # Debug: print initial state
         if self.debug:
@@ -207,6 +232,13 @@ class SpiderRobotEnv(MujocoEnv):
             print(
                 f"Reset - orientation (x,y,z,w): ({orientation[0]:.3f}, {orientation[1]:.3f}, {orientation[2]:.3f}, {orientation[3]:.3f})"
             )
+            # Print initial joint positions for each leg
+            print("Initial joint positions:")
+            for i in range(8):
+                leg_start = 7 + i * 3
+                print(
+                    f"Leg {i+1}: Hip {qpos[leg_start]:.3f}, Femur {qpos[leg_start+1]:.3f}, Tibia {qpos[leg_start+2]:.3f}"
+                )
 
         return self._get_obs()
 
@@ -263,58 +295,60 @@ class SpiderRobotEnv(MujocoEnv):
 
     def _compute_reward(self):
         """Compute reward based on forward progress, stability, and efficiency."""
-        # Forward progress reward
+        # Forward progress reward - make this much stronger
         current_x = self.data.qpos[0]
         forward_reward = (current_x - self.previous_x_position) / self.dt
         self.previous_x_position = current_x
 
-        # Clip forward reward to prevent exploitation
-        forward_reward = np.clip(forward_reward, -2.0, 2.0)
+        # Clip forward reward to prevent exploitation but allow more movement
+        forward_reward = np.clip(
+            forward_reward, -1.0, 5.0
+        )  # Allow more positive reward
 
-        # Height reward (encourage maintaining height) - make this much stronger
-        # Target height should be determined from actual robot standing height
+        # Height reward (encourage maintaining height) - much stronger
         current_height = self.data.qpos[2]
-        # Use the initial height as target (will be set properly after first reset)
         if not hasattr(self, "target_height"):
             self.target_height = current_height
 
-        # Stronger height reward with exponential penalty for deviation
+        # Strong height reward to prevent collapsing
         height_error = abs(current_height - self.target_height)
-        height_reward = 5.0 * np.exp(
-            -20 * height_error**2
+        height_reward = 10.0 * np.exp(
+            -5 * height_error**2
         )  # Much stronger height reward
 
-        # Orientation reward (stay close to initial orientation)
+        # Orientation reward (stay close to initial orientation) - stronger
         orientation = self.data.xquat[self.torso_id]
-        # The robot's normal orientation seems to be (0.707, 0.707, 0, 0)
-        # Reward for maintaining this orientation
         target_orientation = np.array([0.707, 0.707, 0.0, 0.0])
         orientation_diff = np.sum((orientation - target_orientation) ** 2)
         upright_reward = 3.0 * np.exp(
-            -5 * orientation_diff
+            -3 * orientation_diff
         )  # Stronger orientation reward
 
-        # Lateral drift penalty (stay on course)
-        lateral_penalty = 0.5 * abs(self.data.qpos[1])
+        # Lateral drift penalty (stay on course) - moderate penalty
+        lateral_penalty = 0.2 * abs(self.data.qpos[1])  # Moderate penalty
 
-        # Energy efficiency penalty (reduced to allow more exploration)
-        energy_penalty = 0.0001 * np.sum(np.square(self.data.ctrl))
+        # Energy efficiency penalty - reduce to allow more movement
+        energy_penalty = 0.00001 * np.sum(
+            np.square(self.data.ctrl)
+        )  # Very small energy penalty
 
         # Foot contact reward (encourage alternating gait)
         contact_pattern_reward = self._compute_gait_reward()
 
-        # Smoothness reward (penalize jerky movements) - reduced penalty
-        smoothness_penalty = 0.001 * np.sum(np.square(self.data.qvel[6:]))
+        # Smoothness reward (penalize jerky movements) - reduce penalty
+        smoothness_penalty = 0.0001 * np.sum(
+            np.square(self.data.qvel[6:])
+        )  # Small smoothness penalty
 
-        # Survival bonus (encourage staying alive) - increased
+        # Survival bonus (encourage staying alive)
         survival_bonus = 0.5
 
-        # Total reward - prioritize stability over movement initially
+        # Total reward - prioritize stability and movement
         reward = (
-            1.0 * forward_reward  # Reduced forward reward
-            + height_reward  # Strong height reward
+            2.0 * forward_reward  # Strong forward reward
+            + 3.0 * height_reward  # Very strong height reward
             + upright_reward  # Strong orientation reward
-            + 0.5 * contact_pattern_reward  # Moderate contact reward
+            + 2.0 * contact_pattern_reward  # Strong contact reward
             + survival_bonus
             - energy_penalty
             - smoothness_penalty
@@ -345,7 +379,7 @@ class SpiderRobotEnv(MujocoEnv):
         """Check if episode should terminate (robot fell or flipped)."""
         # Check height - robot normally stands at 0.134
         height = self.data.qpos[2]
-        if height < 0.08:  # More lenient height threshold (was 0.10)
+        if height < 0.04:  # More lenient height threshold
             if self.debug:
                 print(f"Terminated: Low height {height:.3f}")
             return True
@@ -361,7 +395,7 @@ class SpiderRobotEnv(MujocoEnv):
         # Check if orientation has changed significantly from initial
         # We'll use the magnitude of the first two components
         orientation_norm = np.sqrt(orientation[0] ** 2 + orientation[1] ** 2)
-        if orientation_norm < 0.3:  # More lenient orientation check (was 0.5)
+        if orientation_norm < 0.2:  # More lenient orientation check (was 0.3)
             if self.debug:
                 print(
                     f"Terminated: Bad orientation norm={orientation_norm:.3f}, quat=({orientation[0]:.3f}, {orientation[1]:.3f}, {orientation[2]:.3f}, {orientation[3]:.3f})"
@@ -370,7 +404,7 @@ class SpiderRobotEnv(MujocoEnv):
 
         # Check if robot has gone too far off course (sideways)
         y_position = abs(self.data.qpos[1])
-        if y_position > 5.0:  # Terminate if drifted too far sideways
+        if y_position > 10.0:  # More lenient lateral drift (was 5.0)
             if self.debug:
                 print(f"Terminated: Lateral drift {y_position:.3f}")
             return True
@@ -430,7 +464,7 @@ class VideoRecorderCallback(BaseCallback):
         self.video_length = video_length
         self.episode_count = 0
 
-        # Create video folder
+        # Create video folder robustly
         os.makedirs(video_folder, exist_ok=True)
 
     def _on_step(self) -> bool:
@@ -442,68 +476,73 @@ class VideoRecorderCallback(BaseCallback):
 
     def _record_video(self, video_name):
         """Record a video of the agent."""
-        print(f"Recording video: {video_name}")
+        try:
+            print(f"Recording video: {video_name}")
 
-        # Wrap environment for video recording
-        video_path = os.path.join(self.video_folder, video_name)
-        vec_env = DummyVecEnv([lambda: self.eval_env])
-        vec_env = VecVideoRecorder(
-            vec_env,
-            video_path,
-            record_video_trigger=lambda x: x == 0,
-            video_length=self.video_length,
-            name_prefix=video_name,
-        )
-
-        obs = vec_env.reset()
-        episode_rewards = []
-        episode_lengths = []
-        current_reward = 0
-        current_length = 0
-
-        for step in range(self.video_length):
-            # Use the trained policy
-            action, _ = self.model.predict(
-                obs[0] if isinstance(obs, tuple) else obs, deterministic=True
+            # Wrap environment for video recording
+            video_path = os.path.join(self.video_folder, video_name)
+            vec_env = DummyVecEnv([lambda: self.eval_env])
+            vec_env = VecVideoRecorder(
+                vec_env,
+                video_path,
+                record_video_trigger=lambda x: x == 0,
+                video_length=self.video_length,
+                name_prefix=video_name,
             )
-            obs, reward, done, info = vec_env.step(action)
-            current_reward += reward[0]
-            current_length += 1
 
-            if done.any():
-                episode_rewards.append(current_reward)
-                episode_lengths.append(current_length)
-                current_reward = 0
-                current_length = 0
-                obs = vec_env.reset()
+            obs = vec_env.reset()
+            episode_rewards = []
+            episode_lengths = []
+            current_reward = 0
+            current_length = 0
 
-                # Log reset info
-                if len(episode_rewards) <= 3:  # Log first few resets
-                    print(f"  Episode {len(episode_rewards)} ended at step {step}")
-                    if info and len(info) > 0:
-                        print(f"    Final height: {info[0].get('height', 'N/A'):.3f}")
-                        print(
-                            f"    Final x_position: {info[0].get('x_position', 'N/A'):.3f}"
-                        )
+            for step in range(self.video_length):
+                # Use the trained policy
+                action, _ = self.model.predict(
+                    obs[0] if isinstance(obs, tuple) else obs, deterministic=True
+                )
+                obs, reward, done, info = vec_env.step(action)
+                current_reward += reward[0]
+                current_length += 1
 
-        # Log video recording summary
-        if episode_rewards:
-            print(f"  Video summary: {len(episode_rewards)} episodes")
-            print(f"  Average reward: {np.mean(episode_rewards):.2f}")
-            print(f"  Average length: {np.mean(episode_lengths):.1f} steps")
+                if done.any():
+                    episode_rewards.append(current_reward)
+                    episode_lengths.append(current_length)
+                    current_reward = 0
+                    current_length = 0
+                    obs = vec_env.reset()
 
-        # Clean up
-        vec_env.close()
+                    # Log reset info
+                    if len(episode_rewards) <= 3:  # Log first few resets
+                        print(f"  Episode {len(episode_rewards)} ended at step {step}")
+                        if info and len(info) > 0:
+                            print(
+                                f"    Final height: {info[0].get('height', 'N/A'):.3f}"
+                            )
+                            print(
+                                f"    Final x_position: {info[0].get('x_position', 'N/A'):.3f}"
+                            )
+
+            # Log video recording summary
+            if episode_rewards:
+                print(f"  Video summary: {len(episode_rewards)} episodes")
+                print(f"  Average reward: {np.mean(episode_rewards):.2f}")
+                print(f"  Average length: {np.mean(episode_lengths):.1f} steps")
+
+            # Clean up
+            vec_env.close()
+
+        except Exception as e:
+            print(f"Error recording video {video_name}: {e}")
+            # Continue training even if video recording fails
 
 
-def make_env(xml_file, rank, seed=0, camera_name="bodycam"):
+def make_env(xml_file, camera_name="bodycam"):
     """Create a wrapped environment for parallel training."""
 
     def _init():
-        env = SpiderRobotEnv(
-            xml_file, render_mode=None, camera_name=camera_name, debug=True
-        )
-        env.reset(seed=seed + rank)
+        env = SpiderRobotEnv(xml_file, render_mode="rgb_array", camera_name=camera_name)
+        env = Monitor(env)
         return env
 
     return _init
@@ -512,57 +551,22 @@ def make_env(xml_file, rank, seed=0, camera_name="bodycam"):
 def train_spider_robot(
     xml_file,
     total_timesteps=1_000_000,
-    n_envs=4,
-    record_video=True,
+    record_video=True,  # Re-enable video recording
     camera_name="bodycam",
 ):
     """Train the spider robot using PPO algorithm."""
-    # Create parallel environments
-    env = SubprocVecEnv(
-        [make_env(xml_file, i, camera_name=camera_name) for i in range(n_envs)]
-    )
+    env = DummyVecEnv([make_env(xml_file, camera_name=camera_name)])
+    env = VecNormalize(env, norm_obs=True, norm_reward=True, clip_obs=10.0)
 
-    # Create evaluation environment
-    eval_env = SpiderRobotEnv(
-        xml_file, render_mode=None, camera_name=camera_name, debug=True
-    )
-
-    # Setup callbacks
-    callbacks = []
-
-    # Checkpoint callback
-    checkpoint_callback = CheckpointCallback(
-        save_freq=10000,
-        save_path="./out/checkpoints/",
-        name_prefix="spider_robot_model",
-    )
-    callbacks.append(checkpoint_callback)
-
-    # Evaluation callback
-    eval_callback = EvalCallback(
-        eval_env,
-        best_model_save_path="./out/best_model/",
-        log_path="./out/logs/",
-        eval_freq=5000,
-        deterministic=True,
-        render=False,
-    )
-    callbacks.append(eval_callback)
-
-    # Video recording callback
+    # Video recording
     if record_video:
-        # Create a separate environment for video recording
-        video_env = SpiderRobotEnv(
-            xml_file, render_mode="rgb_array", camera_name=camera_name
+        env = VecVideoRecorder(
+            env,
+            video_folder="out/videos/",
+            record_video_trigger=lambda x: x % 10000 == 0,
+            video_length=1000,
+            name_prefix="spider-walk",
         )
-        video_callback = VideoRecorderCallback(
-            video_env,
-            render_freq=25000,  # Record video every 25k steps
-            n_eval_episodes=1,
-            video_folder="./out/videos/",
-            video_length=1000,  # 1000 steps per video
-        )
-        callbacks.append(video_callback)
 
     # Create PPO model with custom network architecture
     model = PPO(
@@ -578,18 +582,15 @@ def train_spider_robot(
         ent_coef=0.01,
         verbose=1,
         tensorboard_log="./out/tensorboard/",
-        policy_kwargs=dict(net_arch=[dict(pi=[256, 256], vf=[256, 256])]),
+        policy_kwargs=dict(net_arch=dict(pi=[256, 256], vf=[256, 256])),
     )
 
     # Train the model
-    model.learn(total_timesteps=total_timesteps, callback=callbacks)
+    model.learn(total_timesteps=total_timesteps)
 
     # Save final model
     model.save("./out/spider_robot_final")
-
-    # Close video environment if used
-    if record_video:
-        video_env.close()
+    env.close()
 
     return model
 

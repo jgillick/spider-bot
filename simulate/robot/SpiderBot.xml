@@ -108,59 +108,6 @@
       <site name="imu_site" pos="0.24115 0 0" size="0.01" />
       <geom name="Body_geom" type="mesh" mesh="Body" pos="0 0 0" euler="0 0 0" />
       <inertial mass="2.567558330651746" pos="0.2412000000000002 1.7296168291426336e-18 0.004854024896265552" fullinertia="0.01262901309898984 0.05067644480183947 0.06301756012942178 1.0711431741583518e-18 2.168404344971009e-18 -1.1167056214726778e-19" />
-      <body name="Leg2_Hip-actuator-assembly_Body-Bracket" pos="0.39247899757722804 0.17001612341601535 -0.02862177809359275" euler="-1.5707963267948966 -2.078232164254877e-46 -1.5707963267948968">
-        <geom name="Leg2_Hip-actuator-assembly_Body-Bracket_geom" type="mesh" mesh="Leg2_Hip-actuator-assembly_Body-Bracket" pos="0 0 0" euler="0 0 0" />
-        <inertial mass="0.2737560132535958" pos="0.0467809092818492 -0.03304651659344973 -0.0824789745791283" fullinertia="0.00020548953826175976 0.00030785752435441745 0.00011826659575640188 9.18527627607933e-08 -3.8625346841162e-10 -6.214987796320564e-11" />
-        <body name="Leg2_Hip-actuator-assembly_Motor" pos="0.052366123416015216 -0.013371778093595157 -0.08247899241251187" euler="5.669937756276022e-31 -1.061584664946281e-30 1.5707963267948966">
-          <geom name="Leg2_Hip-actuator-assembly_Motor_geom" type="mesh" mesh="Leg2_Hip-actuator-assembly_Motor" pos="0 0 0" euler="0 0 0" />
-          <inertial mass="0.3028214126901055" pos="0.013799107411403501 0.0002445449923600619 0.0001665011404277553" fullinertia="0.00023174021267842747 0.0001381522821278814 0.00014141746037829648 1.799485937689758e-07 1.0525676781242192e-06 5.361526010486485e-08" />
-          <body name="Leg2_Hip-actuator-assembly_Hip-Bracket" pos="0.012250000000002443 0.09499999999999954 0.04000000000000238" euler="-1.5707963267948966 1.5707963267948966 0">
-            <joint name="Leg2_Hip" type="hinge" axis="1.044698303301379e-30 -1.0000000000000029 2.0382828214422557e-16" pos="0.040000005164718654 -0.017249999999999977 -0.09500000000000065" range="-0.7 1.2" limited="true" />
-            <geom name="Leg2_Hip-actuator-assembly_Hip-Bracket_geom" type="mesh" mesh="Leg2_Hip-actuator-assembly_Hip-Bracket" pos="0 0 0" euler="0 0 0" />
-            <inertial mass="0.05792781115933178" pos="0.04124378816178259 -0.009686640073078253 -0.05405434309768333" fullinertia="9.858380629719369e-05 0.00010067920230328255 5.264746465636887e-05 4.05441780977603e-06 -1.4243321119432946e-06 1.5317549933663755e-05" />
-            <body name="Leg2_Femur-actuator-assembly_Motor" pos="0.0 -2.886579864025407e-16 -1.7763568394002506e-16" euler="-1.4835298641951802 1.2301127401794757e-16 -2.848511181556418e-20">
-              <geom name="Leg2_Femur-actuator-assembly_Motor_geom" type="mesh" mesh="Leg2_Femur-actuator-assembly_Motor" pos="0 0 0" euler="0 0 0" />
-              <inertial mass="0.3028214126901055" pos="0.013799107411403387 0.0002445449923600575 0.00016650114042775343" fullinertia="0.00023174021267842216 0.00013815228212787418 0.00014141746037829616 1.7994859377298617e-07 1.0525676781246802e-06 5.361526010477002e-08" />
-              <body name="Leg2_Femur-actuator-assembly_Femur" pos="0.0 1.0658141036401502e-16 1.1102230246251566e-18" euler="1.4835298641951802 -9.213561862185276e-18 -1.0465783018494714e-16">
-                <joint name="Leg2_Femur" type="hinge" axis="1.0000000000000022 -2.848544170504046e-20 -5.3875665748200195e-17" pos="0.029500005164718634 3.6429108963445334e-16 1.3718854566032069e-16" range="-0.785398 1.832596" limited="true" />
-                <geom name="Leg2_Femur-actuator-assembly_Femur_geom" type="mesh" mesh="Leg2_Femur-actuator-assembly_Femur" pos="0 0 0" euler="0 0 0" />
-                <inertial mass="0.06743801039317165" pos="0.039161077868577525 0.03222905940208431 0.02039616263196659" fullinertia="0.0002477420639114137 9.247070534669906e-05 0.00016401711823831917 -1.8168414869322382e-06 -1.1512909002652635e-06 -8.763800429865386e-05" />
-                <body name="Leg2_Tibia_Tibia-Full" pos="0.0 0.01965999558828654 0.018992913719242638" euler="4.930380657631325e-32 4.9303806524363403e-32 -2.848568968151033e-20">
-                  <joint name="Leg2_Tibia" type="hinge" axis="-1.0000000000000022 -2.4799724658473147e-25 5.3875665748200146e-17" pos="0.033000005164718654 0.10761700441171412 0.07292908628075774" range="-1.047198 1.570796" limited="true" />
-                  <geom name="Leg2_Tibia_Tibia-Full_geom" type="mesh" mesh="Leg2_Tibia_Tibia-Full" pos="0 0 0" euler="0 0 0" />
-                  <inertial mass="0.5325920058039666" pos="0.03903387077261382 0.0025357289803729006 0.157455047889404" fullinertia="0.003029413276509685 0.0008274226390222517 0.002218887888180408 4.0867539756694676e-05 -2.9640896882607377e-05 0.0012309838645819659" />
-                  <body name="Leg2_Tibia_Tibia-Partial" pos="0.0 3.552713678800501e-17 7.105427357601002e-17" euler="2.4651903288156624e-32 -2.1629170918652414e-46 2.4797514612865137e-25">
-                    <geom name="Leg2_Tibia_Tibia-Partial_geom" type="mesh" mesh="Leg2_Tibia_Tibia-Partial" pos="0 0 0" euler="0 0 0" />
-                    <inertial mass="0.04268806780866727" pos="0.04302588971407915 0.09756567365453613 0.08371692150453562" fullinertia="3.765972186276829e-05 1.95706128526108e-05 1.837207381461345e-05 3.177520329347394e-07 -3.0109774704859846e-07 1.513713371521342e-05" />
-                  </body>
-                  <site name="Leg2_Tibia_bad_touch1_site" pos="0.04 0.048 0.148" size="0.005" type="sphere" rgba="1 0 0 1" />
-                  <geom name="Leg2_Tibia_bad_touch1_site" pos="0.04 0.048 0.148" size="0.005" type="sphere" rgba="1 0 0 1" />
-                  <site name="Leg2_Tibia_bad_touch2_site" pos="0.04 -0.05 0.195" size="0.005" type="sphere" rgba="1 0 0 1" />
-                  <geom name="Leg2_Tibia_bad_touch2_site" pos="0.04 -0.05 0.195" size="0.005" type="sphere" rgba="1 0 0 1" />
-                  <site name="Leg2_Tibia_foot_site" pos="0.04 -0.1195 0.2018" size="0.007 0.005" type="cylinder" rgba="0 1 0 1" euler="0 1.5708 0" />
-                  <geom name="Leg2_Tibia_foot_site" pos="0.04 -0.1195 0.2018" size="0.007 0.005" type="cylinder" rgba="0 1 0 1" euler="0 1.5708 0" />
-                </body>
-                <body name="Leg2_Knee-actuator-assembly_Motor" pos="0.07650000000000365 -3.552713678800501e-17 0.0" euler="-0.0820304748437336 -1.3034353007344026e-16 3.141592653589792">
-                  <geom name="Leg2_Knee-actuator-assembly_Motor_geom" type="mesh" mesh="Leg2_Knee-actuator-assembly_Motor" pos="0 0 0" euler="0 0 0" />
-                  <inertial mass="0.3028214126901055" pos="0.013799107411403487 0.0002445449923600579 0.00016650114042775625" fullinertia="0.00023174021267842666 0.00013815228212788456 0.00014141746037830012 1.7994859376933035e-07 1.05256767812675e-06 5.361526010466329e-08" />
-                  <body name="Leg2_Knee-actuator-assembly_Knee-motor-bearings" pos="0.1189449323699726 -0.013337526072353889 -0.040499725337706176" euler="-1.5707963267948981 1.178097245096173 -1.5707963267948972">
-                    <geom name="Leg2_Knee-actuator-assembly_Knee-motor-bearings_geom" type="mesh" mesh="Leg2_Knee-actuator-assembly_Knee-motor-bearings" pos="0 0 0" euler="0 0 0" />
-                    <inertial mass="0.009270686219329867" pos="-0.042575332613045816 -0.0031217780936082136 -0.12080177571379899" fullinertia="6.408471849585739e-06 6.408471849655205e-06 1.275054794519867e-05 -3.652406068560543e-18 2.4644558315639314e-20 1.815128133839956e-19" />
-                  </body>
-                  <body name="Leg2_Knee-actuator-assembly_KneeMotorPulley" pos="0.04100000000000236 -0.033041575943744336 -0.019714907448651717" euler="1.5707963267948966 5.3805566485503884e-20 -3.141592653589793">
-                    <geom name="Leg2_Knee-actuator-assembly_KneeMotorPulley_geom" type="mesh" mesh="Leg2_Knee-actuator-assembly_KneeMotorPulley" pos="0 0 0" euler="0 0 0" />
-                    <inertial mass="0.08135375942547957" pos="0.005405704726782288 0.019714907448618885 0.033041575943703556" fullinertia="1.2462648308958631e-05 7.261200035422366e-06 7.261200035850195e-06 -2.9661331104867094e-18 -4.332791780854766e-18 -2.6729479903325054e-16" />
-                  </body>
-                </body>
-              </body>
-            </body>
-            <body name="Leg2_Knee-actuator-assembly_End-Bearing-Holder" pos="-0.04244493236996938 -0.0031217780935925135 -0.04257533261304136" euler="3.141592653589793 1.5707963267948966 0">
-              <geom name="Leg2_Knee-actuator-assembly_End-Bearing-Holder_geom" type="mesh" mesh="Leg2_Knee-actuator-assembly_End-Bearing-Holder" pos="0 0 0" euler="0 0 0" />
-              <inertial mass="0.057169625310268736" pos="-0.04109062630262349 -0.001108467278132863 -0.12254015277022076" fullinertia="5.1961941766096706e-05 5.134763459656156e-05 0.00010281021554763234 -9.985502905468548e-07 -1.0829253630113236e-08 -1.1711751146800545e-08" />
-            </body>
-          </body>
-        </body>
-      </body>
       <body name="Leg1_Hip-actuator-assembly_Body-Bracket" pos="0.5300789975772281 0.10561612341601537 -0.02862177809359275" euler="-1.5707963267948966 -2.078232164254877e-46 -1.5707963267948968">
         <geom name="Leg1_Hip-actuator-assembly_Body-Bracket_geom" type="mesh" mesh="Leg1_Hip-actuator-assembly_Body-Bracket" pos="0 0 0" euler="0 0 0" />
         <inertial mass="0.2737560132535958" pos="0.046780909281849185 -0.03304651659344973 -0.0824789745791283" fullinertia="0.00020548953826175976 0.0003078575243544244 0.00011826659575640263 9.18527627607933e-08 -3.8625346667689653e-10 -6.214987801741575e-11" />
@@ -210,6 +157,59 @@
             <body name="Leg1_Knee-actuator-assembly_End-Bearing-Holder" pos="-0.04244493236996938 -0.0031217780935925135 -0.042575332613041326" euler="3.141592653589793 1.5707963267948966 0">
               <geom name="Leg1_Knee-actuator-assembly_End-Bearing-Holder_geom" type="mesh" mesh="Leg1_Knee-actuator-assembly_End-Bearing-Holder" pos="0 0 0" euler="0 0 0" />
               <inertial mass="0.057169625310268736" pos="-0.04109062630262349 -0.001108467278132863 -0.12254015277022076" fullinertia="5.196194176609584e-05 5.1347634596559825e-05 0.00010281021554763191 -9.985502905468006e-07 -1.0829253630980598e-08 -1.1711751146800545e-08" />
+            </body>
+          </body>
+        </body>
+      </body>
+      <body name="Leg2_Hip-actuator-assembly_Body-Bracket" pos="0.39247899757722804 0.17001612341601535 -0.02862177809359275" euler="-1.5707963267948966 -2.078232164254877e-46 -1.5707963267948968">
+        <geom name="Leg2_Hip-actuator-assembly_Body-Bracket_geom" type="mesh" mesh="Leg2_Hip-actuator-assembly_Body-Bracket" pos="0 0 0" euler="0 0 0" />
+        <inertial mass="0.2737560132535958" pos="0.0467809092818492 -0.03304651659344973 -0.0824789745791283" fullinertia="0.00020548953826175976 0.00030785752435441745 0.00011826659575640188 9.18527627607933e-08 -3.8625346841162e-10 -6.214987796320564e-11" />
+        <body name="Leg2_Hip-actuator-assembly_Motor" pos="0.052366123416015216 -0.013371778093595157 -0.08247899241251187" euler="5.669937756276022e-31 -1.061584664946281e-30 1.5707963267948966">
+          <geom name="Leg2_Hip-actuator-assembly_Motor_geom" type="mesh" mesh="Leg2_Hip-actuator-assembly_Motor" pos="0 0 0" euler="0 0 0" />
+          <inertial mass="0.3028214126901055" pos="0.013799107411403501 0.0002445449923600619 0.0001665011404277553" fullinertia="0.00023174021267842747 0.0001381522821278814 0.00014141746037829648 1.799485937689758e-07 1.0525676781242192e-06 5.361526010486485e-08" />
+          <body name="Leg2_Hip-actuator-assembly_Hip-Bracket" pos="0.012250000000002443 0.09499999999999954 0.04000000000000238" euler="-1.5707963267948966 1.5707963267948966 0">
+            <joint name="Leg2_Hip" type="hinge" axis="1.044698303301379e-30 -1.0000000000000029 2.0382828214422557e-16" pos="0.040000005164718654 -0.017249999999999977 -0.09500000000000065" range="-0.7 1.2" limited="true" />
+            <geom name="Leg2_Hip-actuator-assembly_Hip-Bracket_geom" type="mesh" mesh="Leg2_Hip-actuator-assembly_Hip-Bracket" pos="0 0 0" euler="0 0 0" />
+            <inertial mass="0.05792781115933178" pos="0.04124378816178259 -0.009686640073078253 -0.05405434309768333" fullinertia="9.858380629719369e-05 0.00010067920230328255 5.264746465636887e-05 4.05441780977603e-06 -1.4243321119432946e-06 1.5317549933663755e-05" />
+            <body name="Leg2_Femur-actuator-assembly_Motor" pos="0.0 -2.886579864025407e-16 -1.7763568394002506e-16" euler="-1.4835298641951802 1.2301127401794757e-16 -2.848511181556418e-20">
+              <geom name="Leg2_Femur-actuator-assembly_Motor_geom" type="mesh" mesh="Leg2_Femur-actuator-assembly_Motor" pos="0 0 0" euler="0 0 0" />
+              <inertial mass="0.3028214126901055" pos="0.013799107411403387 0.0002445449923600575 0.00016650114042775343" fullinertia="0.00023174021267842216 0.00013815228212787418 0.00014141746037829616 1.7994859377298617e-07 1.0525676781246802e-06 5.361526010477002e-08" />
+              <body name="Leg2_Femur-actuator-assembly_Femur" pos="0.0 1.0658141036401502e-16 1.1102230246251566e-18" euler="1.4835298641951802 -9.213561862185276e-18 -1.0465783018494714e-16">
+                <joint name="Leg2_Femur" type="hinge" axis="1.0000000000000022 -2.848544170504046e-20 -5.3875665748200195e-17" pos="0.029500005164718634 3.6429108963445334e-16 1.3718854566032069e-16" range="-0.785398 1.832596" limited="true" />
+                <geom name="Leg2_Femur-actuator-assembly_Femur_geom" type="mesh" mesh="Leg2_Femur-actuator-assembly_Femur" pos="0 0 0" euler="0 0 0" />
+                <inertial mass="0.06743801039317165" pos="0.039161077868577525 0.03222905940208431 0.02039616263196659" fullinertia="0.0002477420639114137 9.247070534669906e-05 0.00016401711823831917 -1.8168414869322382e-06 -1.1512909002652635e-06 -8.763800429865386e-05" />
+                <body name="Leg2_Tibia_Tibia-Full" pos="0.0 0.01965999558828654 0.018992913719242638" euler="4.930380657631325e-32 4.9303806524363403e-32 -2.848568968151033e-20">
+                  <joint name="Leg2_Tibia" type="hinge" axis="-1.0000000000000022 -2.4799724658473147e-25 5.3875665748200146e-17" pos="0.033000005164718654 0.10761700441171412 0.07292908628075774" range="-1.047198 1.570796" limited="true" />
+                  <geom name="Leg2_Tibia_Tibia-Full_geom" type="mesh" mesh="Leg2_Tibia_Tibia-Full" pos="0 0 0" euler="0 0 0" />
+                  <inertial mass="0.5325920058039666" pos="0.03903387077261382 0.0025357289803729006 0.157455047889404" fullinertia="0.003029413276509685 0.0008274226390222517 0.002218887888180408 4.0867539756694676e-05 -2.9640896882607377e-05 0.0012309838645819659" />
+                  <body name="Leg2_Tibia_Tibia-Partial" pos="0.0 3.552713678800501e-17 7.105427357601002e-17" euler="2.4651903288156624e-32 -2.1629170918652414e-46 2.4797514612865137e-25">
+                    <geom name="Leg2_Tibia_Tibia-Partial_geom" type="mesh" mesh="Leg2_Tibia_Tibia-Partial" pos="0 0 0" euler="0 0 0" />
+                    <inertial mass="0.04268806780866727" pos="0.04302588971407915 0.09756567365453613 0.08371692150453562" fullinertia="3.765972186276829e-05 1.95706128526108e-05 1.837207381461345e-05 3.177520329347394e-07 -3.0109774704859846e-07 1.513713371521342e-05" />
+                  </body>
+                  <site name="Leg2_Tibia_bad_touch1_site" pos="0.04 0.048 0.148" size="0.005" type="sphere" rgba="1 0 0 1" />
+                  <geom name="Leg2_Tibia_bad_touch1_site" pos="0.04 0.048 0.148" size="0.005" type="sphere" rgba="1 0 0 1" />
+                  <site name="Leg2_Tibia_bad_touch2_site" pos="0.04 -0.05 0.195" size="0.005" type="sphere" rgba="1 0 0 1" />
+                  <geom name="Leg2_Tibia_bad_touch2_site" pos="0.04 -0.05 0.195" size="0.005" type="sphere" rgba="1 0 0 1" />
+                  <site name="Leg2_Tibia_foot_site" pos="0.04 -0.1195 0.2018" size="0.007 0.005" type="cylinder" rgba="0 1 0 1" euler="0 1.5708 0" />
+                  <geom name="Leg2_Tibia_foot_site" pos="0.04 -0.1195 0.2018" size="0.007 0.005" type="cylinder" rgba="0 1 0 1" euler="0 1.5708 0" />
+                </body>
+                <body name="Leg2_Knee-actuator-assembly_Motor" pos="0.07650000000000365 -3.552713678800501e-17 0.0" euler="-0.0820304748437336 -1.3034353007344026e-16 3.141592653589792">
+                  <geom name="Leg2_Knee-actuator-assembly_Motor_geom" type="mesh" mesh="Leg2_Knee-actuator-assembly_Motor" pos="0 0 0" euler="0 0 0" />
+                  <inertial mass="0.3028214126901055" pos="0.013799107411403487 0.0002445449923600579 0.00016650114042775625" fullinertia="0.00023174021267842666 0.00013815228212788456 0.00014141746037830012 1.7994859376933035e-07 1.05256767812675e-06 5.361526010466329e-08" />
+                  <body name="Leg2_Knee-actuator-assembly_Knee-motor-bearings" pos="0.1189449323699726 -0.013337526072353889 -0.040499725337706176" euler="-1.5707963267948981 1.178097245096173 -1.5707963267948972">
+                    <geom name="Leg2_Knee-actuator-assembly_Knee-motor-bearings_geom" type="mesh" mesh="Leg2_Knee-actuator-assembly_Knee-motor-bearings" pos="0 0 0" euler="0 0 0" />
+                    <inertial mass="0.009270686219329867" pos="-0.042575332613045816 -0.0031217780936082136 -0.12080177571379899" fullinertia="6.408471849585739e-06 6.408471849655205e-06 1.275054794519867e-05 -3.652406068560543e-18 2.4644558315639314e-20 1.815128133839956e-19" />
+                  </body>
+                  <body name="Leg2_Knee-actuator-assembly_KneeMotorPulley" pos="0.04100000000000236 -0.033041575943744336 -0.019714907448651717" euler="1.5707963267948966 5.3805566485503884e-20 -3.141592653589793">
+                    <geom name="Leg2_Knee-actuator-assembly_KneeMotorPulley_geom" type="mesh" mesh="Leg2_Knee-actuator-assembly_KneeMotorPulley" pos="0 0 0" euler="0 0 0" />
+                    <inertial mass="0.08135375942547957" pos="0.005405704726782288 0.019714907448618885 0.033041575943703556" fullinertia="1.2462648308958631e-05 7.261200035422366e-06 7.261200035850195e-06 -2.9661331104867094e-18 -4.332791780854766e-18 -2.6729479903325054e-16" />
+                  </body>
+                </body>
+              </body>
+            </body>
+            <body name="Leg2_Knee-actuator-assembly_End-Bearing-Holder" pos="-0.04244493236996938 -0.0031217780935925135 -0.04257533261304136" euler="3.141592653589793 1.5707963267948966 0">
+              <geom name="Leg2_Knee-actuator-assembly_End-Bearing-Holder_geom" type="mesh" mesh="Leg2_Knee-actuator-assembly_End-Bearing-Holder" pos="0 0 0" euler="0 0 0" />
+              <inertial mass="0.057169625310268736" pos="-0.04109062630262349 -0.001108467278132863 -0.12254015277022076" fullinertia="5.1961941766096706e-05 5.134763459656156e-05 0.00010281021554763234 -9.985502905468548e-07 -1.0829253630113236e-08 -1.1711751146800545e-08" />
             </body>
           </body>
         </body>

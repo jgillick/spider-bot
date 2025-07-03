@@ -9,7 +9,6 @@ ACTUATOR_TORQUE_RANGE = "-10 10"
 
 def main(tree):
     tree = simplify_names(tree)
-    tree = fix_leg_order(tree)
     tree = update_hip_join_ranges(tree)
     tree = ground_plain(tree)
     tree = visual_settings(tree)
@@ -21,39 +20,6 @@ def main(tree):
     # Pretty print and output
     ET.indent(tree, space="  ")
     tree.write(OUT_PATH, encoding="utf-8")
-
-
-def fix_leg_order(tree):
-    """
-    Put the leg 1 body first in the worldbody
-    """
-    robot_body = tree.find("./worldbody//body[@name='Body']")
-    if robot_body is None:
-        print("No body element named 'Body' found.")
-        exit(1)
-
-    # Find the leg 1 body
-    leg1_body = robot_body.find(
-        "./body[@name='Leg1_Hip-actuator-assembly_Body-Bracket']"
-    )
-    if leg1_body is None:
-        print("Could not find Leg1_Hip-actuator-assembly_Body-Bracket")
-        exit(1)
-
-    # Find leg 2 body
-    leg2_body = robot_body.find(
-        "./body[@name='Leg2_Hip-actuator-assembly_Body-Bracket']"
-    )
-    if leg2_body is None:
-        print("Could not find Leg2_Hip-actuator-assembly_Body-Bracket")
-        exit(1)
-    insert_at = list(robot_body).index(leg2_body)
-
-    # Insert before leg 2
-    robot_body.remove(leg1_body)  # remove first, otherwise indenting gets weird
-    robot_body.insert(insert_at, leg1_body)
-
-    return tree
 
 
 def simplify_names(tree):
