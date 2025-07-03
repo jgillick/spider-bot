@@ -4,19 +4,16 @@ This directory contains the training code for the spider robot, separated into m
 
 ## File Structure
 
-- **`spider_env.py`** - The main environment class (`SpiderRobotEnv`) and helper functions
+- **`environment.py`** - The main environment class (`SpiderRobotEnv`)
 - **`train.py`** - Training script using PPO algorithm
 - **`test.py`** - Testing and evaluation script for trained models
-- **`deploy.py`** - Deployment script for real hardware (placeholder)
-- **`env.py`** - Original combined file (kept for reference)
 
 ## Quick Start
 
 ### 1. Training
 
 ```bash
-# Train the spider robot
-python train.py
+python -m training.train
 ```
 
 This will:
@@ -42,11 +39,6 @@ This will:
 - Print detailed statistics
 
 ### 3. Hardware Deployment
-
-```bash
-# Deploy to real hardware (placeholder)
-python deploy.py
-```
 
 **Note**: This is a placeholder implementation. You'll need to:
 

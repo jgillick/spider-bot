@@ -7,7 +7,7 @@ import numpy as np
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import VecNormalize
 from stable_baselines3.common.evaluation import evaluate_policy
-from environment import SpiderRobotEnv
+from .environment import SpiderRobotEnv
 
 
 def test_trained_model(xml_file, model_path, camera_name="bodycam", num_episodes=5):

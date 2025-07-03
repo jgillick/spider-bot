@@ -9,7 +9,7 @@ from stable_baselines3.common.vec_env import (
     VecNormalize,
     VecVideoRecorder,
 )
-from environment import make_env
+from .environment import make_env
 
 
 DEBUG = False
@@ -19,15 +19,16 @@ TRAINING_STEPS = 500_000
 VIDEO_EVERY_N_STEPS = 25000
 VIDEO_LENGTH = 1000  # in steps
 
-OUT_DIR = "../logs"
+OUT_DIR = "../out"
+
+THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 def train_spider_robot(xml_file):
     """Train the spider robot using PPO algorithm."""
 
     # Get absolute output path, relative to this script
-    this_dir = os.path.dirname(os.path.abspath(__file__))
-    out_path = os.path.abspath(os.path.join(this_dir, OUT_DIR))
+    out_path = os.path.abspath(os.path.join(THIS_DIR, OUT_DIR))
 
     # Create output directories
     os.makedirs(out_path, exist_ok=True)
@@ -80,7 +81,7 @@ def train_spider_robot(xml_file):
 
 if __name__ == "__main__":
     # Example usage
-    xml_file = "../robot/SpiderBot.xml"  # Path to your MuJoCo XML file
+    xml_file = os.path.abspath(os.path.join(THIS_DIR, "../robot/SpiderBot.xml"))
 
     # Train the robot with video recording
     print("=== Spider Robot Training ===")
