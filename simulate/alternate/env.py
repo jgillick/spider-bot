@@ -13,11 +13,7 @@ from stable_baselines3.common.vec_env import (
     VecNormalize,
     VecVideoRecorder,
 )
-from stable_baselines3.common.callbacks import (
-    BaseCallback,
-)
 from stable_baselines3.common.monitor import Monitor
-import os
 from stable_baselines3.common.evaluation import evaluate_policy
 
 
@@ -119,10 +115,17 @@ class SpiderRobotEnv(MujocoEnv):
             else:
                 self.actuator_limits.append((-np.pi, np.pi))  # Default limits
 
-        # Action space: target positions for each actuator
+        # Action space: MIT mode (position, velocity, torque) for each actuator
+        # For 24 actuators: 24*3 = 72
+        pos_lows = np.array([lim[0] for lim in self.actuator_limits])
+        pos_highs = np.array([lim[1] for lim in self.actuator_limits])
+        vel_lows = np.full_like(pos_lows, -10.0)  # Reasonable velocity limits (rad/s)
+        vel_highs = np.full_like(pos_highs, 10.0)
+        torque_lows = np.full_like(pos_lows, -self.max_torque)
+        torque_highs = np.full_like(pos_highs, self.max_torque)
         self.action_space = spaces.Box(
-            low=np.array([lim[0] for lim in self.actuator_limits]),
-            high=np.array([lim[1] for lim in self.actuator_limits]),
+            low=np.concatenate([pos_lows, vel_lows, torque_lows]),
+            high=np.concatenate([pos_highs, vel_highs, torque_highs]),
             dtype=np.float32,
         )
 
@@ -147,35 +150,42 @@ class SpiderRobotEnv(MujocoEnv):
         return 86
 
     def step(self, action):
-        """Execute one timestep of the environment dynamics."""
-        if isinstance(self.action_space, gym.spaces.Box):
-            action = np.clip(action, self.action_space.low, self.action_space.high)
-        else:
-            action = action  # or handle other space types if needed
+        """Execute one timestep of the environment dynamics (MIT mode: pos, vel, torque per joint)."""
+        # MIT mode: action = [pos(24), vel(24), torque(24)]
+        n = len(self.actuator_limits)
+        pos = action[:n]
+        vel = action[n : 2 * n]
+        torque_ff = action[2 * n :]
+        # Clip each component
+        pos = np.clip(
+            pos,
+            [lim[0] for lim in self.actuator_limits],
+            [lim[1] for lim in self.actuator_limits],
+        )
+        vel = np.clip(vel, -10.0, 10.0)
+        torque_ff = np.clip(torque_ff, -self.max_torque, self.max_torque)
 
         # Debug: print action statistics occasionally
         if self.debug and self.steps_taken % 100 == 0:
             print(
-                f"Step {self.steps_taken}: action range [{action.min():.3f}, {action.max():.3f}], mean {action.mean():.3f}"
+                f"Step {self.steps_taken}: pos range [{pos.min():.3f}, {pos.max():.3f}], vel range [{vel.min():.3f}, {vel.max():.3f}], torque_ff range [{torque_ff.min():.3f}, {torque_ff.max():.3f}]"
             )
-            # Print individual leg actions
             for i in range(8):
                 leg_start = i * 3
                 print(
-                    f"  Leg {i+1}: Hip {action[leg_start]:.3f}, Femur {action[leg_start+1]:.3f}, Tibia {action[leg_start+2]:.3f}"
+                    f"  Leg {i+1}: Hip (p={pos[leg_start]:.3f}, v={vel[leg_start]:.3f}, t={torque_ff[leg_start]:.3f}), "
+                    f"Femur (p={pos[leg_start+1]:.3f}, v={vel[leg_start+1]:.3f}, t={torque_ff[leg_start+1]:.3f}), "
+                    f"Tibia (p={pos[leg_start+2]:.3f}, v={vel[leg_start+2]:.3f}, t={torque_ff[leg_start+2]:.3f})"
                 )
 
-        # Convert position targets to torques using PD control
-        current_positions = self.data.qpos[7:31]  # Skip root joint (first 7 values)
-        current_velocities = self.data.qvel[6:30]  # Skip root joint (first 6 values)
-
-        position_error = action - current_positions
+        current_positions = self.data.qpos[7:31]
+        current_velocities = self.data.qvel[6:30]
+        # MIT control law: tau = Kp*(q_des - q) + Kd*(qd_des - qd) + tau_ff
         torques = (
-            self.position_gain * position_error
-            - self.velocity_gain * current_velocities
+            self.position_gain * (pos - current_positions)
+            + self.velocity_gain * (vel - current_velocities)
+            + torque_ff
         )
-
-        # Clip torques to maximum
         torques = np.clip(torques, -self.max_torque, self.max_torque)
 
         # Debug: print torque statistics occasionally
@@ -183,25 +193,19 @@ class SpiderRobotEnv(MujocoEnv):
             print(
                 f"Step {self.steps_taken}: torque range [{torques.min():.3f}, {torques.max():.3f}], mean {torques.mean():.3f}"
             )
-            # Print individual leg torques
             for i in range(8):
                 leg_start = i * 3
                 print(
                     f"  Leg {i+1}: Hip {torques[leg_start]:.3f}, Femur {torques[leg_start+1]:.3f}, Tibia {torques[leg_start+2]:.3f}"
                 )
 
-        # Apply torques
         self.do_simulation(torques, self.frame_skip)
-
-        # Calculate reward and check termination
         observation = self._get_obs()
         reward = self._compute_reward()
         terminated = self._is_terminated()
         truncated = False
         info = self._get_info()
-
         self.steps_taken += 1
-
         return observation, reward, terminated, truncated, info
 
     def reset_model(self):
@@ -328,17 +332,13 @@ class SpiderRobotEnv(MujocoEnv):
         lateral_penalty = 0.2 * abs(self.data.qpos[1])  # Moderate penalty
 
         # Energy efficiency penalty - reduce to allow more movement
-        energy_penalty = 0.00001 * np.sum(
-            np.square(self.data.ctrl)
-        )  # Very small energy penalty
+        energy_penalty = 0.00001 * np.sum(np.square(self.data.ctrl))
 
         # Foot contact reward (encourage alternating gait)
         contact_pattern_reward = self._compute_gait_reward()
 
         # Smoothness reward (penalize jerky movements) - reduce penalty
-        smoothness_penalty = 0.0001 * np.sum(
-            np.square(self.data.qvel[6:])
-        )  # Small smoothness penalty
+        smoothness_penalty = 0.0001 * np.sum(np.square(self.data.qvel[6:]))
 
         # Survival bonus (encourage staying alive)
         survival_bonus = 0.5
@@ -443,100 +443,6 @@ class SpiderRobotEnv(MujocoEnv):
         return np.array([x, y, z])
 
 
-class VideoRecorderCallback(BaseCallback):
-    """
-    Callback for recording videos of the agent at regular intervals.
-    """
-
-    def __init__(
-        self,
-        eval_env,
-        render_freq=10000,
-        n_eval_episodes=1,
-        video_folder="./out/videos/",
-        video_length=1000,
-    ):
-        super().__init__()
-        self.eval_env = eval_env
-        self.render_freq = render_freq
-        self.n_eval_episodes = n_eval_episodes
-        self.video_folder = video_folder
-        self.video_length = video_length
-        self.episode_count = 0
-
-        # Create video folder robustly
-        os.makedirs(video_folder, exist_ok=True)
-
-    def _on_step(self) -> bool:
-        if self.n_calls % self.render_freq == 0:
-            # Record video
-            video_name = f"spider_robot_step_{self.n_calls}"
-            self._record_video(video_name)
-        return True
-
-    def _record_video(self, video_name):
-        """Record a video of the agent."""
-        try:
-            print(f"Recording video: {video_name}")
-
-            # Wrap environment for video recording
-            video_path = os.path.join(self.video_folder, video_name)
-            vec_env = DummyVecEnv([lambda: self.eval_env])
-            vec_env = VecVideoRecorder(
-                vec_env,
-                video_path,
-                record_video_trigger=lambda x: x == 0,
-                video_length=self.video_length,
-                name_prefix=video_name,
-            )
-
-            obs = vec_env.reset()
-            episode_rewards = []
-            episode_lengths = []
-            current_reward = 0
-            current_length = 0
-
-            for step in range(self.video_length):
-                # Use the trained policy
-                action, _ = self.model.predict(
-                    obs[0] if isinstance(obs, tuple) else obs, deterministic=True
-                )
-                obs, reward, done, info = vec_env.step(action)
-                current_reward += reward[0]
-                current_length += 1
-
-                if done.any():
-                    episode_rewards.append(current_reward)
-                    episode_lengths.append(current_length)
-                    current_reward = 0
-                    current_length = 0
-                    obs = vec_env.reset()
-
-                    # Log reset info
-                    if len(episode_rewards) <= 3:  # Log first few resets
-                        print(f"  Episode {len(episode_rewards)} ended at step {step}")
-                        if info and len(info) > 0:
-                            print(
-                                f"    Final height: {info[0].get('height', 'N/A'):.3f}"
-                            )
-                            print(
-                                f"    Final x_position: {info[0].get('x_position', 'N/A'):.3f}"
-                            )
-
-            # Log video recording summary
-            if episode_rewards:
-                print(f"  Video summary: {len(episode_rewards)} episodes")
-                print(f"  Average reward: {np.mean(episode_rewards):.2f}")
-                print(f"  Average length: {np.mean(episode_lengths):.1f} steps")
-
-            # Clean up
-            vec_env.close()
-
-        except Exception as e:
-            print(f"Error recording video {video_name}: {e}")
-            # Continue training even if video recording fails
-
-
 def make_env(xml_file, camera_name="bodycam"):
     """Create a wrapped environment for parallel training."""
 
@@ -563,7 +469,7 @@ def train_spider_robot(
         env = VecVideoRecorder(
             env,
             video_folder="out/videos/",
-            record_video_trigger=lambda x: x % 10000 == 0,
+            record_video_trigger=lambda x: x % 25000 == 0,
             video_length=1000,
             name_prefix="spider-walk",
         )
