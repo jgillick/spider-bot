@@ -27,13 +27,13 @@ def fix_leg_order(tree):
     """
     Put the leg 1 body first in the worldbody
     """
-    root_body = tree.find("./worldbody/body[@name='Body']")
-    if root_body is None:
-        print("No root body element found.")
+    robot_body = tree.find("./worldbody//body[@name='Body']")
+    if robot_body is None:
+        print("No body element named 'Body' found.")
         exit(1)
 
     # Find the leg 1 body
-    leg1_body = root_body.find(
+    leg1_body = robot_body.find(
         "./body[@name='Leg1_Hip-actuator-assembly_Body-Bracket']"
     )
     if leg1_body is None:
@@ -41,17 +41,17 @@ def fix_leg_order(tree):
         exit(1)
 
     # Find leg 2 body
-    leg2_body = root_body.find(
+    leg2_body = robot_body.find(
         "./body[@name='Leg2_Hip-actuator-assembly_Body-Bracket']"
     )
     if leg2_body is None:
         print("Could not find Leg2_Hip-actuator-assembly_Body-Bracket")
         exit(1)
-    insert_at = list(root_body).index(leg2_body)
+    insert_at = list(robot_body).index(leg2_body)
 
     # Insert before leg 2
-    root_body.remove(leg1_body)  # remove first, otherwise indenting gets weird
-    root_body.insert(insert_at, leg1_body)
+    robot_body.remove(leg1_body)  # remove first, otherwise indenting gets weird
+    robot_body.insert(insert_at, leg1_body)
 
     return tree
 
@@ -234,9 +234,9 @@ def main_body(tree):
     """
     Add free joint, IMU, and a camera to the main body
     """
-    body = tree.find("./worldbody/body[@name='Body']")
-    if body is None:
-        print('No root body named "Body" found.')
+    root_body = tree.find("./worldbody//body[@name='Body']")
+    if root_body is None:
+        print('No body named "Body" found.')
         exit(1)
 
     sensor = tree.find("./sensor")
@@ -268,20 +268,23 @@ def main_body(tree):
         {
             "name": "bodycam",
             "mode": "trackcom",
-            "pos": "1.9 0.6 1.1",
-            "euler": "-0.3 1.0 0",
+            "pos": "1.0 -1.0 0.6",
+            "euler": "1.05 0.0 0.7",
         },
     )
 
-    body.insert(0, free_joint)
-    body.insert(0, imu_site)
-    body.insert(0, camera)
+    root_body.insert(0, imu_site)
+    root_body.insert(0, camera)
+    root_body.insert(0, free_joint)
 
     # Add IMU sensor
     ET.SubElement(sensor, "gyro", {"name": "gyro_sensor", "site": "imu_site"})
     ET.SubElement(
         sensor, "accelerometer", {"name": "accelerometer_sensor", "site": "imu_site"}
     )
+
+    # Adjust position of body
+    root_body.set("pos", "0.0 0.0 0.134")
 
     return tree
 
@@ -323,7 +326,7 @@ def add_leg_sensors(tree):
 
         foot = {
             "name": f"Leg{i}_Tibia_foot_site",
-            "pos": "0.04 -0.12 0.2015",
+            "pos": "0.04 -0.1195 0.2018",
             "size": "0.007 0.005",
             "type": "cylinder",
             "rgba": "0 1 0 1",
