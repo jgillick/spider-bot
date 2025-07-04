@@ -233,12 +233,23 @@ def main_body(tree):
         "camera",
         {
             "name": "bodycam",
-            "mode": "trackcom",
-            "pos": "1.0 -1.0 0.6",
-            "euler": "1.05 0.0 0.7",
+            "mode": "targetbodycom",
+            "target": "Body",
+            "pos": "-0.817 -1.628 0.4",
+        },
+    )
+    head = ET.Element(
+        "geom",
+        {
+            "name": "head",
+            "pos": "0.49 0 0.015",
+            "size": "0.025",
+            "type": "sphere",
+            "rgba": "0 1 0 1",
         },
     )
 
+    root_body.insert(0, head)
     root_body.insert(0, imu_site)
     root_body.insert(0, camera)
     root_body.insert(0, free_joint)
