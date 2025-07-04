@@ -71,8 +71,35 @@ This will:
 - Upright orientation (critical)
 - Body stability
 - Gait coordination
+- Weight distribution
 - Energy efficiency
 - Survival bonus
+
+## Weight Distribution Feature
+
+The environment now includes a weight distribution reward that encourages the robot to distribute its weight evenly across contacting feet. This improves stability and prevents overloading individual legs.
+
+### How it works:
+
+1. **Contact Force Measurement**: Measures actual contact forces on each foot
+2. **Distribution Analysis**: Calculates coefficient of variation (CV) of forces
+3. **Lateral Balance**: Ensures left and right sides carry similar loads
+4. **Reward Structure**:
+   - 70% weight for even distribution across all contacting feet
+   - 30% weight for left-right balance
+
+### Benefits:
+
+- **Improved Stability**: Prevents tipping and wobbling
+- **Natural Gait**: Encourages more realistic walking patterns
+- **Load Sharing**: Reduces stress on individual legs
+- **Better Sim-to-Real Transfer**: More realistic physics
+
+### Metrics Tracked:
+
+- `weight_distribution_cv`: Coefficient of variation (lower = better)
+- `lateral_balance`: Left-right balance ratio (1.0 = perfect balance)
+- `num_feet_in_contact`: Number of feet touching the ground
 
 ## Hardware Deployment
 
