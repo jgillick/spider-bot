@@ -346,6 +346,9 @@ class SpiderRobotEnv(MujocoEnv):
         # Weight distribution reward (new!)
         weight_distribution_reward = self._compute_weight_distribution_reward()
 
+        # Stride length reward - encourage larger steps
+        stride_reward = self._compute_stride_reward()
+
         # Joint limit penalty
         joint_positions = self.data.qpos[7:31]
         joint_limit_penalty = 0
@@ -368,6 +371,7 @@ class SpiderRobotEnv(MujocoEnv):
             + 2.0 * contact_pattern_reward  # Gait pattern
             + 0.5 * gait_quality  # Gait coordination
             + 1.5 * weight_distribution_reward  # Weight distribution
+            + 1.0 * stride_reward  # Stride length
             + survival_bonus
             - energy_penalty
             - lateral_penalty
@@ -375,6 +379,77 @@ class SpiderRobotEnv(MujocoEnv):
         )
 
         return reward
+
+    def _compute_stride_reward(self):
+        """Reward for using larger hip joint ranges to encourage bigger steps."""
+        joint_positions = self.data.qpos[7:31]
+        joint_velocities = self.data.qvel[6:30]  # Joint velocities
+
+        # Hip joints are at indices 0, 3, 6, 9, 12, 15, 18, 21 (every 3rd joint)
+        hip_indices = [0, 3, 6, 9, 12, 15, 18, 21]
+
+        total_stride_reward = 0.0
+        total_velocity_reward = 0.0
+
+        for hip_idx in hip_indices:
+            if hip_idx < len(joint_positions):
+                hip_position = joint_positions[hip_idx]
+                hip_velocity = joint_velocities[hip_idx]
+                hip_limits = self.actuator_limits[hip_idx]
+
+                # Calculate how much of the range is being used
+                range_size = hip_limits[1] - hip_limits[0]
+                position_in_range = (hip_position - hip_limits[0]) / range_size
+
+                # Reward for using the middle 50-80% of the range (avoiding extremes)
+                # This encourages larger movements while staying away from joint limits
+                if 0.25 <= position_in_range <= 0.75:
+                    # Bonus for using the middle range
+                    stride_reward = 2.0 * (1.0 - abs(position_in_range - 0.5))
+                elif 0.1 <= position_in_range <= 0.9:
+                    # Smaller reward for using more of the range
+                    stride_reward = 1.0 * (1.0 - abs(position_in_range - 0.5))
+                else:
+                    # Penalty for staying near the extremes
+                    stride_reward = -0.5
+
+                # Velocity reward - encourage moderate hip movement speed
+                # Too fast = unstable, too slow = small steps
+                velocity_magnitude = abs(hip_velocity)
+                if 0.5 <= velocity_magnitude <= 2.0:  # Moderate speed range
+                    velocity_reward = 1.0
+                elif 0.2 <= velocity_magnitude <= 3.0:  # Acceptable range
+                    velocity_reward = 0.5
+                else:
+                    velocity_reward = -0.2  # Penalty for too slow or too fast
+
+                total_stride_reward += stride_reward
+                total_velocity_reward += velocity_reward
+
+        # Combine position and velocity rewards
+        avg_stride_reward = total_stride_reward / len(hip_indices)
+        avg_velocity_reward = total_velocity_reward / len(hip_indices)
+
+        # Weight position more heavily than velocity
+        combined_reward = 0.7 * avg_stride_reward + 0.3 * avg_velocity_reward
+
+        # Debug output
+        if self.debug and self.steps_taken % 200 == 0:
+            print(
+                f"Stride reward: pos={avg_stride_reward:.3f}, vel={avg_velocity_reward:.3f}, combined={combined_reward:.3f}"
+            )
+            # Print hip positions for first few legs
+            for i, hip_idx in enumerate(hip_indices[:3]):  # Show first 3 legs
+                if hip_idx < len(joint_positions):
+                    pos = joint_positions[hip_idx]
+                    vel = joint_velocities[hip_idx]
+                    limits = self.actuator_limits[hip_idx]
+                    range_used = (pos - limits[0]) / (limits[1] - limits[0])
+                    print(
+                        f"  Leg{i+1} hip: pos={pos:.3f}, vel={vel:.3f}, range_used={range_used:.2f}"
+                    )
+
+        return combined_reward
 
     def _compute_gait_reward(self):
         """Reward for maintaining a coordinated gait pattern."""

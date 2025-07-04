@@ -15,7 +15,7 @@ from .environment import make_env
 DEBUG = False
 VIDEO = True
 
-TRAINING_STEPS = 500_000
+TRAINING_STEPS = 2_000_000
 VIDEO_EVERY_N_STEPS = 25000
 VIDEO_LENGTH = 1000  # in steps
 
@@ -53,17 +53,17 @@ def train_spider_robot(xml_file):
     model = PPO(
         "MlpPolicy",
         env,
-        learning_rate=3e-4,
-        n_steps=2048,
-        batch_size=64,
+        learning_rate=1e-4,
+        n_steps=4096,
+        batch_size=128,
         n_epochs=10,
         gamma=0.99,
         gae_lambda=0.95,
         clip_range=0.2,
-        ent_coef=0.01,  # Exploration
+        ent_coef=0.005,
         verbose=1,
         tensorboard_log=f"{out_path}/tensorboard/",
-        policy_kwargs=dict(net_arch=dict(pi=[256, 256, 128], vf=[256, 256, 128])),
+        policy_kwargs=dict(net_arch=dict(pi=[512, 256, 128], vf=[512, 256, 128])),
     )
 
     # Train the model
