@@ -229,13 +229,22 @@ def main_body(tree):
             "size": "0.01",
         },
     )
-    camera = ET.Element(
+    body_cam = ET.Element(
         "camera",
         {
             "name": "bodycam",
             "mode": "targetbodycom",
             "target": "Body",
-            "pos": "-0.817 -1.628 0.4",
+            "pos": "-0.817 -1.628 0.6",
+        },
+    )
+    ground_cam = ET.Element(
+        "camera",
+        {
+            "name": "groundcam",
+            "mode": "targetbodycom",
+            "target": "Body",
+            "pos": "-1.0 0 0.1",
         },
     )
     head = ET.Element(
@@ -251,7 +260,8 @@ def main_body(tree):
 
     root_body.insert(0, head)
     root_body.insert(0, imu_site)
-    root_body.insert(0, camera)
+    root_body.insert(0, ground_cam)
+    root_body.insert(0, body_cam)
     root_body.insert(0, free_joint)
 
     # Add IMU sensor
