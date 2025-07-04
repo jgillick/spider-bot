@@ -126,11 +126,29 @@ class SpiderRobotEnv(MujocoEnv):
             dtype=np.float32,
         )
 
-        # Define leg groups for gait patterns
-        # Tripod gait: two groups that alternate
+        # Define leg groups for tetrapod gait based on correct numbering:
+        # Left side: Legs 1,2,3,4 (indices 0,1,2,3)
+        # Right side: Legs 5,6,7,8 (indices 4,5,6,7)
+        # Tetrapod gait: diagonal alternating pattern
         self.leg_groups = {
-            "group_a": [0, 2, 5, 7],  # Legs 1, 3, 6, 8
-            "group_b": [1, 3, 4, 6],  # Legs 2, 4, 5, 7
+            "group_a": [
+                4,
+                1,
+                6,
+                3,
+            ],  # R1, L2, R3, L4 (right front, left second, right third, left rear)
+            "group_b": [
+                0,
+                5,
+                2,
+                7,
+            ],  # L1, R2, L3, R4 (left front, right second, left third, right rear)
+        }
+
+        # Define side groups for lateral stability
+        self.side_groups = {
+            "left": [0, 1, 2, 3],  # Legs 1,2,3,4
+            "right": [4, 5, 6, 7],  # Legs 5,6,7,8
         }
 
         # Debug: print joint limits for each leg
@@ -250,12 +268,18 @@ class SpiderRobotEnv(MujocoEnv):
         # Contact forces for each foot
         contact_forces = np.zeros(8)
         for idx, foot_geom_id in enumerate(self.foot_geom_ids):
+            force_magnitude = 0.0
             for j in range(self.data.ncon):
                 contact = self.data.contact[j]
                 if contact.geom1 == foot_geom_id or contact.geom2 == foot_geom_id:
-                    # Get contact force magnitude - use a simpler approach
-                    # The contact force is available in the contact object
-                    contact_forces[idx] = 1.0  # Binary contact
+                    # Get contact force magnitude
+                    # Try to get actual force from MuJoCo contact data
+                    if hasattr(contact, "efc_force") and j < len(contact.efc_force):
+                        force = np.sqrt(np.sum(contact.efc_force[j] ** 2))
+                    else:
+                        force = 1.0  # Binary contact if force not available
+                    force_magnitude = max(force_magnitude, force)
+            contact_forces[idx] = force_magnitude
 
         # Combine all observations
         obs = np.concatenate(
@@ -277,12 +301,19 @@ class SpiderRobotEnv(MujocoEnv):
 
     def _compute_reward(self):
         """Compute reward based on forward progress, stability, and efficiency."""
-        # Forward progress reward - moderate
-        current_x = self.data.qpos[0]
-        forward_reward = (current_x - self.previous_x_position) / self.dt
-        self.previous_x_position = current_x
+        # Get robot's current orientation
+        orientation = self.data.xquat[self.torso_id]
+        body_mat = self.data.xmat[self.torso_id].reshape(3, 3)
 
-        # Clip forward reward to prevent exploitation
+        # Get forward direction vector (robot's local X-axis)
+        forward_direction = body_mat[:, 0]  # First column is forward direction
+
+        # Calculate velocity in robot's forward direction
+        velocity = self.data.qvel[:3]  # Linear velocity
+        forward_velocity = np.dot(velocity, forward_direction)
+
+        # Forward reward based on robot's orientation
+        forward_reward = forward_velocity
         forward_reward = np.clip(forward_reward, -1.0, 2.0)
 
         # Height reward (encourage maintaining height) - critical for stability
@@ -295,9 +326,6 @@ class SpiderRobotEnv(MujocoEnv):
         height_reward = 5.0 * np.exp(-20 * height_error**2)
 
         # Orientation reward (stay upright) - critical
-        orientation = self.data.xquat[self.torso_id]
-        # The robot's upright orientation has specific quaternion values
-        # Based on the initial orientation (0.707, 0.707, 0, 0)
         target_orientation = np.array([0.707, 0.707, 0.0, 0.0])
         orientation_error = np.sum((orientation - target_orientation) ** 2)
         upright_reward = 3.0 * np.exp(-5 * orientation_error)
@@ -314,6 +342,9 @@ class SpiderRobotEnv(MujocoEnv):
 
         # Foot contact and gait pattern reward
         contact_pattern_reward, gait_quality = self._compute_gait_reward()
+
+        # Weight distribution reward (new!)
+        weight_distribution_reward = self._compute_weight_distribution_reward()
 
         # Joint limit penalty
         joint_positions = self.data.qpos[7:31]
@@ -336,6 +367,7 @@ class SpiderRobotEnv(MujocoEnv):
             + stability_reward  # Body stability
             + 2.0 * contact_pattern_reward  # Gait pattern
             + 0.5 * gait_quality  # Gait coordination
+            + 1.5 * weight_distribution_reward  # Weight distribution
             + survival_bonus
             - energy_penalty
             - lateral_penalty
@@ -416,6 +448,83 @@ class SpiderRobotEnv(MujocoEnv):
 
         return contact_reward, gait_quality
 
+    def _compute_weight_distribution_reward(self):
+        """Reward for even weight distribution across contacting feet."""
+        # Get contact forces for each foot
+        contact_forces = np.zeros(8)
+        feet_in_contact = []
+
+        for idx, foot_geom_id in enumerate(self.foot_geom_ids):
+            force_magnitude = 0.0
+            in_contact = False
+
+            for j in range(self.data.ncon):
+                contact = self.data.contact[j]
+                if contact.geom1 == foot_geom_id or contact.geom2 == foot_geom_id:
+                    # Calculate contact force magnitude
+                    # MuJoCo stores contact forces in the contact object
+                    force = (
+                        np.sqrt(np.sum(contact.efc_force[j] ** 2))
+                        if hasattr(contact, "efc_force")
+                        else 1.0
+                    )
+                    force_magnitude = max(force_magnitude, force)
+                    in_contact = True
+
+            contact_forces[idx] = force_magnitude
+            feet_in_contact.append(in_contact)
+
+        # Only consider feet that are actually in contact
+        contacting_forces = [contact_forces[i] for i in range(8) if feet_in_contact[i]]
+
+        if len(contacting_forces) < 2:
+            return 0.0  # Need at least 2 feet in contact
+
+        # Calculate weight distribution metrics
+        total_force = sum(contacting_forces)
+        mean_force = total_force / len(contacting_forces)
+
+        # Variance in force distribution (lower is better)
+        force_variance = (
+            np.var(contacting_forces) if len(contacting_forces) > 1 else 0.0
+        )
+
+        # Coefficient of variation (standardized measure of dispersion)
+        cv = np.sqrt(force_variance) / mean_force if mean_force > 0 else 1.0
+
+        # Reward for even distribution (lower CV is better)
+        distribution_reward = np.exp(-3.0 * cv)
+
+        # Lateral balance reward (left vs right side)
+        left_forces = [
+            contact_forces[i] for i in self.side_groups["left"] if feet_in_contact[i]
+        ]
+        right_forces = [
+            contact_forces[i] for i in self.side_groups["right"] if feet_in_contact[i]
+        ]
+
+        left_total = sum(left_forces) if left_forces else 0.0
+        right_total = sum(right_forces) if right_forces else 0.0
+
+        # Balance between left and right sides
+        if left_total + right_total > 0:
+            balance_ratio = min(left_total, right_total) / max(left_total, right_total)
+            lateral_balance_reward = balance_ratio
+        else:
+            lateral_balance_reward = 0.0
+
+        # Combined weight distribution reward
+        total_weight_reward = 0.7 * distribution_reward + 0.3 * lateral_balance_reward
+
+        # Debug output
+        if self.debug and self.steps_taken % 200 == 0:
+            print(
+                f"Weight distribution: CV={cv:.3f}, balance={lateral_balance_reward:.3f}, reward={total_weight_reward:.3f}"
+            )
+            print(f"Contact forces: {contact_forces}")
+
+        return total_weight_reward
+
     def _is_terminated(self):
         """Check if episode should terminate (robot fell or flipped)."""
         # Check height - robot normally stands at 0.134
@@ -453,12 +562,71 @@ class SpiderRobotEnv(MujocoEnv):
 
     def _get_info(self):
         """Return additional information about the episode."""
+        # Calculate weight distribution metrics for info
+        contact_forces = np.zeros(8)
+        feet_in_contact = []
+
+        for idx, foot_geom_id in enumerate(self.foot_geom_ids):
+            force_magnitude = 0.0
+            in_contact = False
+
+            for j in range(self.data.ncon):
+                contact = self.data.contact[j]
+                if contact.geom1 == foot_geom_id or contact.geom2 == foot_geom_id:
+                    if hasattr(contact, "efc_force") and j < len(contact.efc_force):
+                        force = np.sqrt(np.sum(contact.efc_force[j] ** 2))
+                    else:
+                        force = 1.0
+                    force_magnitude = max(force_magnitude, force)
+                    in_contact = True
+
+            contact_forces[idx] = force_magnitude
+            feet_in_contact.append(in_contact)
+
+        contacting_forces = [contact_forces[i] for i in range(8) if feet_in_contact[i]]
+        num_feet_in_contact = len(contacting_forces)
+
+        # Weight distribution metrics
+        weight_distribution_cv = 0.0
+        lateral_balance = 0.0
+
+        if num_feet_in_contact >= 2:
+            total_force = sum(contacting_forces)
+            mean_force = total_force / num_feet_in_contact
+            force_variance = np.var(contacting_forces)
+            weight_distribution_cv = (
+                np.sqrt(force_variance) / mean_force if mean_force > 0 else 1.0
+            )
+
+            # Lateral balance
+            left_forces = [
+                contact_forces[i]
+                for i in self.side_groups["left"]
+                if feet_in_contact[i]
+            ]
+            right_forces = [
+                contact_forces[i]
+                for i in self.side_groups["right"]
+                if feet_in_contact[i]
+            ]
+            left_total = sum(left_forces) if left_forces else 0.0
+            right_total = sum(right_forces) if right_forces else 0.0
+
+            if left_total + right_total > 0:
+                lateral_balance = min(left_total, right_total) / max(
+                    left_total, right_total
+                )
+
         return {
             "x_position": self.data.qpos[0],
             "height": self.data.qpos[2],
             "forward_speed": self.data.qvel[0],
             "energy_used": np.sum(np.square(self.data.ctrl)),
             "steps": self.steps_taken,
+            "num_feet_in_contact": num_feet_in_contact,
+            "weight_distribution_cv": weight_distribution_cv,
+            "lateral_balance": lateral_balance,
+            "total_contact_force": sum(contact_forces),
         }
 
     def _mat2euler(self, mat):

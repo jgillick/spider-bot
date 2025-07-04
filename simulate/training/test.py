@@ -87,6 +87,9 @@ def analyze_model_behavior(xml_file, model_path, camera_name="bodycam"):
             print(f"  Position: ({info['x_position']:.3f}, {info['height']:.3f})")
             print(f"  Speed: {info['forward_speed']:.3f}")
             print(f"  Energy: {info['energy_used']:.3f}")
+            print(f"  Feet in contact: {info['num_feet_in_contact']}")
+            print(f"  Weight distribution CV: {info['weight_distribution_cv']:.3f}")
+            print(f"  Lateral balance: {info['lateral_balance']:.3f}")
 
         if terminated or truncated:
             print(
