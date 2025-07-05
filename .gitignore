@@ -209,4 +209,4 @@ __marimo__/
 # Other files
 .DS_Store
 simulate/robot/export/
-simulate/out/
+simulate/out*

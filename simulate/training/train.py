@@ -15,8 +15,8 @@ from .environment import make_env
 DEBUG = False
 VIDEO = True
 
-TRAINING_STEPS = 2_000_000
-VIDEO_EVERY_N_STEPS = 50_000
+TRAINING_STEPS = 2_500_000
+VIDEO_EVERY_N_STEPS = 100_000
 VIDEO_LENGTH = 1_000  # in steps
 
 OUT_DIR = "../out"
@@ -46,6 +46,7 @@ def train_spider_robot(xml_file):
             video_folder=f"{out_path}/videos/",
             record_video_trigger=lambda x: x % VIDEO_EVERY_N_STEPS == 0,
             video_length=VIDEO_LENGTH,
+            name_prefix="spider",
         )
 
     # Create PPO model with custom network architecture

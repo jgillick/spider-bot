@@ -4,7 +4,7 @@
     <geom contype="1" conaffinity="1" />
   </default>
   <visual>
-    <global offwidth="800" offheight="600" />
+    <global offwidth="1200" offheight="800" />
   </visual>
   <asset>
     <mesh name="Body" file="meshes/Body.stl" scale="0.001 0.001 0.001" />
