@@ -32,19 +32,34 @@ class SpiderRobotEnv(MujocoEnv):
         **kwargs,
     ):
         # Initialize tracking variables
-        self.previous_x_position = 0
+        self.previous_x_position = 0.0
+        self.previous_hip_positions = {}
+        self.previous_foot_positions = {}
+        self.step_lengths = []
+        self.max_step_history = 50
+
+        # Contact tracking
+        self.contact_history = []
+        self.max_contact_history = 20
+
+        # Joint smoothness tracking
+        self.previous_joint_velocities = None
+        self.joint_acceleration_history = []
+        self.max_acceleration_history = 10
+
+        # Leg grouping for gait coordination
+        self.leg_groups = {
+            "group_a": [0, 2, 4, 6],  # Front-left, back-left, front-right, back-right
+            "group_b": [1, 3, 5, 7],  # Front-right, back-right, front-left, back-left
+        }
+
+        # Debug mode
+        self.debug = debug
         self.steps_taken = 0
-        self.fall_count = 0
-        self.camera_name = camera_name  # Store camera name for rendering
-        self.debug = debug  # Debug mode
 
         # Gait phase tracking
         self.gait_phase = 0.0
         self.gait_frequency = 0.5  # Hz
-
-        # Contact history for gait reward
-        self.contact_history = []
-        self.max_contact_history = 50
 
         # Control parameters - reduced gains for stability
         self.max_torque = 8.0
@@ -125,25 +140,6 @@ class SpiderRobotEnv(MujocoEnv):
             high=pos_highs,
             dtype=np.float32,
         )
-
-        # Define leg groups for tetrapod gait based on correct numbering:
-        # Left side: Legs 1,2,3,4 (indices 0,1,2,3)
-        # Right side: Legs 5,6,7,8 (indices 4,5,6,7)
-        # Tetrapod gait: diagonal alternating pattern
-        self.leg_groups = {
-            "group_a": [
-                4,
-                1,
-                6,
-                3,
-            ],  # R1, L2, R3, L4 (right front, left second, right third, left rear)
-            "group_b": [
-                0,
-                5,
-                2,
-                7,
-            ],  # L1, R2, L3, R4 (left front, right second, left third, right rear)
-        }
 
         # Define side groups for lateral stability
         self.side_groups = {
@@ -229,6 +225,11 @@ class SpiderRobotEnv(MujocoEnv):
         self.steps_taken = 0
         self.gait_phase = 0.0
         self.contact_history = []
+        self.previous_hip_positions = {}
+        self.previous_foot_positions = {}
+        self.step_lengths = []
+        self.previous_joint_velocities = None
+        self.joint_acceleration_history = []
 
         # Set target height based on initial standing position
         if not hasattr(self, "target_height"):
@@ -325,7 +326,7 @@ class SpiderRobotEnv(MujocoEnv):
         height_error = abs(current_height - self.target_height)
         height_reward = 5.0 * np.exp(-20 * height_error**2)
 
-        # Orientation reward (stay upright) - critical
+        # Orientation reward (stay upright)
         target_orientation = np.array([0.707, 0.707, 0.0, 0.0])
         orientation_error = np.sum((orientation - target_orientation) ** 2)
         upright_reward = 3.0 * np.exp(-5 * orientation_error)
@@ -359,6 +360,12 @@ class SpiderRobotEnv(MujocoEnv):
             if pos < low + margin or pos > high - margin:
                 joint_limit_penalty -= 0.1
 
+        # Joint smoothness penalty (penalize excessive acceleration/jerk)
+        smoothness_penalty = self._compute_smoothness_penalty()
+
+        # Leg coordination reward (encourage coordinated hip-femur-tibia movement)
+        leg_coordination_reward = self._compute_leg_coordination_reward()
+
         # Survival bonus
         survival_bonus = 1.0
 
@@ -372,24 +379,33 @@ class SpiderRobotEnv(MujocoEnv):
             + 0.5 * gait_quality  # Gait coordination
             + 1.5 * weight_distribution_reward  # Weight distribution
             + 1.0 * stride_reward  # Stride length
+            + 1.0 * leg_coordination_reward  # Leg coordination
             + survival_bonus
             - energy_penalty
             - lateral_penalty
             + joint_limit_penalty
+            + smoothness_penalty  # Joint smoothness (negative penalty)
         )
 
         return reward
 
     def _compute_stride_reward(self):
-        """Reward for using larger hip joint ranges to encourage bigger steps."""
+        """Reward for actual hip movement that contributes to forward progress."""
         joint_positions = self.data.qpos[7:31]
         joint_velocities = self.data.qvel[6:30]  # Joint velocities
 
         # Hip joints are at indices 0, 3, 6, 9, 12, 15, 18, 21 (every 3rd joint)
         hip_indices = [0, 3, 6, 9, 12, 15, 18, 21]
 
+        # Get robot's forward direction
+        body_mat = self.data.xmat[self.torso_id].reshape(3, 3)
+        forward_direction = body_mat[:, 0]  # Robot's local X-axis
+
+        # Track actual step lengths
+        current_step_length = self._track_step_lengths()
+
         total_stride_reward = 0.0
-        total_velocity_reward = 0.0
+        total_movement_reward = 0.0
 
         for hip_idx in hip_indices:
             if hip_idx < len(joint_positions):
@@ -401,55 +417,107 @@ class SpiderRobotEnv(MujocoEnv):
                 range_size = hip_limits[1] - hip_limits[0]
                 position_in_range = (hip_position - hip_limits[0]) / range_size
 
-                # Reward for using the middle 50-80% of the range (avoiding extremes)
-                # This encourages larger movements while staying away from joint limits
-                if 0.25 <= position_in_range <= 0.75:
-                    # Bonus for using the middle range
-                    stride_reward = 2.0 * (1.0 - abs(position_in_range - 0.5))
+                # 1. Position reward - encourage using more of the range (but not extremes)
+                if 0.2 <= position_in_range <= 0.8:
+                    # Reward for using more of the middle range
+                    position_reward = 2.0 * (1.0 - abs(position_in_range - 0.5))
                 elif 0.1 <= position_in_range <= 0.9:
-                    # Smaller reward for using more of the range
-                    stride_reward = 1.0 * (1.0 - abs(position_in_range - 0.5))
+                    position_reward = 1.0 * (1.0 - abs(position_in_range - 0.5))
                 else:
-                    # Penalty for staying near the extremes
-                    stride_reward = -0.5
+                    position_reward = -0.5  # Penalty for extremes
 
-                # Velocity reward - encourage moderate hip movement speed
-                # Too fast = unstable, too slow = small steps
+                # 2. Movement reward - encourage larger hip movements
+                # Track hip position changes over time
+                if not hasattr(self, "previous_hip_positions"):
+                    self.previous_hip_positions = {i: hip_position for i in hip_indices}
+
+                hip_movement = abs(
+                    hip_position
+                    - self.previous_hip_positions.get(hip_idx, hip_position)
+                )
+                self.previous_hip_positions[hip_idx] = hip_position
+
+                # Reward for larger hip movements (encourages bigger steps)
+                # Normalize by joint range to get relative movement
+                relative_movement = hip_movement / range_size
+
+                if relative_movement > 0.1:  # Significant movement (>10% of range)
+                    movement_reward = (
+                        3.0 * relative_movement
+                    )  # Strong reward for large movements
+                elif relative_movement > 0.05:  # Moderate movement
+                    movement_reward = 1.0 * relative_movement
+                else:
+                    movement_reward = -0.5  # Penalty for very small movements
+
+                # 3. Velocity reward - encourage purposeful hip movement
                 velocity_magnitude = abs(hip_velocity)
-                if 0.5 <= velocity_magnitude <= 2.0:  # Moderate speed range
+                if 0.3 <= velocity_magnitude <= 2.5:  # Good speed range
                     velocity_reward = 1.0
-                elif 0.2 <= velocity_magnitude <= 3.0:  # Acceptable range
+                elif 0.1 <= velocity_magnitude <= 3.0:  # Acceptable range
                     velocity_reward = 0.5
                 else:
-                    velocity_reward = -0.2  # Penalty for too slow or too fast
+                    velocity_reward = -0.3  # Penalty for too slow or too fast
 
-                total_stride_reward += stride_reward
-                total_velocity_reward += velocity_reward
+                # 4. Directional movement reward - encourage hip movement that contributes to forward motion
+                robot_forward_velocity = np.dot(self.data.qvel[:3], forward_direction)
 
-        # Combine position and velocity rewards
+                # If robot is moving forward and hip is moving, that's good
+                if robot_forward_velocity > 0.1 and abs(hip_velocity) > 0.2:
+                    directional_reward = 1.0
+                elif robot_forward_velocity > 0.05 and abs(hip_velocity) > 0.1:
+                    directional_reward = 0.5
+                else:
+                    directional_reward = 0.0
+
+                # Combine all rewards for this hip
+                hip_total_reward = (
+                    0.3 * position_reward
+                    + 0.4 * movement_reward  # Emphasize actual movement
+                    + 0.2 * velocity_reward
+                    + 0.1 * directional_reward
+                )
+
+                total_stride_reward += hip_total_reward
+                total_movement_reward += movement_reward
+
+        # Add step length reward - encourage larger actual steps
+        step_length_reward = 0.0
+        if current_step_length > 0.05:  # Significant step length
+            step_length_reward = (
+                5.0 * current_step_length
+            )  # Strong reward for large steps
+        elif current_step_length > 0.02:  # Moderate step length
+            step_length_reward = 2.0 * current_step_length
+        else:
+            step_length_reward = -1.0  # Penalty for very small steps
+
+        # Add step length reward to total
+        total_stride_reward += step_length_reward
+
+        # Average rewards across all hips
         avg_stride_reward = total_stride_reward / len(hip_indices)
-        avg_velocity_reward = total_velocity_reward / len(hip_indices)
-
-        # Weight position more heavily than velocity
-        combined_reward = 0.7 * avg_stride_reward + 0.3 * avg_velocity_reward
+        avg_movement_reward = total_movement_reward / len(hip_indices)
 
         # Debug output
         if self.debug and self.steps_taken % 200 == 0:
             print(
-                f"Stride reward: pos={avg_stride_reward:.3f}, vel={avg_velocity_reward:.3f}, combined={combined_reward:.3f}"
+                f"Stride reward: total={avg_stride_reward:.3f}, movement={avg_movement_reward:.3f}, step_length={current_step_length:.4f}"
             )
-            # Print hip positions for first few legs
+            # Print hip movements for first few legs
             for i, hip_idx in enumerate(hip_indices[:3]):  # Show first 3 legs
                 if hip_idx < len(joint_positions):
                     pos = joint_positions[hip_idx]
                     vel = joint_velocities[hip_idx]
                     limits = self.actuator_limits[hip_idx]
                     range_used = (pos - limits[0]) / (limits[1] - limits[0])
+                    movement = abs(pos - self.previous_hip_positions.get(hip_idx, pos))
+                    relative_movement = movement / (limits[1] - limits[0])
                     print(
-                        f"  Leg{i+1} hip: pos={pos:.3f}, vel={vel:.3f}, range_used={range_used:.2f}"
+                        f"  Leg{i+1} hip: pos={pos:.3f}, vel={vel:.3f}, range_used={range_used:.2f}, movement={relative_movement:.3f}"
                     )
 
-        return combined_reward
+        return avg_stride_reward
 
     def _compute_gait_reward(self):
         """Reward for maintaining a coordinated gait pattern."""
@@ -719,6 +787,240 @@ class SpiderRobotEnv(MujocoEnv):
             z = 0
 
         return np.array([x, y, z])
+
+    def _track_step_lengths(self):
+        """Track actual step lengths by monitoring foot positions."""
+        # Get foot positions in world coordinates
+        foot_positions = []
+        for foot_geom_id in self.foot_geom_ids:
+            # Get the body ID from the geom ID
+            foot_body_id = self.model.geom_bodyid[foot_geom_id]
+            foot_pos = self.data.xpos[foot_body_id]
+            foot_positions.append(foot_pos.copy())
+
+        # Track foot movement and step lengths
+        if (
+            not hasattr(self, "previous_foot_positions")
+            or not self.previous_foot_positions
+        ):
+            self.previous_foot_positions = {
+                i: pos.copy() for i, pos in enumerate(foot_positions)
+            }
+            return 0.0
+
+        total_step_length = 0.0
+        num_feet_moving = 0
+
+        for i, (current_pos, prev_pos) in enumerate(
+            zip(foot_positions, self.previous_foot_positions.values())
+        ):
+            # Calculate foot movement in robot's forward direction
+            body_mat = self.data.xmat[self.torso_id].reshape(3, 3)
+            forward_direction = body_mat[:, 0]
+
+            # Project foot movement onto forward direction
+            foot_movement = current_pos - prev_pos
+            forward_movement = np.dot(foot_movement, forward_direction)
+
+            # Only count positive forward movement (actual steps)
+            if forward_movement > 0.01:  # Significant forward movement
+                total_step_length += forward_movement
+                num_feet_moving += 1
+
+            # Update previous position
+            self.previous_foot_positions[i] = current_pos.copy()
+
+        # Calculate average step length
+        avg_step_length = total_step_length / max(num_feet_moving, 1)
+
+        # Store step length history
+        self.step_lengths.append(avg_step_length)
+        if len(self.step_lengths) > self.max_step_history:
+            self.step_lengths.pop(0)
+
+        return avg_step_length
+
+    def _compute_smoothness_penalty(self):
+        """Penalize excessive joint acceleration/jerk to encourage smooth movement."""
+        current_joint_velocities = self.data.qvel[6:30]  # Joint velocities
+
+        if self.previous_joint_velocities is None:
+            self.previous_joint_velocities = current_joint_velocities.copy()
+            return 0.0
+
+        # Calculate joint accelerations (change in velocity)
+        joint_accelerations = (
+            current_joint_velocities - self.previous_joint_velocities
+        ) / (self.dt * self.frame_skip)
+
+        # Store acceleration history
+        self.joint_acceleration_history.append(joint_accelerations.copy())
+        if len(self.joint_acceleration_history) > self.max_acceleration_history:
+            self.joint_acceleration_history.pop(0)
+
+        # Update previous velocities
+        self.previous_joint_velocities = current_joint_velocities.copy()
+
+        # Calculate smoothness penalty
+        # 1. Acceleration magnitude penalty (penalize large accelerations)
+        acc_magnitude_penalty = -0.1 * np.sum(np.square(joint_accelerations))
+
+        # 2. Direction change penalty (penalize rapid velocity direction changes)
+        direction_change_penalty = 0.0
+        if len(self.joint_acceleration_history) >= 2:
+            prev_acc = self.joint_acceleration_history[-2]
+            curr_acc = self.joint_acceleration_history[-1]
+
+            # Penalize when acceleration changes sign rapidly (jerk)
+            for i in range(len(prev_acc)):
+                if (
+                    abs(prev_acc[i]) > 0.1 and abs(curr_acc[i]) > 0.1
+                ):  # Only if significant acceleration
+                    if np.sign(prev_acc[i]) != np.sign(curr_acc[i]):  # Direction change
+                        direction_change_penalty -= 0.05
+
+        # 3. Velocity consistency penalty (penalize erratic velocity changes)
+        velocity_consistency_penalty = 0.0
+        if len(self.joint_acceleration_history) >= 3:
+            # Check for consistent acceleration patterns
+            recent_accs = np.array(self.joint_acceleration_history[-3:])
+            acc_variance = np.var(recent_accs, axis=0)
+            velocity_consistency_penalty = -0.02 * np.sum(acc_variance)
+
+        total_smoothness_penalty = (
+            acc_magnitude_penalty
+            + direction_change_penalty
+            + velocity_consistency_penalty
+        )
+
+        # Debug output
+        if self.debug and self.steps_taken % 200 == 0:
+            acc_rms = np.sqrt(np.mean(np.square(joint_accelerations)))
+            print(
+                f"Smoothness: acc_rms={acc_rms:.3f}, dir_changes={direction_change_penalty:.3f}, penalty={total_smoothness_penalty:.3f}"
+            )
+
+        return total_smoothness_penalty
+
+    def _compute_leg_coordination_reward(self):
+        """Reward coordinated movement between hip, femur, and tibia joints within each leg."""
+        joint_positions = self.data.qpos[7:31]
+        joint_velocities = self.data.qvel[6:30]
+
+        total_coordination_reward = 0.0
+
+        # Analyze each leg (8 legs, 3 joints each)
+        for leg_idx in range(8):
+            leg_start = leg_idx * 3
+
+            # Get joint indices for this leg
+            hip_idx = leg_start + 0
+            femur_idx = leg_start + 1
+            tibia_idx = leg_start + 2
+
+            if tibia_idx >= len(joint_positions):
+                continue
+
+            # Get joint states
+            hip_pos = joint_positions[hip_idx]
+            femur_pos = joint_positions[femur_idx]
+            tibia_pos = joint_positions[tibia_idx]
+
+            hip_vel = joint_velocities[hip_idx]
+            femur_vel = joint_velocities[femur_idx]
+            tibia_vel = joint_velocities[tibia_idx]
+
+            # 1. Velocity coordination reward
+            # Encourage joints to move in coordinated patterns
+            velocity_magnitudes = np.array(
+                [abs(hip_vel), abs(femur_vel), abs(tibia_vel)]
+            )
+
+            # Reward when all joints are active (not just hip)
+            if np.all(velocity_magnitudes > 0.1):  # All joints moving significantly
+                velocity_coordination = 1.0
+            elif np.sum(velocity_magnitudes > 0.1) >= 2:  # At least 2 joints moving
+                velocity_coordination = 0.5
+            else:
+                velocity_coordination = -0.2  # Penalty for only one joint moving
+
+            # 2. Phase relationship reward
+            # Encourage proper phase relationships between joints
+            # Hip leads, femur follows, tibia completes the motion
+            phase_reward = 0.0
+
+            # Check if joints are moving in coordinated directions
+            if abs(hip_vel) > 0.1 and abs(femur_vel) > 0.1:
+                # Reward when hip and femur move in coordinated patterns
+                if np.sign(hip_vel) == np.sign(femur_vel):
+                    phase_reward += (
+                        0.3  # Same direction can be good for some gait phases
+                    )
+                else:
+                    phase_reward += 0.5  # Opposite directions often better for walking
+
+            if abs(femur_vel) > 0.1 and abs(tibia_vel) > 0.1:
+                # Femur and tibia coordination
+                if abs(np.sign(femur_vel) - np.sign(tibia_vel)) < 0.1:
+                    phase_reward += 0.3
+
+            # 3. Range utilization reward
+            # Encourage using more of each joint's range, not just hip
+            range_utilization = 0.0
+            for joint_idx, joint_pos in enumerate([hip_pos, femur_pos, tibia_pos]):
+                actual_joint_idx = leg_start + joint_idx
+                if actual_joint_idx < len(self.actuator_limits):
+                    joint_limits = self.actuator_limits[actual_joint_idx]
+                    range_size = joint_limits[1] - joint_limits[0]
+                    position_in_range = (joint_pos - joint_limits[0]) / range_size
+
+                    # Reward for using middle portions of the range
+                    if 0.2 <= position_in_range <= 0.8:
+                        range_utilization += 0.3
+                    elif 0.1 <= position_in_range <= 0.9:
+                        range_utilization += 0.1
+                    else:
+                        range_utilization -= 0.1  # Penalty for extremes
+
+            # 4. Movement amplitude balance
+            # Encourage similar movement amplitudes across joints
+            amplitude_balance = 0.0
+            if np.all(velocity_magnitudes > 0.05):
+                # Calculate coefficient of variation for velocity magnitudes
+                mean_vel = np.mean(velocity_magnitudes)
+                vel_cv = np.std(velocity_magnitudes) / mean_vel if mean_vel > 0 else 1.0
+                amplitude_balance = 0.5 * np.exp(
+                    -2.0 * vel_cv
+                )  # Reward balanced movement
+
+            # Combine rewards for this leg
+            leg_coordination = (
+                0.4 * velocity_coordination
+                + 0.3 * phase_reward
+                + 0.2 * range_utilization
+                + 0.1 * amplitude_balance
+            )
+
+            total_coordination_reward += leg_coordination
+
+        # Average across all legs
+        avg_coordination_reward = total_coordination_reward / 8
+
+        # Debug output
+        if self.debug and self.steps_taken % 200 == 0:
+            print(f"Leg coordination reward: {avg_coordination_reward:.3f}")
+            # Show details for first few legs
+            for leg_idx in range(min(3, 8)):
+                leg_start = leg_idx * 3
+                if leg_start + 2 < len(joint_velocities):
+                    hip_vel = joint_velocities[leg_start]
+                    femur_vel = joint_velocities[leg_start + 1]
+                    tibia_vel = joint_velocities[leg_start + 2]
+                    print(
+                        f"  Leg{leg_idx+1}: hip_vel={hip_vel:.3f}, femur_vel={femur_vel:.3f}, tibia_vel={tibia_vel:.3f}"
+                    )
+
+        return avg_coordination_reward
 
 
 def make_env(xml_file, debug=False):
