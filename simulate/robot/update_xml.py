@@ -6,6 +6,18 @@ SOURCE_PATH = "./export/SpiderBody/SpiderBody.xml"
 OUT_PATH = "./SpiderBot.xml"
 ACTUATOR_TORQUE_RANGE = "-10 10"
 
+HIP_RANGES = (
+    "",
+    "-1.8 0",  # Leg1
+    "-1.8 0",  # Leg2
+    "0 1.8",  # Leg3
+    "0 1.8",  # Leg4
+    "0 1.8",  # Leg5
+    "0 1.8",  # Leg6
+    "-1.8 0",  # Leg7
+    "-1.8 0",  # Leg8
+)
+
 
 def main(tree):
     tree = simplify_names(tree)
@@ -44,7 +56,7 @@ def simplify_names(tree):
             name = elem.attrib["name"]
             name = re.sub(r"Hip-actuator-assembly_Hip-Bracket_Hip", "Hip", name)
             name = re.sub(r"Femur-actuator-assembly_Femur_Revolute-2", "Femur", name)
-            name = re.sub(r"Tibia_Tibia-Full_Tibia", "Tibia", name)
+            name = re.sub(r"Tibia_Leg_Tibia", "Tibia", name)
             elem.attrib["name"] = name
 
     return tree
@@ -54,22 +66,11 @@ def update_hip_join_ranges(tree):
     """
     Update the ranges of the hip joints in the XML tree.
     """
-    hip_range = (
-        "",
-        "-0.3 1.570796",  # Leg1
-        "-0.7 1.2",  # Leg2
-        "-1.2 0.6",  # Leg3
-        "-1.570796 0.3",  # Leg4
-        "-1.570796 0.3",  # Leg5
-        "-1.2 0.7",  # Leg6
-        "-0.6 1.2",  # Leg7
-        "-0.3 1.570796",  # Leg8
-    )
     for i in range(1, 9):
         joint_name = f"Leg{i}_Hip"
         joint = tree.find(f".//joint[@name='{joint_name}']")
         if joint is not None:
-            joint.set("range", hip_range[i])
+            joint.set("range", HIP_RANGES[i])
 
     return tree
 
@@ -285,9 +286,9 @@ def add_feet_and_sensors(tree):
         sensor = ET.SubElement(tree.getroot(), "sensor")
 
     for i in range(1, 9):
-        tibia = tree.find(f".//worldbody//body[@name='Leg{i}_Tibia_Tibia-Full']")
+        tibia = tree.find(f".//worldbody//body[@name='Leg{i}_Tibia_Leg']")
         if tibia is None:
-            print(f"No Leg{i}_Tibia_Tibia-Full body found.")
+            print(f"No 'Leg{i}_Tibia_Leg' body found.")
             exit(1)
 
         #  Add touch sites

@@ -8,6 +8,33 @@ from gymnasium import spaces
 from gymnasium.envs.mujoco.mujoco_env import MujocoEnv
 from mujoco import mjtObj, mj_name2id
 
+INITIAL_JOINT_POSITIONS = (
+    "-1",  # Leg 1 - Hip
+    "0.75",  # Leg 1 - Femur
+    "1.0",  # Leg 1 - Tibia
+    "-1",  # Leg 2 - Hip
+    "0.75",  # Leg 2 - Femur
+    "1.0",  # Leg 2 - Tibia
+    "1",  # Leg 3 - Hip
+    "0.75",  # Leg 3 - Femur
+    "1.0",  # Leg 3 - Tibia
+    "1",  # Leg 4 - Hip
+    "0.75",  # Leg 4 - Femur
+    "1.0",  # Leg 4 - Tibia
+    "1",  # Leg 5 - Hip
+    "0.75",  # Leg 5 - Femur
+    "1.0",  # Leg 5 - Tibia
+    "1",  # Leg 6 - Hip
+    "0.75",  # Leg 6 - Femur
+    "1.0",  # Leg 6 - Tibia
+    "-1.0",  # Leg 7 - Hip
+    "0.75",  # Leg 7 - Femur
+    "1.0",  # Leg 7 - Tibia
+    "-1.0",  # Leg 8 - Hip
+    "0.75",  # Leg 8 - Femur
+    "1.0",  # Leg 8 - Tibia
+)
+
 
 class SpiderRobotEnv(MujocoEnv):
     """
@@ -35,6 +62,10 @@ class SpiderRobotEnv(MujocoEnv):
         # Simplified tracking
         self.previous_action = None
         self.feet_contact_count = 0
+
+        # Episode stability tracking
+        self.stable_steps = 0
+        self.total_steps = 0
 
         # Core parameters
         self.target_height = 0.134  # Will be set on reset
@@ -68,6 +99,26 @@ class SpiderRobotEnv(MujocoEnv):
 
         # Cache foot geom IDs by name
         self._cache_foot_geom_ids()
+
+        # Set initial joint positions
+        self._set_initial_joint_positions()
+
+    def _set_initial_joint_positions(self):
+        """Set the initial joint positions from the constant."""
+        qpos = self.data.qpos.copy()
+
+        # Set joint positions from the constant
+        for i, pos_str in enumerate(INITIAL_JOINT_POSITIONS):
+            if i < len(qpos) - 7:  # Ensure we don't go out of bounds
+                qpos[7 + i] = float(pos_str)
+
+        # Update the state
+        self.set_state(qpos, self.data.qvel)
+
+        # Debug: Print initial joint positions
+        print(
+            f"🦵 Set initial joint positions: {qpos[7:7+len(INITIAL_JOINT_POSITIONS)]}"
+        )
 
     def step(self, action):
         """Simplified step with curriculum-aware rewards."""
@@ -105,6 +156,12 @@ class SpiderRobotEnv(MujocoEnv):
         self.do_simulation(torques, self.frame_skip)
 
         self.episode_length += 1
+        self.total_steps += 1
+
+        # Track stability
+        if self._is_stable():
+            self.stable_steps += 1
+
         observation = self._get_obs()
         reward = self._compute_curriculum_reward(action)
         terminated = self._is_terminated()
@@ -116,12 +173,23 @@ class SpiderRobotEnv(MujocoEnv):
         return observation, reward, terminated, truncated, info
 
     def reset_model(self):
-        """Reset with slight randomization."""
+        """Reset with predefined joint positions and slight randomization."""
         qpos = self.init_qpos.copy()
         qvel = self.init_qvel.copy()
 
-        # Small random perturbations
-        qpos[7:] += self.np_random.uniform(low=-0.01, high=0.01, size=self.model.nq - 7)
+        # Set initial joint positions from the constant
+        for i, pos_str in enumerate(INITIAL_JOINT_POSITIONS):
+            if i < len(qpos) - 7:  # Ensure we don't go out of bounds
+                qpos[7 + i] = float(pos_str)
+
+        # Small random perturbations to joint positions only
+        joint_perturbations = self.np_random.uniform(
+            low=-0.005, high=0.005, size=len(INITIAL_JOINT_POSITIONS)
+        )
+        for i in range(min(len(joint_perturbations), len(qpos) - 7)):
+            qpos[7 + i] += joint_perturbations[i]
+
+        # Small random perturbations to velocities
         qvel[6:] += self.np_random.uniform(low=-0.01, high=0.01, size=self.model.nv - 6)
 
         self.set_state(qpos, qvel)
@@ -132,6 +200,10 @@ class SpiderRobotEnv(MujocoEnv):
         self.target_height = self.data.qpos[2]
         self.previous_action = np.zeros(24)
         self.feet_contact_count = 0
+
+        # Reset stability tracking
+        self.stable_steps = 0
+        self.total_steps = 0
 
         return self._get_obs()
 
@@ -184,24 +256,37 @@ class SpiderRobotEnv(MujocoEnv):
 
         # Stage 1: Balance (focus on stability)
         if self.curriculum_stage == 1:
-            height_reward = 25.0 * np.exp(
+            height_reward = 8.0 * np.exp(
                 -100 * height_error**2
-            )  # Tighter height control
-            upright_reward = 15.0 * np.exp(
+            )  # Stronger height control
+            upright_reward = 5.0 * np.exp(
                 -20 * upright_error**2
             )  # Stronger upright bonus
 
-            # Softer penalty for joint movement (allow some adjustment)
+            # Stronger penalty for joint movement (encourage stillness)
             joint_velocities = self.data.qvel[6:30]
             joint_movement_penalty = -0.5 * np.sum(np.abs(joint_velocities))
 
-            # Reward for minimal body movement
-            body_stillness = 8.0 * np.exp(-10 * np.sum(self.data.qvel[:6] ** 2))
+            # Stronger reward for minimal body movement
+            body_stillness = 5.0 * np.exp(-10 * np.sum(self.data.qvel[:6] ** 2))
 
-            gyro_reward = 20.0 * gyro_stability  # Even stronger gyro reward
+            gyro_reward = 6.0 * gyro_stability  # Stronger gyro reward
 
             # Bonus for maintaining target height
-            height_bonus = 10.0 if height_error < 0.01 else 0.0
+            height_bonus = 2.0 if height_error < 0.005 else 0.0
+
+            # Penalty for action changes (encourage smooth, minimal actions)
+            if self.previous_action is not None:
+                action_change = np.sum((action - self.previous_action) ** 2)
+                action_smoothness_penalty = -0.3 * action_change
+            else:
+                action_smoothness_penalty = 0.0
+
+            # Calculate stability ratio for reward scaling
+            stability_ratio = self.stable_steps / max(1, self.total_steps)
+
+            # Scale rewards based on stability (more stable = higher rewards)
+            stability_multiplier = 0.5 + 0.5 * stability_ratio
 
             reward = (
                 height_reward
@@ -210,19 +295,20 @@ class SpiderRobotEnv(MujocoEnv):
                 + joint_movement_penalty
                 + gyro_reward
                 + height_bonus
-                + contact_penalty * 0.2  # Reduce contact penalty impact
-                + 5.0  # Higher base reward
-            )
+                + action_smoothness_penalty
+                + contact_penalty * 0.2
+                + 2.0  # Base reward
+            ) * stability_multiplier
 
         # Stage 2: Movement (add forward progress)
         elif self.curriculum_stage == 2:
-            height_reward = 12.0 * np.exp(-50 * height_error**2)
-            upright_reward = 8.0 * np.exp(-15 * upright_error**2)
+            height_reward = 3.0 * np.exp(-30 * height_error**2)
+            upright_reward = 2.0 * np.exp(-8 * upright_error**2)
 
             # Progressive forward reward (encourage consistent forward motion)
-            forward_reward = 8.0 * np.clip(
-                forward_velocity, 0, 1.0
-            )  # No negative reward
+            forward_reward = 10.0 * np.clip(
+                forward_velocity, 0, 0.5
+            )  # More reasonable forward reward
 
             # Penalize sideways drift
             lateral_penalty = -5.0 * lateral_velocity
@@ -231,7 +317,7 @@ class SpiderRobotEnv(MujocoEnv):
             foot_contacts = self._get_foot_contacts()
             alternating_contacts = self._get_gait_coordination_reward(foot_contacts)
 
-            gyro_reward = 8.0 * gyro_stability  # Still important for stable walking
+            gyro_reward = 2.0 * gyro_stability  # Still important for stable walking
 
             reward = (
                 height_reward
@@ -240,35 +326,35 @@ class SpiderRobotEnv(MujocoEnv):
                 + lateral_penalty
                 + alternating_contacts
                 + gyro_reward
-                + contact_penalty * 0.5  # Reduce impact
-                + 3.0  # Higher base reward
+                + contact_penalty * 0.2  # Reduce impact
+                + 1.5  # Reasonable base reward
             )
 
         # Stage 3: Efficiency (optimize everything)
         else:
-            height_reward = 10.0 * np.exp(-40 * height_error**2)
-            upright_reward = 6.0 * np.exp(-15 * upright_error**2)
+            height_reward = 2.0 * np.exp(-25 * height_error**2)
+            upright_reward = 1.5 * np.exp(-8 * upright_error**2)
 
             # Reward faster forward motion
-            forward_reward = 10.0 * np.clip(forward_velocity, 0, 2.0)
+            forward_reward = 5.0 * np.clip(forward_velocity, 0, 1.0)
 
-            gyro_reward = 6.0 * gyro_stability
+            gyro_reward = 1.5 * gyro_stability
 
             # Energy efficiency (smoother actions)
             if self.previous_action is not None:
                 action_change = np.sum((action - self.previous_action) ** 2)
-                smoothness_reward = 3.0 * np.exp(-0.3 * action_change)
+                smoothness_reward = 1.0 * np.exp(-0.5 * action_change)
             else:
                 smoothness_reward = 0.0
 
             # Advanced gait quality
             foot_contacts = self._get_foot_contacts()
-            gait_reward = self._get_gait_coordination_reward(foot_contacts) * 1.5
+            gait_reward = self._get_gait_coordination_reward(foot_contacts) * 0.8
 
             # Speed consistency bonus
             if hasattr(self, "previous_forward_velocity"):
-                speed_consistency = 2.0 * np.exp(
-                    -5 * (forward_velocity - self.previous_forward_velocity) ** 2
+                speed_consistency = 1.0 * np.exp(
+                    -3 * (forward_velocity - self.previous_forward_velocity) ** 2
                 )
             else:
                 speed_consistency = 0.0
@@ -282,8 +368,8 @@ class SpiderRobotEnv(MujocoEnv):
                 + smoothness_reward
                 + gait_reward
                 + speed_consistency
-                + contact_penalty * 0.3  # Further reduce impact
-                + 2.0  # Base reward
+                + contact_penalty * 0.1  # Further reduce impact
+                + 1.0  # Reasonable base reward
             )
 
         return reward
@@ -319,11 +405,11 @@ class SpiderRobotEnv(MujocoEnv):
             if not geom1_is_foot and not geom2_is_foot:
                 # Check if one of them is ground (geom 0)
                 if contact.geom1 == 0 or contact.geom2 == 0:
-                    # Severe penalty for non-foot touching ground
-                    penalty -= 10.0
+                    # Moderate penalty for non-foot touching ground
+                    penalty -= 2.0
                 else:
-                    # Mild penalty for robot parts touching each other
-                    penalty -= 1.0
+                    # Very mild penalty for robot parts touching each other
+                    penalty -= 0.1
 
         return penalty
 
@@ -361,7 +447,7 @@ class SpiderRobotEnv(MujocoEnv):
         # Ideal is alternating contact (some on each side)
         if left_contacts > 0 and right_contacts > 0:
             # Good - both sides have contact
-            balance_reward = 2.0
+            balance_reward = 0.5
 
             # Extra reward for diagonal pairs (more stable)
             diagonal_pairs = [
@@ -370,7 +456,7 @@ class SpiderRobotEnv(MujocoEnv):
                 (foot_contacts[2] and foot_contacts[4]),  # Leg3 & Leg5
                 (foot_contacts[3] and foot_contacts[5]),  # Leg4 & Leg6
             ]
-            diagonal_reward = sum(diagonal_pairs) * 1.0
+            diagonal_reward = sum(diagonal_pairs) * 0.2
 
             return balance_reward + diagonal_reward
         else:
@@ -402,11 +488,27 @@ class SpiderRobotEnv(MujocoEnv):
         return contacts
 
     def _is_terminated(self):
-        """Check if episode should terminate (robot has fallen)."""
+        """Check if episode should terminate (robot has fallen or become unstable)."""
 
         # Terminate if body is too low
         height = self.data.qpos[2]
         if height < 0.05:
+            return True
+
+        # Terminate if robot has fallen (body too tilted)
+        orientation = self.data.xquat[1]
+        upright_error = 1.0 - orientation[3]  # Assuming w component should be 1
+        if upright_error > 0.3:  # More than 30 degrees tilt
+            return True
+
+        # Terminate if body velocity is too high (unstable movement)
+        body_velocity = np.linalg.norm(self.data.qvel[:3])
+        if body_velocity > 2.0:  # Too fast movement
+            return True
+
+        # Terminate if joint velocities are too high (excessive movement)
+        joint_velocities = np.linalg.norm(self.data.qvel[6:30])
+        if joint_velocities > 5.0:  # Excessive joint movement
             return True
 
         # Check for simulation instability
@@ -415,14 +517,42 @@ class SpiderRobotEnv(MujocoEnv):
 
         return False
 
+    def _is_stable(self):
+        """Check if the robot is currently in a stable state."""
+        # Check if height is close to target
+        height = self.data.qpos[2]
+        height_error = abs(height - self.target_height)
+
+        # Check if body is upright
+        orientation = self.data.xquat[1]
+        upright_error = 1.0 - orientation[3]
+
+        # Check if body velocity is low
+        body_velocity = np.linalg.norm(self.data.qvel[:3])
+
+        # Check if joint velocities are low
+        joint_velocities = np.linalg.norm(self.data.qvel[6:30])
+
+        # Consider stable if all conditions are met
+        return (
+            height_error < 0.02
+            and upright_error < 0.1
+            and body_velocity < 0.5
+            and joint_velocities < 1.0
+        )
+
     def _get_info(self):
         """Return training information."""
+        stability_ratio = self.stable_steps / max(1, self.total_steps)
         return {
             "episode_length": self.episode_length,
             "height": self.data.qpos[2],
             "forward_velocity": self.data.qvel[0],
             "distance_traveled": self.data.qpos[0] - self.initial_x_position,
             "curriculum_stage": self.curriculum_stage,
+            "stability_ratio": stability_ratio,
+            "stable_steps": self.stable_steps,
+            "total_steps": self.total_steps,
         }
 
     def set_curriculum_stage(self, stage):
