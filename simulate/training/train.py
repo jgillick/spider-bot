@@ -43,10 +43,10 @@ DEFAULT_CONFIG = {
     "network_arch": [512, 512, 256],
     "checkpoint_freq": 100_000,
     "eval_freq": 25_000,
-    "stage_thresholds": [35_000, 40_000, 45_000],
+    "stage_thresholds": [2000, 3000, 4000],
     "early_stopping": True,
-    "early_stopping_patience": 15,
-    "early_stopping_min_improvement": 5.0,
+    "early_stopping_patience": 20,
+    "early_stopping_min_improvement": 10.0,
     "generate_videos": True,
 }
 
