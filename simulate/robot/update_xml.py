@@ -170,7 +170,7 @@ def visual_settings(tree):
             insert_at = list(tree.getroot()).index(compiler) + 1
         tree.getroot().insert(insert_at, visual)
 
-    ET.SubElement(visual, "global", {"offwidth": "800", "offheight": "600"})
+    ET.SubElement(visual, "global", {"offwidth": "1200", "offheight": "800"})
 
     return tree
 
@@ -312,15 +312,22 @@ def add_feet_and_sensors(tree):
         ET.SubElement(tibia, "geom", bad2)
 
         foot = {
-            "name": f"Leg{i}_Tibia_foot_site",
             "pos": "0.04 -0.1195 0.2018",
             "size": "0.007 0.005",
             "type": "cylinder",
             "rgba": "0 1 0 1",
             "euler": "0 1.5708 0",
         }
-        ET.SubElement(tibia, "site", foot)
-        ET.SubElement(tibia, "geom", foot | {"friction": "2.0 0.1 0.01"})
+        ET.SubElement(
+            tibia,
+            "site",
+            {"name": f"Leg{i}_Tibia_foot_site"} | foot,
+        )
+        ET.SubElement(
+            tibia,
+            "geom",
+            {"name": f"Leg{i}_Tibia_foot", "friction": "2.0 0.1 0.01"} | foot,
+        )
 
         # Add sensors
         ET.SubElement(
