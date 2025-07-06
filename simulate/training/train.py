@@ -13,10 +13,8 @@ import os
 import json
 import traceback
 import numpy as np
-import torch.nn as nn
 from moviepy import ImageSequenceClip
 from datetime import datetime
-import torch.nn as nn
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv, VecNormalize
 from stable_baselines3.common.callbacks import (
@@ -26,29 +24,29 @@ from stable_baselines3.common.callbacks import (
 )
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.monitor import Monitor
+from stable_baselines3.common.vec_env import VecVideoRecorder
 
 from .environment import SpiderRobotEnv
-from stable_baselines3.common.vec_env import VecVideoRecorder
 
 DEFAULT_CONFIG = {
     "num_envs": 8,
-    "total_timesteps": 4_000_000,
+    "total_timesteps": 10_000_000,
     "learning_rate": 3e-4,
     "batch_size": 256,
     "n_steps": 2048,
     "n_epochs": 10,
     "gamma": 0.99,
     "gae_lambda": 0.95,
-    "clip_range": 0.2,
-    "ent_coef": 0.01,
+    "clip_range": 0.15,
+    "ent_coef": 0.02,
     "max_grad_norm": 0.5,
-    "network_arch": [256, 256, 128],
+    "network_arch": [512, 512, 256],
     "checkpoint_freq": 100_000,
-    "eval_freq": 50_000,
-    "stage_thresholds": [13_000, 15_000, 18_000],
+    "eval_freq": 25_000,
+    "stage_thresholds": [35_000, 40_000, 45_000],
     "early_stopping": True,
-    "early_stopping_patience": 10,
-    "early_stopping_min_improvement": 10.0,
+    "early_stopping_patience": 15,
+    "early_stopping_min_improvement": 5.0,
     "generate_videos": True,
 }
 
@@ -56,7 +54,7 @@ DEFAULT_CONFIG = {
 class CurriculumCallback(BaseCallback):
     """Callback for automatic curriculum progression."""
 
-    def __init__(self, eval_env, stage_thresholds, verbose=0):
+    def __init__(self, eval_env, stage_thresholds, verbose=0, out_dir=None):
         super().__init__(verbose)
         self.eval_env = eval_env
         self.stage_thresholds = stage_thresholds
@@ -64,6 +62,8 @@ class CurriculumCallback(BaseCallback):
         self.stage_episodes = 0
         self.stage_start_timestep = 0
         self.advance_requested = False  # Flag for advancing curriculum
+        self.out_dir = out_dir
+        self.xml_file = None  # Will be set later
 
     def request_advance(self):
         """Request curriculum advancement from evaluation callback."""
@@ -76,6 +76,10 @@ class CurriculumCallback(BaseCallback):
     def _on_step(self) -> bool:
         # Check if curriculum advancement was requested
         if self.advance_requested and self.current_stage < 3:
+            # Record stage completion video
+            if self.out_dir and self.xml_file:
+                self._record_stage_video()
+
             self.current_stage += 1
             self.stage_start_timestep = self.num_timesteps
             self.advance_requested = False
@@ -154,6 +158,74 @@ class CurriculumCallback(BaseCallback):
             self.logger.record("curriculum/current_stage", self.current_stage)
 
         return True
+
+    def _record_stage_video(self):
+        """Record a video showing the robot's performance at the end of a stage."""
+        try:
+            print(f"🎬 Recording stage {self.current_stage} completion video...")
+
+            # Create video environment for this stage
+            video_env = DummyVecEnv(
+                [
+                    lambda: SpiderRobotEnv(
+                        self.xml_file,
+                        render_mode="rgb_array",
+                        camera_name="track",
+                        width=1200,
+                        height=800,
+                        curriculum_stage=self.current_stage,
+                    )
+                ]
+            )
+
+            # Apply normalization if available
+            if hasattr(self.eval_env, "obs_rms"):
+                video_env = VecNormalize(
+                    video_env,
+                    norm_obs=True,
+                    norm_reward=False,
+                    clip_obs=10.0,
+                    training=False,
+                )
+                video_env.obs_rms = self.eval_env.obs_rms
+
+            # Wrap with video recorder
+            stage_video_path = (
+                f"{self.out_dir}/videos/stage_{self.current_stage}_completion"
+            )
+            video_env = VecVideoRecorder(
+                video_env,
+                video_folder=stage_video_path,
+                record_video_trigger=lambda x: True,
+                video_length=1000,  # 1000 steps for stage video
+                name_prefix=f"stage_{self.current_stage}",
+            )
+
+            # Record one episode
+            obs = video_env.reset()
+            episode_reward = 0
+            steps = 0
+
+            for _ in range(1000):
+                action, _ = self.model.predict(obs, deterministic=True)
+                obs, reward, done, info = video_env.step(action)
+                episode_reward += (
+                    reward[0] if isinstance(reward, np.ndarray) else reward
+                )
+                steps += 1
+
+                if done[0] if isinstance(done, np.ndarray) else done:
+                    break
+
+            video_env.close()
+            print(f"✅ Stage {self.current_stage} video saved to {stage_video_path}")
+
+        except Exception as e:
+            print(f"⚠️ Failed to record stage {self.current_stage} video: {e}")
+
+    def set_xml_file(self, xml_file):
+        """Set the XML file path for video recording."""
+        self.xml_file = xml_file
 
 
 class CustomEvalCallback(BaseCallback):
@@ -235,7 +307,14 @@ class CustomEvalCallback(BaseCallback):
                 mean_reward = np.mean(episode_rewards)
                 std_reward = np.std(episode_rewards)
 
-                print(f"   📊 Evaluation Results:")
+                # Get current stage
+                current_stage = (
+                    self.curriculum_callback.current_stage
+                    if self.curriculum_callback
+                    else 1
+                )
+
+                print(f"   📊 Evaluation Results (Stage {current_stage}):")
                 print(f"      Mean reward: {mean_reward:.2f} ± {std_reward:.2f}")
                 print(f"      Best so far: {self.best_mean_reward:.2f}")
 
@@ -393,7 +472,7 @@ def generate_training_videos(model, xml_file, out_dir, eval_env=None):
         episode_reward = 0
         steps = 0
 
-        for step in range(2000):  # 2000 steps per episode
+        for _ in range(2000):  # 2000 steps per episode
             action, _ = model.predict(obs, deterministic=True)
             obs, reward, done, info = video_env.step(action)
             episode_reward += reward[0] if isinstance(reward, np.ndarray) else reward
@@ -422,13 +501,15 @@ def create_demo_video(model, xml_file, out_dir):
         render_mode="rgb_array",
         curriculum_stage=3,
         camera_name="track",
+        width=1200,
+        height=800,
     )
 
     # Run one episode and collect frames
     obs, _ = demo_env.reset()
     frames = []
 
-    for step in range(1000):  # 1000 steps for demo
+    for _ in range(1000):  # 1000 steps for demo
         action, _ = model.predict(obs, deterministic=True)
         obs, reward, done, truncated, info = demo_env.step(action)
 
@@ -442,13 +523,13 @@ def create_demo_video(model, xml_file, out_dir):
 
     demo_env.close()
 
-    # Save frames as video using moviepy if available
+    # Save frames as video using moviepy
     if frames:
         try:
             # Create video from frames
             clip = ImageSequenceClip(frames, fps=20)
             demo_video_path = f"{out_dir}/videos/spider_demo.mp4"
-            clip.write_videofile(demo_video_path, verbose=False, logger=None)
+            clip.write_videofile(demo_video_path, logger=None)
             print(f"✅ Demo video saved to {demo_video_path}")
         except Exception as e:
             print(f"⚠️ Error creating demo video: {e}")
@@ -478,7 +559,6 @@ def train_spider(xml_file, config=None):
     with open(f"{out_dir}/config.json", "w") as f:
         json.dump(config, f, indent=2)
 
-    print(f"🚀 Starting spider robot training")
     print(f"📁 Output directory: {out_dir}")
     print(f"🔧 Configuration: {config['num_envs']} parallel environments")
 
@@ -529,8 +609,9 @@ def train_spider(xml_file, config=None):
 
     # Create callbacks
     curriculum_callback = CurriculumCallback(
-        eval_env, config["stage_thresholds"], verbose=1
+        eval_env, config["stage_thresholds"], verbose=1, out_dir=out_dir
     )
+    curriculum_callback.set_xml_file(xml_file)
 
     eval_callback = CustomEvalCallback(
         eval_env=eval_env,
@@ -608,8 +689,8 @@ def train_spider(xml_file, config=None):
 
         # Save training summary
         summary = {
-            "final_mean_reward": final_mean,
-            "final_std_reward": final_std,
+            "final_mean_reward": float(final_mean),
+            "final_std_reward": float(final_std),
             "total_timesteps": config["total_timesteps"],
             "final_curriculum_stage": curriculum_callback.get_current_stage(),
         }
