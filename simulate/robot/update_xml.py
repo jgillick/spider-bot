@@ -27,7 +27,6 @@ def main(tree):
     tree = add_defaults(tree)
     tree = actuator_definitions(tree)
     tree = main_body(tree)
-    tree = add_feet_and_sensors(tree)
 
     # Pretty print and output
     ET.indent(tree, space="  ")
@@ -273,85 +272,6 @@ def main_body(tree):
 
     # Adjust position of body
     root_body.set("pos", "0.0 0.0 0.134")
-
-    return tree
-
-
-def add_feet_and_sensors(tree):
-    """
-    Add feet and touch sensors to each leg
-    """
-    sensor = tree.find("./sensor")
-    if sensor is None:
-        sensor = ET.SubElement(tree.getroot(), "sensor")
-
-    for i in range(1, 9):
-        tibia = tree.find(f".//worldbody//body[@name='Leg{i}_Tibia_Leg']")
-        if tibia is None:
-            print(f"No 'Leg{i}_Tibia_Leg' body found.")
-            exit(1)
-
-        #  Add touch sites
-        bad1 = {
-            "name": f"Leg{i}_Tibia_bad_touch1_site",
-            "pos": "0.04 0.048 0.148",
-            "size": "0.005",
-            "type": "sphere",
-            "rgba": "1 0 0 1",
-        }
-        ET.SubElement(tibia, "site", bad1)
-        ET.SubElement(tibia, "geom", bad1)
-
-        bad2 = {
-            "name": f"Leg{i}_Tibia_bad_touch2_site",
-            "pos": "0.04 -0.05 0.195",
-            "size": "0.005",
-            "type": "sphere",
-            "rgba": "1 0 0 1",
-        }
-        ET.SubElement(tibia, "site", bad2)
-        ET.SubElement(tibia, "geom", bad2)
-
-        foot = {
-            "pos": "0.04 -0.1195 0.2018",
-            "size": "0.007 0.005",
-            "type": "cylinder",
-            "rgba": "0 1 0 1",
-            "euler": "0 1.5708 0",
-        }
-        ET.SubElement(
-            tibia,
-            "site",
-            {"name": f"Leg{i}_Tibia_foot_site"} | foot,
-        )
-        ET.SubElement(
-            tibia,
-            "geom",
-            {"name": f"Leg{i}_Tibia_foot", "friction": "2.0 0.1 0.01"} | foot,
-        )
-
-        # Add sensors
-        ET.SubElement(
-            sensor,
-            "touch",
-            {
-                "name": f"Leg{i}_Tibia_bad_touch1",
-                "site": f"Leg{i}_Tibia_bad_touch1_site",
-            },
-        )
-        ET.SubElement(
-            sensor,
-            "touch",
-            {
-                "name": f"Leg{i}_Tibia_bad_touch2",
-                "site": f"Leg{i}_Tibia_bad_touch2_site",
-            },
-        )
-        ET.SubElement(
-            sensor,
-            "touch",
-            {"name": f"Leg{i}_Tibia_foot", "site": f"Leg{i}_Tibia_foot_site"},
-        )
 
     return tree
 

@@ -22,7 +22,6 @@ from stable_baselines3.common.callbacks import (
     CheckpointCallback,
     BaseCallback,
 )
-from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import VecVideoRecorder
 
@@ -43,7 +42,7 @@ DEFAULT_CONFIG = {
     "network_arch": [512, 512, 256],
     "checkpoint_freq": 100_000,
     "eval_freq": 25_000,
-    "stage_thresholds": [2000, 3000, 4000],
+    "stage_thresholds": [15000, 25000, 35000],
     "early_stopping": True,
     "early_stopping_patience": 20,
     "early_stopping_min_improvement": 10.0,
@@ -263,7 +262,7 @@ class CustomEvalCallback(BaseCallback):
 
         # Curriculum integration
         self.curriculum_callback = curriculum_callback
-        self.stage_thresholds = stage_thresholds or [30.0, 50.0, 80.0]
+        self.stage_thresholds = stage_thresholds or [15000.0, 25000.0, 35000.0]
         self.stage_best_rewards = {}  # Track best reward per stage
 
     def reset_for_new_stage(self):
@@ -286,26 +285,32 @@ class CustomEvalCallback(BaseCallback):
                 # Manual evaluation to avoid evaluate_policy issues
                 print("   Running manual evaluation...")
                 episode_rewards = []
+                episode_lengths = []
 
                 for _ in range(self.n_eval_episodes):
                     obs = self.eval_env.reset()
                     episode_reward = 0
+                    episode_length = 0
 
-                    for step in range(1000):  # Max 1000 steps per episode
+                    for _ in range(2000):  # Max 2000 steps per episode
                         action, _ = self.model.predict(obs, deterministic=True)
                         obs, reward, done, info = self.eval_env.step(action)
 
                         episode_reward += (
                             reward[0] if isinstance(reward, np.ndarray) else reward
                         )
+                        episode_length += 1
 
                         if done[0] if isinstance(done, np.ndarray) else done:
                             break
 
                     episode_rewards.append(episode_reward)
+                    episode_lengths.append(episode_length)
 
                 mean_reward = np.mean(episode_rewards)
                 std_reward = np.std(episode_rewards)
+                mean_episode_length = np.mean(episode_lengths)
+                std_episode_length = np.std(episode_lengths)
 
                 # Get current stage
                 current_stage = (
@@ -316,6 +321,9 @@ class CustomEvalCallback(BaseCallback):
 
                 print(f"   📊 Evaluation Results (Stage {current_stage}):")
                 print(f"      Mean reward: {mean_reward:.2f} ± {std_reward:.2f}")
+                print(
+                    f"      Mean episode length: {mean_episode_length:.1f} ± {std_episode_length:.1f} steps"
+                )
                 print(f"      Best so far: {self.best_mean_reward:.2f}")
 
                 # Check for improvement
@@ -363,6 +371,8 @@ class CustomEvalCallback(BaseCallback):
                 # Log metrics
                 self.logger.record("eval/mean_reward", mean_reward)
                 self.logger.record("eval/std_reward", std_reward)
+                self.logger.record("eval/mean_episode_length", mean_episode_length)
+                self.logger.record("eval/std_episode_length", std_episode_length)
                 self.logger.record("eval/best_mean_reward", self.best_mean_reward)
                 self.logger.record(
                     "eval/steps_without_improvement", self.steps_without_improvement
@@ -419,7 +429,14 @@ def make_env(xml_file, out_dir, curriculum_stage=1, rank=0):
 
     def _init():
         env = SpiderRobotEnv(xml_file, curriculum_stage=curriculum_stage)
+
+        # Add TimeLimit wrapper to set max episode steps
+        from gymnasium.wrappers import TimeLimit
+
+        env = TimeLimit(env, max_episode_steps=2000)
+
         env = Monitor(env, f"{out_dir}/monitor_logs/env_{rank}")
+
         return env
 
     return _init
