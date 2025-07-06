@@ -4,4 +4,5 @@ stable-baselines3
 tensorboard
 tensorflow
 numpy
-moviepy
+moviepy>=2.0.0
+opencv-python

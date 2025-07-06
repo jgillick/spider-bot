@@ -232,7 +232,7 @@ def main_body(tree):
     body_cam = ET.Element(
         "camera",
         {
-            "name": "bodycam",
+            "name": "track",
             "mode": "targetbodycom",
             "target": "Body",
             "pos": "-0.817 -1.628 0.6",
