@@ -104,7 +104,7 @@
     <light directional="true" pos="-0.5 0.5 3" dir="0 0 -1" />
     <body name="Body" pos="0.0 0.0 0.134" euler="0.0 -0.0 0.0">
       <joint name="root" type="free" pos="0 0 0" armature="0" damping="0" limited="false" margin="0.01" />
-      <camera name="bodycam" mode="targetbodycom" target="Body" pos="-0.817 -1.628 0.6" />
+      <camera name="track" mode="targetbodycom" target="Body" pos="-0.817 -1.628 0.6" />
       <camera name="groundcam" mode="targetbodycom" target="Body" pos="-1.0 0 0.1" />
 
       <site name="imu_site" pos="0.24115 0 0" size="0.01" />

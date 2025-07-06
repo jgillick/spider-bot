@@ -1,51 +1,190 @@
-# Spider Robot Training
+# Spider Robot Reinforcement Learning Training
 
-This directory contains the training code for the spider robot, separated into modular components for better organization.
+This directory contains the reinforcement learning environment and training scripts for the spider robot.
+
+## Contents
+
+- `environment.py` - Simplified Gymnasium environment with curriculum learning
+- `train.py` - **CONSOLIDATED**: Comprehensive training script with multiple configurations
+- `test.py` - Script for testing trained models
+
+## Quick Start
+
+### Using the Consolidated Training System (Recommended)
+
+```bash
+# Run the interactive training script
+python -m training.train
+
+# Or run directly
+python train.py
+
+# Or with custom config
+python -c "
+from training.train import train_spider_improved
+config = {
+    'num_envs': 8,
+    'total_timesteps': 800_000,
+    'early_stopping': True,
+    'ent_coef': 0.05,  # Increased exploration
+    'generate_videos': True
+}
+train_spider_improved('../robot/SpiderBot.xml', config)
+"
+```
+
+## Training Configurations
+
+The consolidated `train.py` script offers three training configurations:
+
+### 1. Basic Training
+
+- **Purpose**: Simple training with standard parameters
+- **Best for**: Quick experiments and baseline testing
+- **Features**: 4 parallel environments, standard exploration, basic curriculum
+
+### 2. Improved Training (Default)
+
+- **Purpose**: Enhanced training with curriculum advancement and anti-overfitting
+- **Best for**: Most training scenarios
+- **Features**:
+  - 8 parallel environments
+  - Curriculum advancement on plateau
+  - Increased exploration (ent_coef=0.05)
+  - Reduced clipping for stability
+  - More frequent evaluation
+
+### 3. Walking Training
+
+- **Purpose**: Optimized specifically for learning to walk
+- **Best for**: When the robot needs to master walking behavior
+- **Features**:
+  - Higher stage thresholds (13k, 15k, 18k)
+  - More patience before advancing (10 evaluations)
+  - Standard exploration parameters
+  - Longer training between evaluations
+
+## System Comparison
+
+The training system has been analyzed and improved. Key findings:
+
+- **Original System**: Over-optimized reward function (12+ components) but under-optimized infrastructure
+- **Improved System**: Simplified rewards with curriculum learning and parallel training
+
+## Requirements
+
+```bash
+pip install -r ../requirements.txt
+```
+
+## Key Features
+
+### Original Environment
+
+- 87-dimensional observation space
+- Complex reward with 12+ components
+- Single environment training
+- No curriculum learning
+
+### Enhanced Training System
+
+- **48-dimensional observation space** (simplified from 87)
+- **Staged curriculum learning** (Balance → Movement → Efficiency)
+- **Parallel training** (4-8 environments for 4-8x speedup)
+- **Automatic video generation** after training completes
+- **Adaptive learning rate** and comprehensive checkpointing
+- **Real-time monitoring** with tensorboard integration
+- **🛡️ Anti-overfitting features** (early stopping, increased exploration)
+- **📊 Better evaluation** with manual evaluation to avoid deadlocks
+
+### Video Generation Features
+
+- **Automatic creation** of training videos after model completion
+- **Multiple episodes** recorded showing learned walking behavior
+- **Demo videos** with different camera perspectives
+- **High-quality MP4 output** for easy sharing and analysis
+- **Configurable video settings** (length, frequency, quality)
+- **MoviePy 2.x compatibility** with graceful fallback
+
+## Training Tips
+
+1. **Start Simple**: Use the basic configuration for initial testing
+2. **Use Improved**: Switch to improved configuration for most training
+3. **Monitor Progress**: Watch tensorboard for stage progression
+4. **Adjust Thresholds**: Modify stage thresholds based on robot performance
+5. **Parallel Training**: Use 4-8 environments for 4-8x speedup
+6. **Prevent Overfitting**: Use improved configuration with early stopping
+7. **Monitor Evaluation**: Watch for reward decreases indicating overfitting
+
+## Anti-Overfitting Features
+
+The improved training system includes several features to prevent overfitting:
+
+### Early Stopping
+
+- **Automatic detection** of performance degradation
+- **Configurable patience** (default: 5 evaluations)
+- **Minimum improvement threshold** (default: 1.0 reward)
+- **Best model preservation** at peak performance
+
+### Increased Exploration
+
+- **Higher entropy coefficient** (0.05 vs 0.01)
+- **Reduced clipping range** (0.1 vs 0.2)
+- **More frequent evaluation** (every 25k vs 50k steps)
+
+### Better Monitoring
+
+- **Manual evaluation** to avoid deadlocks
+- **Detailed logging** of improvement tracking
+- **Evaluation history** for trend analysis
+- **Best performance tracking** with timestamps
+
+## Curriculum Advancement on Plateau
+
+The consolidated training script includes:
+
+### Smart Curriculum Progression
+
+- **Dual progression triggers**:
+  - Performance threshold exceeded (natural progression)
+  - Learning plateau detected (forced progression)
+- **Stage-specific metrics**: Tracks best performance per stage
+- **Automatic environment updates**: Updates both training and eval environments
+- **Metric reset**: Resets evaluation metrics for each new stage
+
+### Benefits
+
+- **No wasted training**: Advances when learning stops improving
+- **Complete curriculum**: Ensures all stages are trained
+- **Optimal models**: Saves best model for each stage
+- **Efficient training**: Stops only when final stage plateaus
+
+## Troubleshooting
+
+- **Robot falls immediately**: Check XML model and initial pose
+- **No movement**: Curriculum may be progressing too fast, increase thresholds
+- **Jerky motion**: Reduce max torque or increase damping
+- **Slow training**: Increase number of parallel environments
+- **Training freezes during evaluation**: This was a known issue with `evaluate_policy` that has been fixed by using manual evaluation instead
+- **Overfitting (rewards decrease after peak)**: Use improved configuration with early stopping and increased exploration
+- **No curriculum progression**: Lower stage thresholds in config
+- **MoviePy import error**: Install moviepy 2.x with `pip install moviepy>=2.0.0`
+
+## Next Steps
+
+After training, you can:
+
+1. Visualize the learned behavior using `test.py`
+2. Export the policy for deployment
+3. Fine-tune with different reward weights
+4. Try domain randomization for robustness
 
 ## File Structure
 
 - **`environment.py`** - The main environment class (`SpiderRobotEnv`)
-- **`train.py`** - Training script using PPO algorithm
+- **`train.py`** - **CONSOLIDATED**: Training script with multiple configurations
 - **`test.py`** - Testing and evaluation script for trained models
-
-## Quick Start
-
-### 1. Training
-
-```bash
-python -m training.train
-```
-
-This will:
-
-- Create output directories (`out/`, `out/videos/`, `out/tensorboard/`)
-- Train for 500,000 timesteps by default
-- Save the model to `out/spider_robot_final`
-- Record videos every 25,000 steps
-- Log training progress to TensorBoard
-
-### 2. Testing
-
-```bash
-# Test a trained model
-python test.py
-```
-
-This will:
-
-- Load the trained model
-- Evaluate performance over 5 episodes
-- Run a few episodes with rendering
-- Print detailed statistics
-
-### 3. Hardware Deployment
-
-**Note**: This is a placeholder implementation. You'll need to:
-
-- Implement actual ODrive controller connections
-- Add sensor reading code
-- Implement safety systems
-- Test thoroughly in simulation first
 
 ## Environment Details
 
@@ -55,14 +194,10 @@ This will:
 - Uses PD control with Kp=10.0, Kd=0.5
 - Torque limits: ±8.0 N⋅m
 
-### Observation Space (87 dimensions)
+### Observation Space (48 dimensions - simplified)
 
-- Joint positions (31)
-- Joint velocities (30)
-- IMU data (10): orientation, angular velocity, linear acceleration
-- Body position/orientation (7)
-- Contact forces (8)
-- Gait phase (1)
+- Joint positions (24)
+- Joint velocities (24)
 
 ### Reward Function
 
