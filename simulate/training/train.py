@@ -37,14 +37,18 @@ DEFAULT_CONFIG = {
     "gamma": 0.99,
     "gae_lambda": 0.95,
     "clip_range": 0.15,
-    "ent_coef": 0.02,
+    "ent_coef": 0.05,
     "max_grad_norm": 0.5,
-    "network_arch": [512, 512, 256],
+    "network_arch": [
+        256,
+        256,
+        128,
+    ],  # Reduced from [512, 512, 256] to prevent overfitting
     "checkpoint_freq": 100_000,
     "eval_freq": 25_000,
-    "stage_thresholds": [15000, 25000, 35000],
+    "stage_thresholds": [15000, 25000, 30000],  # Reduced Stage 3 threshold from 35000
     "early_stopping": True,
-    "early_stopping_patience": 20,
+    "early_stopping_patience": 10,
     "early_stopping_min_improvement": 10.0,
     "generate_videos": True,
 }
@@ -63,6 +67,11 @@ class CurriculumCallback(BaseCallback):
         self.advance_requested = False  # Flag for advancing curriculum
         self.out_dir = out_dir
         self.xml_file = None  # Will be set later
+        self.best_reward_per_stage = {
+            1: -np.inf,
+            2: -np.inf,
+            3: -np.inf,
+        }  # Track best rewards
 
     def request_advance(self):
         """Request curriculum advancement from evaluation callback."""
@@ -105,11 +114,11 @@ class CurriculumCallback(BaseCallback):
             # Manual evaluation to avoid evaluate_policy issues
             episode_rewards = []
 
-            for episode in range(10):  # 10 episodes for curriculum evaluation
+            for _ in range(10):  # 10 episodes for curriculum evaluation
                 obs = self.eval_env.reset()
                 episode_reward = 0
 
-                for step in range(1000):  # Max 1000 steps per episode
+                for _ in range(1000):  # Max 1000 steps per episode
                     action, _ = self.model.predict(obs, deterministic=True)
                     obs, reward, done, info = self.eval_env.step(action)
 
@@ -124,8 +133,15 @@ class CurriculumCallback(BaseCallback):
 
             mean_reward = np.mean(episode_rewards)
 
-            # Check if ready to progress
-            if mean_reward > self.stage_thresholds[self.current_stage - 1]:
+            # Update best reward for current stage
+            if mean_reward > self.best_reward_per_stage[self.current_stage]:
+                self.best_reward_per_stage[self.current_stage] = mean_reward
+
+            # Check if ready to progress using BEST reward achieved
+            if (
+                self.best_reward_per_stage[self.current_stage]
+                > self.stage_thresholds[self.current_stage - 1]
+            ):
                 if self.current_stage < 3:
                     self.current_stage += 1
                     self.stage_start_timestep = self.num_timesteps
@@ -133,13 +149,18 @@ class CurriculumCallback(BaseCallback):
                     # Update all training environments
                     # Note: Updating environments in SubprocVecEnv is complex
                     # For now, we'll track the stage and apply it on reset
-                    if hasattr(self.training_env, "env_method"):
-                        try:
-                            self.training_env.env_method(
-                                "set_curriculum_stage", self.current_stage
-                            )
-                        except:
-                            pass  # Some vec envs don't support this
+                    try:
+                        self.training_env.env_method(
+                            "set_curriculum_stage", self.current_stage
+                        )
+                        self.eval_env.env_method(
+                            "set_curriculum_stage", self.current_stage
+                        )
+                    except Exception as e:
+                        print(
+                            "⚠️ Error progressing training environments to the next stage!"
+                        )
+                        raise e
 
                     print(
                         f"\n🎯 Progressed to curriculum stage {self.current_stage} at timestep {self.num_timesteps}"
@@ -152,9 +173,22 @@ class CurriculumCallback(BaseCallback):
                         "curriculum/progression_timestep", self.num_timesteps
                     )
 
+                    # Note: The evaluation callback will detect this stage change and reset its metrics
+
             # Always log current performance
             self.logger.record("curriculum/mean_reward", mean_reward)
             self.logger.record("curriculum/current_stage", self.current_stage)
+
+            # Add debugging to see why curriculum isn't advancing
+            print(f"Current stage: {self.current_stage}")
+            print(f"Current reward: {mean_reward}")
+            print(
+                f"Best reward for stage: {self.best_reward_per_stage[self.current_stage]}"
+            )
+            print(f"Stage threshold: {self.stage_thresholds[self.current_stage - 1]}")
+            print(
+                f"Should advance: {self.best_reward_per_stage[self.current_stage] > self.stage_thresholds[self.current_stage - 1]}"
+            )
 
         return True
 
@@ -276,6 +310,29 @@ class CustomEvalCallback(BaseCallback):
         self.best_step = self.num_timesteps
 
     def _on_step(self) -> bool:
+        # Check if curriculum stage has changed (from natural progression)
+        if self.curriculum_callback and hasattr(self, "_last_known_stage"):
+            current_stage = self.curriculum_callback.current_stage
+            if current_stage != self._last_known_stage:
+                print(
+                    f"   🔄 Detected curriculum stage change: {self._last_known_stage} → {current_stage}"
+                )
+                self.reset_for_new_stage()
+                self._last_known_stage = current_stage
+
+                # CRITICAL: Update evaluation environment to new stage
+                if hasattr(self.eval_env, "env_method"):
+                    try:
+                        self.eval_env.env_method("set_curriculum_stage", current_stage)
+                        print(
+                            f"   ✅ Updated evaluation environment to stage {current_stage}"
+                        )
+                    except Exception as e:
+                        print(f"   ⚠️ Failed to update eval env stage: {e}")
+        elif self.curriculum_callback:
+            # Initialize tracking
+            self._last_known_stage = self.curriculum_callback.current_stage
+
         # Check if we should evaluate based on total timesteps
         if self.num_timesteps >= self.last_eval_step + self.eval_freq:
             print(f"🎯 EVALUATION TRIGGERED at step {self.num_timesteps}")
@@ -318,6 +375,18 @@ class CustomEvalCallback(BaseCallback):
                     if self.curriculum_callback
                     else 1
                 )
+
+                # Update curriculum callback's best reward tracking
+                if (
+                    self.curriculum_callback
+                    and mean_reward
+                    > self.curriculum_callback.best_reward_per_stage.get(
+                        current_stage, -np.inf
+                    )
+                ):
+                    self.curriculum_callback.best_reward_per_stage[current_stage] = (
+                        mean_reward
+                    )
 
                 print(f"   📊 Evaluation Results (Stage {current_stage}):")
                 print(f"      Mean reward: {mean_reward:.2f} ± {std_reward:.2f}")
