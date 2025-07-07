@@ -37,19 +37,23 @@ DEFAULT_CONFIG = {
     "gamma": 0.99,
     "gae_lambda": 0.95,
     "clip_range": 0.15,
-    "ent_coef": 0.05,
+    "ent_coef": 0.01,  # Reduced from 0.05 - simplified rewards need less exploration
     "max_grad_norm": 0.5,
     "network_arch": [
         256,
         256,
         128,
-    ],  # Reduced from [512, 512, 256] to prevent overfitting
+    ],
     "checkpoint_freq": 100_000,
     "eval_freq": 25_000,
-    "stage_thresholds": [15000, 25000, 30000],  # Reduced Stage 3 threshold from 35000
+    "stage_thresholds": [
+        8000,
+        12000,
+        18000,
+    ],  # Significantly reduced for simplified rewards
     "early_stopping": True,
     "early_stopping_patience": 10,
-    "early_stopping_min_improvement": 10.0,
+    "early_stopping_min_improvement": 5.0,
     "generate_videos": True,
 }
 

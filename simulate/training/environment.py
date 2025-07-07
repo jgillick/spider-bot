@@ -62,10 +62,19 @@ class SpiderRobotEnv(MujocoEnv):
         # Simplified tracking
         self.previous_action = np.zeros(24)  # 24 actuators
         self.feet_contact_count = 0
+        self.previous_foot_contacts = np.zeros(8)  # Track foot contact changes
+        self.previous_forward_velocity = 0.0  # Track velocity changes
 
         # Episode stability tracking
         self.stable_steps = 0
         self.total_steps = 0
+
+        # Movement history tracking for continuous walking rewards
+        self.movement_history_window = 50  # Track last 50 steps
+        self.position_history = []  # Will store recent x positions
+        self.last_significant_movement_step = (
+            0  # Track when we last moved significantly
+        )
 
         # Core parameters
         self.target_height = 0.134  # Will be set on reset
@@ -166,6 +175,18 @@ class SpiderRobotEnv(MujocoEnv):
 
         self.episode_length += 1
         self.total_steps += 1
+
+        # Track position history for movement detection
+        current_x_pos = self.data.qpos[0]
+        self.position_history.append(current_x_pos)
+        if len(self.position_history) > self.movement_history_window:
+            self.position_history.pop(0)
+
+        # Check if we've moved significantly recently
+        if len(self.position_history) >= 10:
+            recent_movement = abs(current_x_pos - self.position_history[-10])
+            if recent_movement > 0.01:  # Moved at least 1cm in last 10 steps
+                self.last_significant_movement_step = self.episode_length
 
         # Track stability
         if self._is_stable():
@@ -284,10 +305,16 @@ class SpiderRobotEnv(MujocoEnv):
         self.target_height = self.data.qpos[2]
         self.previous_action = np.zeros(24)  # 24 actuators
         self.feet_contact_count = 0
+        self.previous_foot_contacts = np.zeros(8)  # Reset foot contact tracking
+        self.previous_forward_velocity = 0.0  # Reset velocity tracking
 
         # Reset stability tracking
         self.stable_steps = 0
         self.total_steps = 0
+
+        # Reset movement history
+        self.position_history = []
+        self.last_significant_movement_step = 0
 
         return self._get_obs()
 
@@ -412,125 +439,99 @@ class SpiderRobotEnv(MujocoEnv):
 
         # Stage 2: Movement (add forward progress)
         elif self.curriculum_stage == 2:
-            height_reward = 3.0 * np.exp(-30 * height_error**2)
-            upright_reward = 2.0 * np.exp(-8 * upright_error**2)
+            # Basic stability rewards (reduced emphasis)
+            height_reward = 2.0 * np.exp(-30 * height_error**2)
+            upright_reward = 1.5 * np.exp(-8 * upright_error**2)
 
-            # Progressive forward reward (encourage consistent forward motion)
-            forward_reward = 15.0 * np.clip(forward_velocity, 0, 0.5)
+            # PRIMARY REWARD: Forward velocity (uncapped to encourage continuous motion)
+            forward_reward = 15.0 * forward_velocity if forward_velocity > 0 else 0
 
-            # Penalty for NOT moving forward (anti-freezing)
-            movement_penalty = -3.0 if forward_velocity < 0.05 else 0.0
+            # ANTI-STAGNATION: Penalty that grows with time spent not moving
+            steps_since_movement = (
+                self.episode_length - self.last_significant_movement_step
+            )
+            if steps_since_movement > 20:  # Give some time before penalizing
+                stagnation_penalty = -0.1 * (steps_since_movement - 20)
+            else:
+                stagnation_penalty = 0
 
-            # Penalize sideways drift
-            lateral_penalty = -3.0 * lateral_velocity  # Reduced from -5.0
+            # Lateral drift penalty (keep it simple)
+            lateral_penalty = -2.0 * lateral_velocity
 
-            # Gait coordination reward
+            # Simple gait reward - just check if we're lifting some feet
             foot_contacts = self._get_foot_contacts()
-            alternating_contacts = self._get_gait_coordination_reward(foot_contacts)
-
-            # Bonus for lifting feet (to encourage stepping)
             num_feet_lifted = 8 - np.sum(foot_contacts)
-            stepping_bonus = 1.0 * min(
-                float(num_feet_lifted) / 4.0, 1.0
-            )  # Max when 4 feet lifted
+            gait_reward = (
+                1.0 if 2 <= num_feet_lifted <= 5 else 0
+            )  # Reward lifting 2-5 feet
 
-            gyro_reward = (
-                1.5 * gyro_stability
-            )  # Reduced from 2.0 to allow more movement
+            # Reduced gyro reward to allow more dynamic movement
+            gyro_reward = 1.0 * gyro_stability
 
-            # Distance traveled bonus
+            # Simple distance bonus
             distance_traveled = self.data.qpos[0] - self.initial_x_position
-            distance_bonus = 0.5 * distance_traveled  # Small cumulative bonus
+            distance_bonus = 0.5 * max(0, distance_traveled)
 
             reward = (
                 height_reward
                 + upright_reward
-                + forward_reward
-                + movement_penalty
+                + forward_reward  # Main focus
+                + stagnation_penalty  # Prevent stopping
                 + lateral_penalty
-                + alternating_contacts
-                + stepping_bonus
+                + gait_reward
                 + gyro_reward
                 + distance_bonus
-                + contact_penalty * 0.1  # Further reduced
-                + 1.0  # Reduced base reward
+                + contact_penalty * 0.1
+                + 1.0  # Base reward
             )
 
         # Stage 3: Efficiency (optimize everything)
         else:
-            # Maintain stability but with less emphasis
-            height_reward = 2.5 * np.exp(
-                -20 * height_error**2
-            )  # Increased from 2.0, relaxed exp
-            upright_reward = 2.0 * np.exp(
-                -6 * upright_error**2
-            )  # Increased from 1.5, relaxed exp
+            # Minimal stability constraints
+            height_reward = 1.5 * np.exp(-20 * height_error**2)
+            upright_reward = 1.0 * np.exp(-6 * upright_error**2)
 
-            # SIGNIFICANTLY increase forward motion reward with progressive scaling
-            # Stage 3 should reward speed much more than Stage 2
-            forward_reward = 20.0 * np.clip(
-                forward_velocity, 0, 0.8
-            )  # Increased from 5.0 to 20.0
+            # PRIMARY REWARD: Speed is king! (strongly uncapped)
+            forward_reward = 20.0 * forward_velocity if forward_velocity > 0 else -5.0
 
-            # Add acceleration bonus to encourage pushing speed limits
-            if hasattr(self, "previous_forward_velocity"):
-                acceleration = forward_velocity - self.previous_forward_velocity
-                acceleration_bonus = 2.0 * np.clip(
-                    acceleration, 0, 0.1
-                )  # Reward positive acceleration
-            else:
-                acceleration_bonus = 0.0
-
-            gyro_reward = 2.0 * gyro_stability  # Increased from 1.5 for better balance
-
-            # Energy efficiency (smoother actions) - reduced penalty
+            # EFFICIENCY PENALTY: Punish inefficient gaits
+            # Penalize excessive action changes (encourage smooth, efficient motion)
             if self.previous_action is not None:
-                action_change = np.sum((action - self.previous_action) ** 2)
-                smoothness_reward = 0.5 * np.exp(
-                    -0.3 * action_change
-                )  # Reduced weight and decay
-            else:
-                smoothness_reward = 0.0
-
-            # Advanced gait quality - increased importance
-            foot_contacts = self._get_foot_contacts()
-            gait_reward = (
-                self._get_gait_coordination_reward(foot_contacts) * 1.5
-            )  # Increased from 0.8
-
-            # Speed consistency - less strict to allow acceleration
-            if hasattr(self, "previous_forward_velocity"):
-                speed_consistency = 0.5 * np.exp(
-                    -1.0
-                    * (forward_velocity - self.previous_forward_velocity)
-                    ** 2  # Relaxed from -3.0
+                action_efficiency = -0.2 * np.mean(
+                    np.abs(action - self.previous_action)
                 )
             else:
-                speed_consistency = 0.0
-            self.previous_forward_velocity = forward_velocity
+                action_efficiency = 0
 
-            # Distance milestone bonuses
+            # CONTINUOUS MOTION: Strong penalty for stopping
+            if forward_velocity < 0.15:  # Below threshold
+                motion_penalty = -5.0
+            else:
+                motion_penalty = 0
+
+            # Gait quality - reward good foot coordination
+            foot_contacts = self._get_foot_contacts()
+            gait_quality = self._get_gait_coordination_reward(foot_contacts)
+
+            # Distance milestone bonuses (keep these for long-term goals)
             distance_traveled = self.data.qpos[0] - self.initial_x_position
-            distance_bonus = 1.0 * distance_traveled  # Progressive distance reward
-
-            # Milestone rewards for reaching certain distances
             if distance_traveled > 2.0:
-                distance_bonus += 5.0
-            if distance_traveled > 5.0:
-                distance_bonus += 10.0
+                milestone_bonus = 5.0
+            elif distance_traveled > 5.0:
+                milestone_bonus = 15.0
+            else:
+                milestone_bonus = 0
 
             reward = (
                 height_reward
                 + upright_reward
-                + forward_reward
-                + acceleration_bonus
-                + gyro_reward
-                + smoothness_reward
-                + gait_reward
-                + speed_consistency
-                + distance_bonus
-                + contact_penalty * 0.05  # Further reduced from 0.1
-                + 2.0  # Increased base reward from 1.0
+                + forward_reward  # Primary focus
+                + action_efficiency  # Smooth motion
+                + motion_penalty  # Keep moving
+                + gait_quality
+                + milestone_bonus
+                + contact_penalty * 0.05
+                + 1.0  # Base reward
             )
 
         return reward
