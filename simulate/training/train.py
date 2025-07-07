@@ -37,7 +37,7 @@ DEFAULT_CONFIG = {
     "gamma": 0.99,
     "gae_lambda": 0.95,
     "clip_range": 0.15,
-    "ent_coef": 0.01,  # Reduced from 0.05 - simplified rewards need less exploration
+    "ent_coef": 0.01,  # Increased exploration for harder task
     "max_grad_norm": 0.5,
     "network_arch": [
         256,
@@ -47,13 +47,13 @@ DEFAULT_CONFIG = {
     "checkpoint_freq": 100_000,
     "eval_freq": 25_000,
     "stage_thresholds": [
-        8000,
-        12000,
-        18000,
-    ],  # Significantly reduced for simplified rewards
+        25000,  # Stage 1: Proper standing with good posture (was 1000)
+        40000,  # Stage 2: Basic walking with coordination (was 3000)
+        60000,  # Stage 3: Optimized locomotion (was 5000)
+    ],
     "early_stopping": True,
-    "early_stopping_patience": 10,
-    "early_stopping_min_improvement": 5.0,
+    "early_stopping_patience": 15,  # More patience for harder learning
+    "early_stopping_min_improvement": 10.0,  # Expect smaller improvements
     "generate_videos": True,
 }
 
@@ -87,10 +87,9 @@ class CurriculumCallback(BaseCallback):
 
     def _on_step(self) -> bool:
         # Check if curriculum advancement was requested
-        if self.advance_requested and self.current_stage < 3:
+        if self.advance_requested:
             # Record stage completion video
-            if self.out_dir and self.xml_file:
-                self._record_stage_video()
+            self._record_stage_video()
 
             self.current_stage += 1
             self.stage_start_timestep = self.num_timesteps
@@ -166,6 +165,7 @@ class CurriculumCallback(BaseCallback):
                         )
                         raise e
 
+                    self.request_advance()
                     print(
                         f"\n🎯 Progressed to curriculum stage {self.current_stage} at timestep {self.num_timesteps}"
                     )

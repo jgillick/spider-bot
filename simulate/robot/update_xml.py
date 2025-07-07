@@ -7,7 +7,6 @@ SOURCE_PATH = "./export/SpiderBody/SpiderBody.xml"
 ACTUATOR_TORQUE_RANGE = "-10 10"
 
 HIP_RANGES = (
-    "",
     "-1.8 0",  # Leg1
     "-1.8 0",  # Leg2
     "0 1.8",  # Leg3
@@ -17,11 +16,13 @@ HIP_RANGES = (
     "-1.8 0",  # Leg7
     "-1.8 0",  # Leg8
 )
+FEMUR_RANGE = "0 1.0"
+TIBIA_RANGE = "0.4 3.0"
 
 
 def main(tree, output_path, ground=False, light=False):
     tree = simplify_names(tree)
-    tree = update_hip_join_ranges(tree)
+    tree = update_join_ranges(tree)
 
     tree = remove_default_ground_plane(tree)
     if ground:
@@ -67,15 +68,30 @@ def simplify_names(tree):
     return tree
 
 
-def update_hip_join_ranges(tree):
+def update_join_ranges(tree):
     """
-    Update the ranges of the hip joints in the XML tree.
+    Update the position range the leg joints
     """
-    for i in range(1, 9):
-        joint_name = f"Leg{i}_Hip"
+    for i in range(0, 8):
+        leg_name = f"Leg{i+1}"
+
+        # Hip
+        joint_name = f"{leg_name}_Hip"
         joint = tree.find(f".//joint[@name='{joint_name}']")
         if joint is not None:
             joint.set("range", HIP_RANGES[i])
+
+        # Femur
+        joint_name = f"{leg_name}_Femur"
+        joint = tree.find(f".//joint[@name='{joint_name}']")
+        if joint is not None:
+            joint.set("range", FEMUR_RANGE)
+
+        # Tibia
+        joint_name = f"{leg_name}_Tibia"
+        joint = tree.find(f".//joint[@name='{joint_name}']")
+        if joint is not None:
+            joint.set("range", TIBIA_RANGE)
 
     return tree
 
@@ -229,7 +245,7 @@ def actuator_definitions(tree):
 
 def main_body(tree):
     """
-    Add free joint, IMU, and a camera to the main body
+    Add free joint, bottom plane, IMU, and a camera to the main body
     """
     root_body = tree.find("./worldbody//body[@name='Body']")
     if root_body is None:
@@ -288,6 +304,31 @@ def main_body(tree):
             "rgba": "0 1 0 1",
         },
     )
+
+    # Bottom planes that should cover the entire bottom of the robot
+    # (this makes it easier to detect when the robot is on the ground)
+    bottom1 = ET.Element(
+        "geom",
+        {
+            "name": "body_bottom1",
+            "pos": "0.24115 0 -0.075",
+            "size": "0.17 0.175 0.0001",
+            "type": "box",
+            "rgba": "1 0 0 0",
+        },
+    )
+    bottom2 = ET.Element(
+        "geom",
+        {
+            "name": "body_bottom2",
+            "pos": "0.24115 0 -0.075",
+            "size": "0.3 0.12 0.0001",
+            "type": "box",
+            "rgba": "1 0 0 0",
+        },
+    )
+    root_body.insert(0, bottom1)
+    root_body.insert(0, bottom2)
 
     root_body.insert(0, head)
     root_body.insert(0, imu_site)
