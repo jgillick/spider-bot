@@ -1,9 +1,9 @@
 import re
 import os
+import argparse
 import xml.etree.ElementTree as ET
 
 SOURCE_PATH = "./export/SpiderBody/SpiderBody.xml"
-OUT_PATH = "./SpiderBot.xml"
 ACTUATOR_TORQUE_RANGE = "-10 10"
 
 HIP_RANGES = (
@@ -19,10 +19,16 @@ HIP_RANGES = (
 )
 
 
-def main(tree):
+def main(tree, output_path, ground=False, light=False):
     tree = simplify_names(tree)
     tree = update_hip_join_ranges(tree)
-    tree = ground_plain(tree)
+
+    tree = remove_default_ground_plane(tree)
+    if ground:
+        tree = ground_plain(tree)
+    if not light:
+        tree = remove_default_light(tree)
+
     tree = visual_settings(tree)
     tree = add_defaults(tree)
     tree = actuator_definitions(tree)
@@ -30,7 +36,7 @@ def main(tree):
 
     # Pretty print and output
     ET.indent(tree, space="  ")
-    tree.write(OUT_PATH, encoding="utf-8")
+    tree.write(output_path, encoding="utf-8")
 
 
 def simplify_names(tree):
@@ -74,6 +80,38 @@ def update_hip_join_ranges(tree):
     return tree
 
 
+def remove_default_ground_plane(tree):
+    """
+    Remove the default ground plane from the XML tree.
+    """
+    worldbody = tree.find("./worldbody")
+    if worldbody is None:
+        print("No <worldbody> found.")
+        exit(1)
+
+    ground_plane = tree.find("./worldbody/geom[@type='plane']")
+    if ground_plane is not None:
+        worldbody.remove(ground_plane)
+
+    return tree
+
+
+def remove_default_light(tree):
+    """
+    Remove the default light element
+    """
+    worldbody = tree.find("./worldbody")
+    if worldbody is None:
+        print("No <worldbody> found.")
+        exit(1)
+
+    light = tree.find("./worldbody/light")
+    if light is not None:
+        worldbody.remove(light)
+
+    return tree
+
+
 def ground_plain(tree):
     """
     Add a better ground plane
@@ -113,13 +151,6 @@ def ground_plain(tree):
             "reflectance": "0.2",
         },
     )
-
-    # Remove existing ground plane if it exists
-    ground_plane = tree.find("./worldbody/geom[@type='plane']")
-    if ground_plane is not None:
-        worldbody.remove(ground_plane)
-
-    # Add new ground plane
     ground_plane = ET.Element(
         "geom",
         {
@@ -277,8 +308,27 @@ def main_body(tree):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Update SpiderBot XML configuration")
+    parser.add_argument("output_path", help="Output file path for the generated XML")
+    parser.add_argument(
+        "--ground", action="store_true", help="Add ground plane", default=False
+    )
+    parser.add_argument(
+        "--light",
+        action="store_true",
+        help="Add light",
+        default=False,
+    )
+
+    args = parser.parse_args()
+
     if not os.path.exists(SOURCE_PATH):
         print(f"File does not exist: {SOURCE_PATH}")
         exit(1)
     tree = ET.parse(SOURCE_PATH)
-    main(tree)
+    main(
+        tree,
+        output_path=args.output_path,
+        ground=args.ground,
+        light=args.light,
+    )

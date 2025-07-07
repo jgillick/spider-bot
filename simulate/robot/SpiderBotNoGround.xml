@@ -96,12 +96,8 @@
     <mesh name="Leg8_Hip-actuator-assembly_Body-Bracket" file="meshes/Leg8_Hip-actuator-assembly_Body-Bracket.stl" scale="0.001 0.001 0.001" />
     <mesh name="Leg8_Tibia_Leg" file="meshes/Leg8_Tibia_Leg.stl" scale="0.001 0.001 0.001" />
     <mesh name="Leg8_Tibia_Foot" file="meshes/Leg8_Tibia_Foot.stl" scale="0.001 0.001 0.001" />
-    <texture type="2d" name="groundplane" builtin="checker" mark="edge" rgb1="0.2 0.3 0.4" rgb2="0.1 0.2 0.3" markrgb="0.8 0.8 0.8" width="300" height="300" />
-    <material name="groundplane" texture="groundplane" texuniform="true" texrepeat="5 5" reflectance="0.2" />
   </asset>
   <worldbody>
-    <geom name="floor" size="40 40 40" type="plane" material="groundplane" contype="1" conaffinity="1" />
-    <light directional="true" pos="-0.5 0.5 3" dir="0 0 -1" />
     <body name="Body" pos="0.0 0.0 0.134" euler="0.0 -0.0 0.0">
       <joint name="root" type="free" pos="0 0 0" armature="0" damping="0" limited="false" margin="0.01" />
       <camera name="track" mode="targetbodycom" target="Body" pos="-0.817 -1.628 0.6" />

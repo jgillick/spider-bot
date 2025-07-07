@@ -1,0 +1,333 @@
+"""Configuration for the spider locomotion environment."""
+
+import math
+from dataclasses import MISSING
+from isaaclab.envs import ManagerBasedRLEnvCfg
+from isaaclab.managers import ActionTermCfg as ActionTerm
+from isaaclab.managers import CurriculumTermCfg as CurrTerm
+from isaaclab.managers import EventTermCfg as EventTerm
+from isaaclab.managers import ObservationGroupCfg as ObsGroup
+from isaaclab.managers import ObservationTermCfg as ObsTerm
+from isaaclab.managers import RewardTermCfg as RewTerm
+from isaaclab.managers import TerminationTermCfg as DoneTerm
+from isaaclab.managers import SceneEntityCfg
+from isaaclab.scene import InteractiveSceneCfg
+from isaaclab.sensors import ContactSensorCfg, RayCasterCfg, patterns
+from isaaclab.sim import SimulationCfg
+from isaaclab.terrains import TerrainImporterCfg
+from isaaclab.utils import configclass
+from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
+from isaaclab.assets import AssetBaseCfg
+
+import isaaclab.envs.mdp as mdp
+import isaaclab.sim as sim_utils
+from isaaclab.terrains.config.rough import ROUGH_TERRAINS_CFG
+
+# Import spider robot configuration
+from .spider_bot_cfg import SpiderBotCfg
+
+##
+# Scene definition
+##
+
+
+@configclass
+class SpiderSceneCfg(InteractiveSceneCfg):
+    """Configuration for the terrain scene with the spider robot."""
+
+    # Ground terrain
+    terrain = TerrainImporterCfg(
+        prim_path="/World/ground",
+        terrain_type="generator",
+        terrain_generator=ROUGH_TERRAINS_CFG,
+        max_init_terrain_level=5,
+        collision_group=-1,
+        physics_material=sim_utils.RigidBodyMaterialCfg(
+            friction_combine_mode="multiply",
+            restitution_combine_mode="multiply",
+            static_friction=1.0,
+            dynamic_friction=1.0,
+        ),
+        visual_material=sim_utils.MdlFileCfg(
+            mdl_path="{NVIDIA_NUCLEUS_DIR}/Materials/Base/Architecture/Shingles_01.mdl",
+            project_uvw=True,
+        ),
+        debug_vis=False,
+    )
+
+    # Robots
+    robot = SpiderBotCfg(
+        prim_path="{ENV_REGEX_NS}/Robot",
+        init_state=SpiderBotCfg.InitialStateCfg(pos=(0.0, 0.0, 0.2)),
+    )
+
+    # Sensors
+    contact_sensor = ContactSensorCfg(
+        prim_path="{ENV_REGEX_NS}/Robot/.*_Tibia_Foot",  # Assuming foot links end with "Foot"
+        history_length=3,
+        debug_vis=False,
+    )
+
+    # Lights
+    light = AssetBaseCfg(
+        prim_path="/World/light",
+        spawn=sim_utils.DistantLightCfg(intensity=3000.0, color=(1.0, 1.0, 1.0)),
+    )
+    sky_light = AssetBaseCfg(
+        prim_path="/World/skyLight",
+        spawn=sim_utils.DomeLightCfg(intensity=1000.0, color=(0.8, 0.8, 0.8)),
+    )
+
+
+##
+# MDP settings
+##
+
+
+@configclass
+class ActionsCfg:
+    """Action specifications for the spider robot."""
+
+    joint_pos = mdp.JointPositionActionCfg(
+        asset_name="robot",
+        joint_names=[".*"],
+        scale=0.5,
+        use_default_offset=True,
+    )
+
+
+@configclass
+class ObservationsCfg:
+    """Observation specifications for the spider robot."""
+
+    @configclass
+    class PolicyCfg(ObsGroup):
+        """Observations for the policy."""
+
+        # Base information
+        base_lin_vel = ObsTerm(
+            func=mdp.base_lin_vel, noise=Unoise(n_min=-0.1, n_max=0.1)
+        )
+        base_ang_vel = ObsTerm(
+            func=mdp.base_ang_vel, noise=Unoise(n_min=-0.2, n_max=0.2)
+        )
+        projected_gravity = ObsTerm(
+            func=mdp.projected_gravity,
+            noise=Unoise(n_min=-0.05, n_max=0.05),
+        )
+
+        # Joint information
+        joint_pos = ObsTerm(
+            func=mdp.joint_pos_rel, noise=Unoise(n_min=-0.01, n_max=0.01)
+        )
+        joint_vel = ObsTerm(func=mdp.joint_vel_rel, noise=Unoise(n_min=-1.5, n_max=1.5))
+
+        # Commands
+        velocity_commands = ObsTerm(
+            func=mdp.generated_commands, params={"command_name": "base_velocity"}
+        )
+
+        # Actions
+        actions = ObsTerm(func=mdp.last_action)
+
+        def __post_init__(self):
+            self.enable_corruption = True
+            self.concatenate_terms = True
+
+    # Observation groups
+    policy: PolicyCfg = PolicyCfg()
+
+
+@configclass
+class RewardsCfg:
+    """Reward terms for the spider robot."""
+
+    # -- Task rewards
+    # Reward for matching commanded linear velocity in the XY plane
+    track_lin_vel_xy_exp = RewTerm(
+        func=mdp.track_lin_vel_xy_exp,
+        weight=1.0,
+        params={"command_name": "base_velocity", "std": math.sqrt(0.25)},
+    )
+    # Reward for matching commanded angular velocity around the Z axis
+    track_ang_vel_z_exp = RewTerm(
+        func=mdp.track_ang_vel_z_exp,
+        weight=0.5,
+        params={"command_name": "base_velocity", "std": math.sqrt(0.25)},
+    )
+
+    # -- Regularization rewards
+    # Penalize vertical (Z) linear velocity to encourage flat movement
+    lin_vel_z_l2 = RewTerm(func=mdp.lin_vel_z_l2, weight=-2.0)
+    # Penalize angular velocity in X and Y to discourage tipping/rolling
+    ang_vel_xy_l2 = RewTerm(func=mdp.ang_vel_xy_l2, weight=-0.05)
+    # Penalize large joint torques to encourage energy efficiency
+    dof_torques_l2 = RewTerm(func=mdp.joint_torques_l2, weight=-0.0001)
+    # Penalize large joint accelerations for smoother motion
+    dof_acc_l2 = RewTerm(func=mdp.joint_acc_l2, weight=-2.5e-7)
+    # Penalize rapid changes in action for smoother control
+    action_rate_l2 = RewTerm(func=mdp.action_rate_l2, weight=-0.01)
+
+    # -- Gait rewards (for 8-legged locomotion)
+    # Reward for keeping feet in the air for appropriate durations (encourages stepping)
+    feet_air_time = RewTerm(
+        func=mdp.feet_air_time,
+        weight=0.125,
+        params={
+            "sensor_cfg": SceneEntityCfg("contact_sensor"),
+            "command_name": "base_velocity",
+            "threshold": 0.5,
+        },
+    )
+    # Penalize undesired contacts (e.g., body touching the ground)
+    not_feet = ["Body"]
+    for leg_num in range(1, 9):
+        not_feet.append(f"Leg{leg_num}_Hip-actuator-assembly_Body-Bracket")
+        not_feet.append(f"Leg{leg_num}_Hip-actuator-assembly_Motor")
+        not_feet.append(f"Leg{leg_num}_Hip-actuator-assembly_Hip-Bracket")
+        not_feet.append(f"Leg{leg_num}_Femur-actuator-assembly_Motor")
+        not_feet.append(f"Leg{leg_num}_Hip-actuator-assembly_Femur")
+        not_feet.append(f"Leg{leg_num}_Tibia_Leg")
+    undesired_contacts = RewTerm(
+        func=mdp.undesired_contacts,
+        weight=-1.0,
+        params={"sensor_cfg": SceneEntityCfg("contact_sensor"), "body_names": not_feet},
+    )
+
+    # -- Spider-specific rewards
+    # Reward for keeping the robot's body flat (upright orientation)
+    flat_orientation_l2 = RewTerm(func=mdp.flat_orientation_l2, weight=0.1)
+    # Penalize deviation from target base height
+    base_height_l2 = RewTerm(
+        func=mdp.base_height_l2, weight=-0.5, params={"target_height": 0.134}
+    )
+
+
+@configclass
+class TerminationsCfg:
+    """Termination terms for the spider robot."""
+
+    time_out = DoneTerm(func=mdp.time_out, time_out=True)
+    base_contact = DoneTerm(
+        func=mdp.illegal_contact,
+        params={
+            "sensor_cfg": SceneEntityCfg("contact_sensor"),
+            "illegal_bodies": ["Body"],
+        },
+    )
+
+
+@configclass
+class CurriculumCfg:
+    """Curriculum terms for the spider robot."""
+
+    terrain_levels = CurrTerm(func=mdp.terrain_levels_vel)
+
+
+##
+# Environment configuration
+##
+
+
+@configclass
+class SpiderLocomotionEnvCfg(ManagerBasedRLEnvCfg):
+    """Configuration for the spider locomotion environment."""
+
+    # Scene settings
+    scene: SpiderSceneCfg = SpiderSceneCfg(num_envs=4096, env_spacing=2.5)
+    # Basic settings
+    observations: ObservationsCfg = ObservationsCfg()
+    actions: ActionsCfg = ActionsCfg()
+    rewards: RewardsCfg = RewardsCfg()
+    terminations: TerminationsCfg = TerminationsCfg()
+    curriculum: CurriculumCfg = CurriculumCfg()
+
+    # Commands
+    commands = mdp.UniformVelocityCommandCfg(
+        asset_name="robot",
+        resampling_time_range=(10.0, 10.0),
+        rel_standing_envs=0.02,
+        rel_heading_envs=0.0,
+        heading_command=True,
+        heading_control_stiffness=0.5,
+        debug_vis=True,
+        ranges=mdp.UniformVelocityCommandCfg.Ranges(
+            lin_vel_x=(-1.0, 1.0),
+            lin_vel_y=(-0.5, 0.5),
+            ang_vel_z=(-1.0, 1.0),
+        ),
+    )
+
+    # Events
+    events = mdp.EventCfg(
+        physics_material=EventTerm(
+            func=mdp.randomize_rigid_body_material,
+            mode="startup",
+            params={
+                "asset_cfg": SceneEntityCfg("robot", body_names=".*"),
+                "static_friction_range": (0.8, 1.2),
+                "dynamic_friction_range": (0.6, 1.0),
+                "restitution_range": (0.0, 0.0),
+                "num_buckets": 64,
+            },
+        ),
+        add_base_mass=EventTerm(
+            func=mdp.randomize_rigid_body_mass,
+            mode="startup",
+            params={
+                "asset_cfg": SceneEntityCfg("robot", body_names="Body"),
+                "mass_distribution_params": (-0.1, 0.1),
+                "operation": "add",
+            },
+        ),
+        push_robot=EventTerm(
+            func=mdp.push_by_setting_velocity,
+            mode="interval",
+            interval_range_s=(10.0, 15.0),
+            params={"velocity_range": {"x": (-0.5, 0.5), "y": (-0.5, 0.5)}},
+        ),
+        reset_robot_base=EventTerm(
+            func=mdp.reset_root_state_uniform,
+            mode="reset",
+            params={
+                "pose_range": {
+                    "x": (-0.5, 0.5),
+                    "y": (-0.5, 0.5),
+                    "yaw": (-3.14, 3.14),
+                },
+                "velocity_range": {
+                    "x": (-0.5, 0.5),
+                    "y": (-0.5, 0.5),
+                    "z": (-0.5, 0.5),
+                    "roll": (-0.5, 0.5),
+                    "pitch": (-0.5, 0.5),
+                    "yaw": (-0.5, 0.5),
+                },
+            },
+        ),
+        reset_robot_joints=EventTerm(
+            func=mdp.reset_joints_by_scale,
+            mode="reset",
+            params={
+                "position_range": (0.5, 1.5),
+                "velocity_range": (0.0, 0.0),
+            },
+        ),
+    )
+
+    def __post_init__(self):
+        """Post initialization."""
+        # General settings
+        self.decimation = 4  # Run at 50Hz
+        self.episode_length_s = 20.0
+
+        # Simulation settings
+        self.sim.dt = 0.005  # 200Hz physics
+        self.sim.physics_material = self.scene.terrain.physics_material
+
+        # Update controller parameters
+        self.actions.joint_pos.scale = 0.5
+
+        # Viewer settings
+        self.viewer.eye = (7.5, 7.5, 5.0)
+        self.viewer.lookat = (0.0, 0.0, 0.0)
