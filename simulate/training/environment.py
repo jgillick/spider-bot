@@ -86,7 +86,7 @@ class SpiderRobotEnv(MujocoEnv):
         observation_space = spaces.Box(
             low=-np.inf,
             high=np.inf,
-            shape=(48,),  # Updated observation space size
+            shape=(64,),
             dtype=np.float64,
         )
 
@@ -106,8 +106,9 @@ class SpiderRobotEnv(MujocoEnv):
             dtype=np.float32,
         )
 
-        # Cache foot geom IDs by name
+        # Cache model data
         self._cache_foot_geom_ids()
+        self._cache_joint_ranges()
 
         # Set initial joint positions
         self._set_initial_joint_positions()
@@ -135,23 +136,9 @@ class SpiderRobotEnv(MujocoEnv):
 
     def step(self, action):
         """Simplified step with curriculum-aware rewards."""
-        # Convert normalized actions to joint positions
-        joint_ranges = []
-        for i in range(self.model.nu):
-            joint_id = self.model.actuator_trnid[i, 0]
-            if self.model.jnt_limited[joint_id]:
-                joint_ranges.append(
-                    (
-                        self.model.jnt_range[joint_id, 0],
-                        self.model.jnt_range[joint_id, 1],
-                    )
-                )
-            else:
-                joint_ranges.append((-np.pi, np.pi))
-
-        # Scale actions to joint ranges
+        # Scale actions to joint ranges with safety bounds
         target_positions = []
-        for i, (low, high) in enumerate(joint_ranges):
+        for i, (low, high) in enumerate(self.joint_ranges):
             scaled_pos = low + (action[i] + 1.0) * 0.5 * (high - low)
             target_positions.append(scaled_pos)
         target_positions = np.array(target_positions)
@@ -165,9 +152,18 @@ class SpiderRobotEnv(MujocoEnv):
             6:30
         ]  # Start at index 6, get 24 actuated joint velocities (indices 6-29)
 
+        # Calculate torques with safety checks
+        position_errors = target_positions - current_positions
+        velocity_errors = current_velocities
+
+        # Clip position errors to prevent extreme corrections
+        position_errors = np.clip(position_errors, -0.5, 0.5)
+
+        # Clip velocity errors to prevent extreme damping
+        velocity_errors = np.clip(velocity_errors, -5.0, 5.0)
+
         torques = (
-            self.position_gain * (target_positions - current_positions)
-            - self.velocity_gain * current_velocities
+            self.position_gain * position_errors - self.velocity_gain * velocity_errors
         )
         torques = np.clip(torques, -self.max_torque, self.max_torque)
 
@@ -325,31 +321,30 @@ class SpiderRobotEnv(MujocoEnv):
         body_velocity = self.data.qvel[:3]
 
         # Orientation as rotation matrix (flattened)
-        orientation = self.data.xquat[1]  # Assuming body ID 1
+        orientation = self.data.xquat[1]
 
-        # Joint positions and velocities (normalized)
-        joint_positions = self.data.qpos[
-            7:31
-        ]  # Start at index 7, get 24 actuated joints (indices 7-30)
-        joint_velocities = self.data.qvel[
-            6:30
-        ]  # Start at index 6, get 24 actuated joint velocities (indices 6-29)
+        # Joint velocities
+        joint_velocities = self.data.qvel[6:30]
+
+        # Convert joint positions back to -1.0 - 1.0 range
+        joint_positions = self.data.qpos[7:31]
+        for i, (low, high) in enumerate(self.joint_ranges):
+            joint_positions[i] = (joint_positions[i] - low) / (high - low)
+            joint_positions[i] = round(joint_positions[i], 2)
 
         # Foot contacts (binary)
         foot_contacts = self._get_foot_contacts()
 
-        obs = np.concatenate(
+        return np.concatenate(
             [
-                [body_height],  # 1
-                body_velocity,  # 3
-                orientation,  # 4
-                joint_positions,  # 24
-                joint_velocities / 10.0,  # 24 (normalized)
-                foot_contacts,  # 8
+                [body_height],
+                body_velocity,
+                orientation,
+                joint_positions,
+                joint_velocities / 10.0,
+                foot_contacts,
             ]
         )
-
-        return obs[:48]  # Ensure correct size (1+3+4+24+24+8 = 64, but we want 48)
 
     def _compute_curriculum_reward(self, action):
         """Compute reward based on curriculum stage."""
@@ -381,12 +376,8 @@ class SpiderRobotEnv(MujocoEnv):
 
         # Stage 1: Balance (focus on stability)
         if self.curriculum_stage == 1:
-            height_reward = 8.0 * np.exp(
-                -100 * height_error**2
-            )  # Stronger height control
-            upright_reward = 5.0 * np.exp(
-                -20 * upright_error**2
-            )  # Stronger upright bonus
+            height_reward = 8.0 * np.exp(-100 * height_error**2)
+            upright_reward = 5.0 * np.exp(-20 * upright_error**2)
 
             # Stronger penalty for joint movement (encourage stillness)
             joint_velocities = self.data.qvel[
@@ -418,10 +409,8 @@ class SpiderRobotEnv(MujocoEnv):
                 3.0 * (num_feet_on_ground / 8.0) if num_feet_on_ground >= 6 else 0.0
             )
 
-            # Calculate stability ratio for reward scaling
-            stability_ratio = self.stable_steps / max(1, self.total_steps)
-
             # Scale rewards based on stability (more stable = higher rewards)
+            stability_ratio = self.stable_steps / max(1, self.total_steps)
             stability_multiplier = 0.5 + 0.5 * stability_ratio
 
             reward = (
@@ -432,7 +421,7 @@ class SpiderRobotEnv(MujocoEnv):
                 + gyro_reward
                 + height_bonus
                 + action_smoothness_penalty
-                + foot_contact_reward  # New reward component
+                + foot_contact_reward
                 + contact_penalty * 0.2
                 + 2.0  # Base reward
             ) * stability_multiplier
@@ -549,6 +538,22 @@ class SpiderRobotEnv(MujocoEnv):
             else:
                 print(f"⚠️ Warning: Could not find geom '{foot_name}'")
 
+    def _cache_joint_ranges(self):
+        """Cache the join position ranges."""
+        self.joint_ranges = []
+        for i in range(0, self.model.nu):
+            joint_id = self.model.actuator_trnid[i, 0]
+            joint_type = self.model.jnt_type[joint_id]
+            if self.model.jnt_limited[joint_id]:
+                self.joint_ranges.append(
+                    (
+                        self.model.jnt_range[joint_id, 0],
+                        self.model.jnt_range[joint_id, 1],
+                    )
+                )
+            else:
+                self.joint_ranges.append((-np.pi, np.pi))
+
     def _get_contact_penalty(self):
         """Penalize contact with non-foot parts of the robot."""
         penalty = 0.0
@@ -649,20 +654,10 @@ class SpiderRobotEnv(MujocoEnv):
     def _is_terminated(self):
         """Check if episode should terminate (robot has fallen or become unstable)."""
 
-        # Very minimal termination conditions - let the robot learn from any state
-
-        # Only terminate on complete simulation failure
+        # Check for NaN values (simulation failure)
         if np.any(np.isnan(self.data.qpos)) or np.any(np.isnan(self.data.qvel)):
             print(
                 f"🔴 Episode terminated at step {self.episode_length}: NaN values detected"
-            )
-            return True
-
-        # Only terminate if robot is completely underground (simulation error)
-        height = self.data.qpos[2]
-        if height < -0.1:  # Only if completely underground
-            print(
-                f"🔴 Episode terminated at step {self.episode_length}: Robot underground (height: {height:.4f})"
             )
             return True
 
