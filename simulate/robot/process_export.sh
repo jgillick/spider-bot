@@ -4,7 +4,10 @@ set -e
 EXPORT_DIR="./export/SpiderBody"
 
 echo "Processing XML..."
-python update_xml.py
+
+# Create two versions of the XML: one with the ground plane and one without
+python update_xml.py SpiderBotNoGround.xml
+python update_xml.py --ground --light SpiderBot.xml
 
 ###
 # Move mesh files, if they exist

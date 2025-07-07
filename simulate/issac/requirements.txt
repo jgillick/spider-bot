@@ -1,0 +1,41 @@
+# Isaac Lab Spider Locomotion Environment Requirements
+# Core Isaac Lab dependencies
+isaaclab>=1.0.0
+isaac-sim>=2023.1.1
+
+# RL training frameworks
+gymnasium>=0.29.0
+stable-baselines3>=2.1.0
+torch>=2.0.0
+tensorboard>=2.13.0
+
+# Physics and simulation
+mujoco>=2.3.0
+mujoco-py>=2.1.2.14
+
+# Data processing and utilities
+numpy>=1.24.0
+scipy>=1.10.0
+pandas>=2.0.0
+
+# Visualization and monitoring
+matplotlib>=3.7.0
+seaborn>=0.12.0
+wandb>=0.15.0
+
+# Development and testing
+pytest>=7.4.0
+black>=23.0.0
+flake8>=6.0.0
+
+# Optional: For advanced RL algorithms
+ray[rllib]>=2.6.0
+optuna>=3.2.0
+
+# Optional: For model export and deployment
+onnx>=1.14.0
+onnxruntime>=1.15.0
+
+# System dependencies (may need to be installed separately)
+# - CUDA toolkit (for GPU acceleration)
+# - Isaac Sim dependencies (see Isaac Sim documentation)
