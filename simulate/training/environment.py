@@ -9,30 +9,30 @@ from gymnasium.envs.mujoco.mujoco_env import MujocoEnv
 from mujoco import mjtObj, mj_name2id
 
 INITIAL_JOINT_POSITIONS = (
-    "-1",  # Leg 1 - Hip
-    "0.75",  # Leg 1 - Femur
-    "1.0",  # Leg 1 - Tibia
-    "-1",  # Leg 2 - Hip
-    "0.75",  # Leg 2 - Femur
-    "1.0",  # Leg 2 - Tibia
-    "1",  # Leg 3 - Hip
-    "0.75",  # Leg 3 - Femur
-    "1.0",  # Leg 3 - Tibia
-    "1",  # Leg 4 - Hip
-    "0.75",  # Leg 4 - Femur
-    "1.0",  # Leg 4 - Tibia
-    "1",  # Leg 5 - Hip
-    "0.75",  # Leg 5 - Femur
-    "1.0",  # Leg 5 - Tibia
-    "1",  # Leg 6 - Hip
-    "0.75",  # Leg 6 - Femur
-    "1.0",  # Leg 6 - Tibia
-    "-1.0",  # Leg 7 - Hip
-    "0.75",  # Leg 7 - Femur
-    "1.0",  # Leg 7 - Tibia
-    "-1.0",  # Leg 8 - Hip
-    "0.75",  # Leg 8 - Femur
-    "1.0",  # Leg 8 - Tibia
+    -1.0,  # Leg 1 - Hip
+    0.75,  # Leg 1 - Femur
+    1.0,  # Leg 1 - Tibia
+    -1.0,  # Leg 2 - Hip
+    0.75,  # Leg 2 - Femur
+    1.0,  # Leg 2 - Tibia
+    1.0,  # Leg 3 - Hip
+    0.75,  # Leg 3 - Femur
+    1.0,  # Leg 3 - Tibia
+    1.0,  # Leg 4 - Hip
+    0.75,  # Leg 4 - Femur
+    1.0,  # Leg 4 - Tibia
+    1.0,  # Leg 5 - Hip
+    0.75,  # Leg 5 - Femur
+    1.0,  # Leg 5 - Tibia
+    1.0,  # Leg 6 - Hip
+    0.75,  # Leg 6 - Femur
+    1.0,  # Leg 6 - Tibia
+    -1.0,  # Leg 7 - Hip
+    0.75,  # Leg 7 - Femur
+    1.0,  # Leg 7 - Tibia
+    -1.0,  # Leg 8 - Hip
+    0.75,  # Leg 8 - Femur
+    1.0,  # Leg 8 - Tibia
 )
 
 
@@ -125,14 +125,10 @@ class SpiderRobotEnv(MujocoEnv):
 
         # Ensure the robot starts at a reasonable height
         # Set the z-position (height) to be above ground
-        qpos[2] = 0.15  # Start 15cm above ground
+        # qpos[2] = 0.15  # Start 15cm above ground
 
         # Update the state
         self.set_state(qpos, self.data.qvel)
-
-        # Let the physics settle for a few steps
-        for _ in range(10):
-            self.do_simulation(np.zeros(24), 1)
 
     def step(self, action):
         """Simplified step with curriculum-aware rewards."""
@@ -203,97 +199,24 @@ class SpiderRobotEnv(MujocoEnv):
         qpos = self.init_qpos.copy()
         qvel = self.init_qvel.copy()
 
-        # Stage 1: 30% chance to start from completely random pose
-        if self.curriculum_stage == 1 and self.np_random.random() < 0.3:
-            # Complete random initialization for Stage 1
-            # Random joint positions within limits
-            for i in range(24):  # 24 actuated joints
-                joint_id = i + 1  # Joint IDs start at 1 (0 is free joint)
-                if self.model.jnt_limited[joint_id]:
-                    low = self.model.jnt_range[joint_id, 0]
-                    high = self.model.jnt_range[joint_id, 1]
-                    qpos[7 + i] = self.np_random.uniform(
-                        low * 0.8, high * 0.8
-                    )  # 80% of range for safety
-                else:
-                    qpos[7 + i] = self.np_random.uniform(-1.5, 1.5)
-
-            # Random but reasonable height
-            qpos[2] = self.np_random.uniform(0.10, 0.20)  # 10-20cm
-
-            # Random but mostly upright orientation
-            roll_angle = self.np_random.uniform(-0.2, 0.2)  # ±0.2 rad
-            pitch_angle = self.np_random.uniform(-0.2, 0.2)
-            qpos[3] = np.cos(roll_angle / 2) * np.cos(pitch_angle / 2)
-            qpos[4] = np.sin(roll_angle / 2) * np.cos(pitch_angle / 2)
-            qpos[5] = np.cos(roll_angle / 2) * np.sin(pitch_angle / 2)
-            qpos[6] = 0
-            quat_norm = np.linalg.norm(qpos[3:7])
-            qpos[3:7] /= quat_norm
-
-        else:
-            # Normal initialization with INITIAL_JOINT_POSITIONS
-            # Set initial joint positions from the constant
-            for i, pos_str in enumerate(INITIAL_JOINT_POSITIONS):
-                if i < len(qpos) - 7:
-                    qpos[7 + i] = float(pos_str)
-
-            # Ensure the robot starts at a reasonable height
-            qpos[2] = 0.15  # Start 15cm above ground
-
-            # Keep body orientation upright
-            qpos[3:7] = [1, 0, 0, 0]  # Quaternion for upright orientation
-
-        # Curriculum-based randomization
+        # Set initial joint positions
         if self.curriculum_stage == 1:
-            # Stage 1: Significant randomization to learn recovery
-            # Add random perturbations to joint positions
-            joint_noise_scale = 0.3  # ±0.3 radians (~17 degrees)
-            joint_perturbations = self.np_random.uniform(
-                low=-joint_noise_scale,
-                high=joint_noise_scale,
-                size=len(INITIAL_JOINT_POSITIONS),
-            )
-            for i in range(min(len(joint_perturbations), len(qpos) - 7)):
-                qpos[7 + i] += joint_perturbations[i]
-
-            # Randomize body orientation slightly
-            # Small rotations around roll and pitch axes
-            roll_angle = self.np_random.uniform(-0.1, 0.1)  # ±0.1 rad (~6 degrees)
-            pitch_angle = self.np_random.uniform(-0.1, 0.1)
-
-            # Convert to quaternion (approximate for small angles)
-            qpos[3] = np.cos(roll_angle / 2) * np.cos(pitch_angle / 2)  # w
-            qpos[4] = np.sin(roll_angle / 2) * np.cos(pitch_angle / 2)  # x
-            qpos[5] = np.cos(roll_angle / 2) * np.sin(pitch_angle / 2)  # y
-            qpos[6] = 0  # z (no yaw variation)
-
-            # Normalize quaternion
-            quat_norm = np.linalg.norm(qpos[3:7])
-            qpos[3:7] /= quat_norm
-
-            # Randomize initial height slightly
-            qpos[2] += self.np_random.uniform(-0.02, 0.02)  # ±2cm variation
-
+            joint_noise_scale = 0.5  # ±<radians>
         else:
-            # Stage 2 & 3: Less randomization (robot should be more stable)
             joint_noise_scale = 0.1  # ±0.1 radians (~6 degrees)
-            joint_perturbations = self.np_random.uniform(
-                low=-joint_noise_scale,
-                high=joint_noise_scale,
-                size=len(INITIAL_JOINT_POSITIONS),
-            )
-            for i in range(min(len(joint_perturbations), len(qpos) - 7)):
-                qpos[7 + i] += joint_perturbations[i]
+        joint_perturbations = self.np_random.uniform(
+            low=-joint_noise_scale,
+            high=joint_noise_scale,
+            size=len(INITIAL_JOINT_POSITIONS),
+        )
+        first_joint_id = 7
+        for i, pos_str in enumerate(INITIAL_JOINT_POSITIONS):
+            qpos[first_joint_id + i] = float(pos_str) + joint_perturbations[i]
 
-        # Zero all velocities for stable start
-        qvel[:] = 0.0
+        # Ensure the robot starts at a reasonable height
+        # qpos[2] = 0.135
 
         self.set_state(qpos, qvel)
-
-        # Let physics settle for a few steps
-        for _ in range(5):
-            self.do_simulation(np.zeros(24), 1)
 
         self.episode_length = 0
         self.total_distance = 0.0
@@ -527,14 +450,14 @@ class SpiderRobotEnv(MujocoEnv):
 
     def _cache_foot_geom_ids(self):
         """Cache foot geom IDs by looking up their names."""
-        self.foot_geom_ids = set()
+        self.foot_geom_ids = []
 
         # Look for foot geoms by name pattern "LegX_Tibia_foot"
         for leg_num in range(1, 9):  # Legs 1-8
             foot_name = f"Leg{leg_num}_Tibia_Foot_geom"
             foot_id = mj_name2id(self.model, mjtObj.mjOBJ_GEOM, foot_name)
             if foot_id is not None:
-                self.foot_geom_ids.add(foot_id)
+                self.foot_geom_ids.append(foot_id)
             else:
                 print(f"⚠️ Warning: Could not find geom '{foot_name}'")
 
@@ -543,7 +466,6 @@ class SpiderRobotEnv(MujocoEnv):
         self.joint_ranges = []
         for i in range(0, self.model.nu):
             joint_id = self.model.actuator_trnid[i, 0]
-            joint_type = self.model.jnt_type[joint_id]
             if self.model.jnt_limited[joint_id]:
                 self.joint_ranges.append(
                     (
@@ -634,19 +556,16 @@ class SpiderRobotEnv(MujocoEnv):
         # Check each contact in the simulation
         for i in range(self.data.ncon):
             contact = self.data.contact[i]
-            # Use cached foot geom IDs
             if (
                 contact.geom1 in self.foot_geom_ids
                 or contact.geom2 in self.foot_geom_ids
             ):
-                # Find which foot this is (assuming they're in order)
                 foot_geom_id = (
                     contact.geom1
                     if contact.geom1 in self.foot_geom_ids
                     else contact.geom2
                 )
-                # Map geom ID to foot index (assuming they're sequential)
-                foot_idx = min(foot_geom_id - min(self.foot_geom_ids), 7)
+                foot_idx = self.foot_geom_ids.index(foot_geom_id)
                 contacts[foot_idx] = 1.0
 
         return contacts

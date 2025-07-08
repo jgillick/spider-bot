@@ -22,8 +22,10 @@ from stable_baselines3.common.callbacks import (
     CheckpointCallback,
     BaseCallback,
 )
+from gymnasium.wrappers import TimeLimit
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import VecVideoRecorder
+from stable_baselines3.common.evaluation import evaluate_policy
 
 from .environment import SpiderRobotEnv
 
@@ -37,162 +39,210 @@ DEFAULT_CONFIG = {
     "gamma": 0.99,
     "gae_lambda": 0.95,
     "clip_range": 0.15,
-    "ent_coef": 0.01,  # Increased exploration for harder task
+    "ent_coef": 0.01,
     "max_grad_norm": 0.5,
     "network_arch": [
-        256,
-        256,
         128,
+        256,
+        64,
     ],
+    "max_episode_steps": 2_000,
     "checkpoint_freq": 100_000,
-    "eval_freq": 25_000,
+    "eval_freq": 50_000,
+    "eval_episodes": 10,
     "stage_thresholds": [
-        25000,  # Stage 1: Proper standing with good posture (was 1000)
-        40000,  # Stage 2: Basic walking with coordination (was 3000)
-        60000,  # Stage 3: Optimized locomotion (was 5000)
+        25000,
+        40000,
+        60000,
     ],
     "early_stopping": True,
-    "early_stopping_patience": 15,  # More patience for harder learning
-    "early_stopping_min_improvement": 10.0,  # Expect smaller improvements
+    "early_stopping_patience": 10,
+    "early_stopping_min_improvement": 10.0,
     "generate_videos": True,
 }
 
 
 class CurriculumCallback(BaseCallback):
-    """Callback for automatic curriculum progression."""
+    """Callback for curriculum progression."""
 
-    def __init__(self, eval_env, stage_thresholds, verbose=0, out_dir=None):
+    def __init__(
+        self,
+        eval_env,
+        stage_thresholds,
+        min_improvement,
+        patience,
+        eval_freq,
+        eval_episodes,
+        max_episode_steps,
+        checkpoint_path,
+        video_path,
+        verbose=0,
+        early_stopping=True,
+        out_dir=None,
+        xml_file=None,
+    ):
         super().__init__(verbose)
         self.eval_env = eval_env
+        self.eval_freq = eval_freq
+        self.eval_episodes = eval_episodes
+        self.max_episode_steps = max_episode_steps
         self.stage_thresholds = stage_thresholds
         self.current_stage = 1
         self.stage_episodes = 0
+        self.patience = patience
         self.stage_start_timestep = 0
-        self.advance_requested = False  # Flag for advancing curriculum
-        self.out_dir = out_dir
-        self.xml_file = None  # Will be set later
+        self.min_improvement = min_improvement
+        self.xml_file = xml_file
+        self.early_stopping = early_stopping
         self.best_reward_per_stage = {
             1: -np.inf,
             2: -np.inf,
             3: -np.inf,
-        }  # Track best rewards
+        }
+        self.checkpoint_path = checkpoint_path
+        self.video_path = video_path
+        self.last_eval_step = 0
 
-    def request_advance(self):
+        self.best_mean_reward = -np.inf
+        self.steps_without_improvement = 0
+        self.best_step = None
+
+    def advance_stage(self):
         """Request curriculum advancement from evaluation callback."""
-        self.advance_requested = True
+        self._record_stage_video()
+        self.current_stage += 1
+        self.stage_start_timestep = self.num_timesteps
+        self.reset_for_new_stage()
+
+        # Update all training environments
+        if hasattr(self.training_env, "env_method"):
+            self.training_env.env_method("set_curriculum_stage", self.current_stage)
+
+        # Log to tensorboard
+        self.logger.record("curriculum/stage", self.current_stage)
+        self.logger.record("curriculum/progression_timestep", self.num_timesteps)
 
     def get_current_stage(self):
         """Get current curriculum stage."""
         return self.current_stage
 
+    def reset_for_new_stage(self):
+        """Reset evaluation metrics for new curriculum stage."""
+        print(f"📊 Resetting metrics for stage {self.current_stage}")
+        self.best_mean_reward = -np.inf
+        self.steps_without_improvement = 0
+        self.best_step = self.num_timesteps
+
+    def evaluate_model(self):
+        """Manually evaluate the model at this point."""
+        episode_rewards = []
+        episode_lengths = []
+        for _ in range(self.eval_episodes):
+            obs = self.eval_env.reset()
+            episode_reward = 0
+            episode_length = 0
+
+            for _ in range(self.max_episode_steps):
+                action, _ = self.model.predict(obs, deterministic=True)
+                obs, reward, done, info = self.eval_env.step(action)
+
+                episode_reward += (
+                    reward[0] if isinstance(reward, np.ndarray) else reward
+                )
+                episode_length += 1
+
+                if done[0] if isinstance(done, np.ndarray) else done:
+                    break
+
+            episode_rewards.append(episode_reward)
+            episode_lengths.append(episode_length)
+
+        mean_reward = np.mean(episode_rewards)
+        std_reward = np.std(episode_rewards)
+        mean_episode_length = np.mean(episode_lengths)
+        std_episode_length = np.std(episode_lengths)
+
+        return (mean_reward, std_reward, mean_episode_length, std_episode_length)
+
     def _on_step(self) -> bool:
-        # Check if curriculum advancement was requested
-        if self.advance_requested:
-            # Record stage completion video
-            self._record_stage_video()
-
-            self.current_stage += 1
-            self.stage_start_timestep = self.num_timesteps
-            self.advance_requested = False
-
-            # Update all training environments
-            if hasattr(self.training_env, "env_method"):
-                try:
-                    self.training_env.env_method(
-                        "set_curriculum_stage", self.current_stage
-                    )
-                except:
-                    pass  # Some vec envs don't support this
-
-            print(
-                f"\n🎯 Advanced to curriculum stage {self.current_stage} due to plateau at timestep {self.num_timesteps}"
+        # Evaluate every X steps for natural progression check
+        if self.num_timesteps >= self.last_eval_step + self.eval_freq:
+            print("   ⏳ Running evaluation...")
+            self.last_eval_step = self.num_timesteps
+            mean_reward, std_reward, mean_episode_length, std_episode_length = (
+                self.evaluate_model()
             )
 
-            # Log to tensorboard
+            mean_reward = float(mean_reward)
+            improvement = mean_reward - self.best_mean_reward
+            has_improved = improvement > self.min_improvement
+
+            print(f"📊 Evaluation Results (Stage {self.current_stage}):")
+            print(f"   Mean reward: {mean_reward:.2f} ± {std_reward:.2f}")
+            print(
+                f"   Mean episode length: {mean_episode_length:.1f} ± {std_episode_length:.1f} steps"
+            )
+            print(f"   Best so far: {self.best_mean_reward:.2f}")
+            if not has_improved and self.best_step is not None:
+                self.steps_without_improvement += 1
+                print(
+                    f"⚠️ No improvement for {self.steps_without_improvement} evaluation(s)"
+                )
+
+            self.logger.record("curriculum/mean_reward", mean_reward)
+            self.logger.record("curriculum/std_reward", std_reward)
+            self.logger.record("curriculum/current_stage", self.current_stage)
+            self.logger.record("eval/mean_episode_length", mean_episode_length)
+            self.logger.record("eval/std_episode_length", std_episode_length)
             self.logger.record("curriculum/stage", self.current_stage)
             self.logger.record("curriculum/progression_timestep", self.num_timesteps)
-
-        # Evaluate every 50k steps for natural progression check
-        if self.n_calls % 50000 == 0 and self.n_calls > 0:
-            # Manual evaluation to avoid evaluate_policy issues
-            episode_rewards = []
-
-            for _ in range(10):  # 10 episodes for curriculum evaluation
-                obs = self.eval_env.reset()
-                episode_reward = 0
-
-                for _ in range(1000):  # Max 1000 steps per episode
-                    action, _ = self.model.predict(obs, deterministic=True)
-                    obs, reward, done, info = self.eval_env.step(action)
-
-                    episode_reward += (
-                        reward[0] if isinstance(reward, np.ndarray) else reward
-                    )
-
-                    if done[0] if isinstance(done, np.ndarray) else done:
-                        break
-
-                episode_rewards.append(episode_reward)
-
-            mean_reward = np.mean(episode_rewards)
 
             # Update best reward for current stage
             if mean_reward > self.best_reward_per_stage[self.current_stage]:
                 self.best_reward_per_stage[self.current_stage] = mean_reward
 
+            # Check for improvement
+            if has_improved:
+                print(f"✅ Improvement: +{improvement:.2f}")
+                self.best_mean_reward = mean_reward
+                self.steps_without_improvement = 0
+                self.best_step = self.num_timesteps
+
+                # Save best model
+                best_model_path = os.path.join(self.checkpoint_path, "best_model")
+                self.model.save(best_model_path)
+                print(f"💾 Best model saved to {best_model_path}")
+
             # Check if ready to progress using BEST reward achieved
-            if (
+            elif (
                 self.best_reward_per_stage[self.current_stage]
                 > self.stage_thresholds[self.current_stage - 1]
+                and self.current_stage < 3
+            ):
+                self.current_stage += 1
+                self.stage_start_timestep = self.num_timesteps
+
+                # Update all training environments
+                print(
+                    f"\n🎯 Progressing to curriculum stage {self.current_stage} at timestep {self.num_timesteps}"
+                )
+                self.training_env.env_method("set_curriculum_stage", self.current_stage)
+                self.eval_env.env_method("set_curriculum_stage", self.current_stage)
+                self.advance_stage()
+
+            # Has this stage plateaued?
+            elif (
+                self.early_stopping and self.steps_without_improvement >= self.patience
             ):
                 if self.current_stage < 3:
-                    self.current_stage += 1
-                    self.stage_start_timestep = self.num_timesteps
-
-                    # Update all training environments
-                    # Note: Updating environments in SubprocVecEnv is complex
-                    # For now, we'll track the stage and apply it on reset
-                    try:
-                        self.training_env.env_method(
-                            "set_curriculum_stage", self.current_stage
-                        )
-                        self.eval_env.env_method(
-                            "set_curriculum_stage", self.current_stage
-                        )
-                    except Exception as e:
-                        print(
-                            "⚠️ Error progressing training environments to the next stage!"
-                        )
-                        raise e
-
-                    self.request_advance()
                     print(
-                        f"\n🎯 Progressed to curriculum stage {self.current_stage} at timestep {self.num_timesteps}"
+                        f"   🎯 Plateau detected - advancing curriculum to stage {self.current_stage + 1}"
                     )
-                    print(f"   Mean reward: {mean_reward:.2f}")
-
-                    # Log to tensorboard
-                    self.logger.record("curriculum/stage", self.current_stage)
-                    self.logger.record(
-                        "curriculum/progression_timestep", self.num_timesteps
-                    )
-
-                    # Note: The evaluation callback will detect this stage change and reset its metrics
-
-            # Always log current performance
-            self.logger.record("curriculum/mean_reward", mean_reward)
-            self.logger.record("curriculum/current_stage", self.current_stage)
-
-            # Add debugging to see why curriculum isn't advancing
-            print(f"Current stage: {self.current_stage}")
-            print(f"Current reward: {mean_reward}")
-            print(
-                f"Best reward for stage: {self.best_reward_per_stage[self.current_stage]}"
-            )
-            print(f"Stage threshold: {self.stage_thresholds[self.current_stage - 1]}")
-            print(
-                f"Should advance: {self.best_reward_per_stage[self.current_stage] > self.stage_thresholds[self.current_stage - 1]}"
-            )
+                    self.advance_stage()
+                elif self.current_stage >= 3:
+                    # Final stage plateau - stop training
+                    print(f"🛑 Final stage plateau - stopping training")
+                    return False
 
         return True
 
@@ -228,7 +278,7 @@ class CurriculumCallback(BaseCallback):
 
             # Wrap with video recorder
             stage_video_path = (
-                f"{self.out_dir}/videos/stage_{self.current_stage}_completion"
+                f"{self.video_path}/stage_{self.current_stage}_completion"
             )
             video_env = VecVideoRecorder(
                 video_env,
@@ -244,7 +294,7 @@ class CurriculumCallback(BaseCallback):
             steps = 0
 
             for _ in range(1000):
-                action, _ = self.model.predict(obs, deterministic=True)
+                action, _ = self.model.predict(obs, deterministic=True)  # type: ignore[arg-type]
                 obs, reward, done, info = video_env.step(action)
                 episode_reward += (
                     reward[0] if isinstance(reward, np.ndarray) else reward
@@ -259,206 +309,6 @@ class CurriculumCallback(BaseCallback):
 
         except Exception as e:
             print(f"⚠️ Failed to record stage {self.current_stage} video: {e}")
-
-    def set_xml_file(self, xml_file):
-        """Set the XML file path for video recording."""
-        self.xml_file = xml_file
-
-
-class CustomEvalCallback(BaseCallback):
-    """Custom evaluation callback with curriculum advancement on plateau."""
-
-    def __init__(
-        self,
-        eval_env,
-        save_path,
-        log_path,
-        eval_freq,
-        n_eval_episodes=10,
-        patience=5,
-        min_improvement=1.0,
-        early_stopping=True,
-        curriculum_callback=None,
-        stage_thresholds=None,
-    ):
-        super().__init__()
-        self.eval_env = eval_env
-        self.save_path = save_path
-        self.log_path = log_path
-        self.eval_freq = eval_freq
-        self.n_eval_episodes = n_eval_episodes
-        self.best_mean_reward = -np.inf
-        self.last_eval_step = 0
-
-        # Early stopping parameters
-        self.patience = patience
-        self.min_improvement = min_improvement
-        self.early_stopping = early_stopping
-        self.eval_history = []
-        self.steps_without_improvement = 0
-        self.best_step = 0
-
-        # Curriculum integration
-        self.curriculum_callback = curriculum_callback
-        self.stage_thresholds = stage_thresholds or [15000.0, 25000.0, 35000.0]
-        self.stage_best_rewards = {}  # Track best reward per stage
-
-    def reset_for_new_stage(self):
-        """Reset evaluation metrics for new curriculum stage."""
-        current_stage = (
-            self.curriculum_callback.current_stage if self.curriculum_callback else 1
-        )
-        print(f"   📊 Resetting metrics for stage {current_stage}")
-        self.best_mean_reward = -np.inf
-        self.steps_without_improvement = 0
-        self.best_step = self.num_timesteps
-
-    def _on_step(self) -> bool:
-        # Check if curriculum stage has changed (from natural progression)
-        if self.curriculum_callback and hasattr(self, "_last_known_stage"):
-            current_stage = self.curriculum_callback.current_stage
-            if current_stage != self._last_known_stage:
-                print(
-                    f"   🔄 Detected curriculum stage change: {self._last_known_stage} → {current_stage}"
-                )
-                self.reset_for_new_stage()
-                self._last_known_stage = current_stage
-
-                # CRITICAL: Update evaluation environment to new stage
-                if hasattr(self.eval_env, "env_method"):
-                    try:
-                        self.eval_env.env_method("set_curriculum_stage", current_stage)
-                        print(
-                            f"   ✅ Updated evaluation environment to stage {current_stage}"
-                        )
-                    except Exception as e:
-                        print(f"   ⚠️ Failed to update eval env stage: {e}")
-        elif self.curriculum_callback:
-            # Initialize tracking
-            self._last_known_stage = self.curriculum_callback.current_stage
-
-        # Check if we should evaluate based on total timesteps
-        if self.num_timesteps >= self.last_eval_step + self.eval_freq:
-            print(f"🎯 EVALUATION TRIGGERED at step {self.num_timesteps}")
-            print(f"   Last eval: {self.last_eval_step}, freq: {self.eval_freq}")
-
-            try:
-                # Manual evaluation to avoid evaluate_policy issues
-                print("   Running manual evaluation...")
-                episode_rewards = []
-                episode_lengths = []
-
-                for _ in range(self.n_eval_episodes):
-                    obs = self.eval_env.reset()
-                    episode_reward = 0
-                    episode_length = 0
-
-                    for _ in range(2000):  # Max 2000 steps per episode
-                        action, _ = self.model.predict(obs, deterministic=True)
-                        obs, reward, done, info = self.eval_env.step(action)
-
-                        episode_reward += (
-                            reward[0] if isinstance(reward, np.ndarray) else reward
-                        )
-                        episode_length += 1
-
-                        if done[0] if isinstance(done, np.ndarray) else done:
-                            break
-
-                    episode_rewards.append(episode_reward)
-                    episode_lengths.append(episode_length)
-
-                mean_reward = np.mean(episode_rewards)
-                std_reward = np.std(episode_rewards)
-                mean_episode_length = np.mean(episode_lengths)
-                std_episode_length = np.std(episode_lengths)
-
-                # Get current stage
-                current_stage = (
-                    self.curriculum_callback.current_stage
-                    if self.curriculum_callback
-                    else 1
-                )
-
-                # Update curriculum callback's best reward tracking
-                if (
-                    self.curriculum_callback
-                    and mean_reward
-                    > self.curriculum_callback.best_reward_per_stage.get(
-                        current_stage, -np.inf
-                    )
-                ):
-                    self.curriculum_callback.best_reward_per_stage[current_stage] = (
-                        mean_reward
-                    )
-
-                print(f"   📊 Evaluation Results (Stage {current_stage}):")
-                print(f"      Mean reward: {mean_reward:.2f} ± {std_reward:.2f}")
-                print(
-                    f"      Mean episode length: {mean_episode_length:.1f} ± {std_episode_length:.1f} steps"
-                )
-                print(f"      Best so far: {self.best_mean_reward:.2f}")
-
-                # Check for improvement
-                improvement = mean_reward - self.best_mean_reward
-                if improvement > self.min_improvement:
-                    print(f"   ✅ Improvement: +{improvement:.2f}")
-                    self.best_mean_reward = mean_reward
-                    self.steps_without_improvement = 0
-                    self.best_step = self.num_timesteps
-
-                    # Save best model
-                    best_model_path = os.path.join(self.save_path, "best_model")
-                    self.model.save(best_model_path)
-                    print(f"   💾 Best model saved to {best_model_path}")
-
-                else:
-                    self.steps_without_improvement += 1
-                    print(
-                        f"   ⚠️ No improvement for {self.steps_without_improvement} evaluations"
-                    )
-
-                # Check for curriculum advancement or early stopping
-                current_stage = (
-                    self.curriculum_callback.current_stage
-                    if self.curriculum_callback
-                    else 1
-                )
-
-                if (
-                    self.early_stopping
-                    and self.steps_without_improvement >= self.patience
-                ):
-                    if current_stage < 3 and self.curriculum_callback:
-                        # Advance curriculum instead of stopping
-                        print(
-                            f"   🎯 Plateau detected - advancing curriculum to stage {current_stage + 1}"
-                        )
-                        self.curriculum_callback.request_advance()
-                        self.reset_for_new_stage()
-                    elif current_stage >= 3:
-                        # Final stage plateau - stop training
-                        print(f"   🛑 Final stage plateau - stopping training")
-                        return False
-
-                # Log metrics
-                self.logger.record("eval/mean_reward", mean_reward)
-                self.logger.record("eval/std_reward", std_reward)
-                self.logger.record("eval/mean_episode_length", mean_episode_length)
-                self.logger.record("eval/std_episode_length", std_episode_length)
-                self.logger.record("eval/best_mean_reward", self.best_mean_reward)
-                self.logger.record(
-                    "eval/steps_without_improvement", self.steps_without_improvement
-                )
-                self.logger.record("eval/curriculum_stage", current_stage)
-
-                self.last_eval_step = self.num_timesteps
-
-            except Exception as e:
-                print(f"   ❌ Evaluation failed: {e}")
-                traceback.print_exc()
-
-        return True
 
 
 class AdaptiveLearningRateCallback(BaseCallback):
@@ -481,6 +331,10 @@ class AdaptiveLearningRateCallback(BaseCallback):
             # Get current learning rate
             if hasattr(self.model, "learning_rate"):
                 current_lr = self.model.learning_rate
+                # Handle Schedule case - get current value if it's callable
+                if callable(current_lr):
+                    current_lr = current_lr(1.0)  # Get current value
+                current_lr = float(current_lr)
             else:
                 current_lr = self.current_lr
 
@@ -497,16 +351,20 @@ class AdaptiveLearningRateCallback(BaseCallback):
         return True
 
 
-def make_env(xml_file, out_dir, curriculum_stage=1, rank=0):
+def make_env(
+    xml_file, out_dir, curriculum_stage=1, rank=0, video=False, max_episode_steps=1000
+):
     """Create a single environment."""
 
     def _init():
-        env = SpiderRobotEnv(xml_file, curriculum_stage=curriculum_stage)
+        env = SpiderRobotEnv(
+            xml_file,
+            curriculum_stage=curriculum_stage,
+            render_mode="rgb_array" if video else None,
+        )
 
         # Add TimeLimit wrapper to set max episode steps
-        from gymnasium.wrappers import TimeLimit
-
-        env = TimeLimit(env, max_episode_steps=2000)
+        env = TimeLimit(env, max_episode_steps=max_episode_steps)
 
         env = Monitor(env, f"{out_dir}/monitor_logs/env_{rank}")
 
@@ -557,7 +415,7 @@ def generate_training_videos(model, xml_file, out_dir, eval_env=None):
 
     # Record multiple episodes
     for episode in range(3):
-        print(f"   Recording episode {episode + 1}/3...")
+        print(f"  Recording episode {episode + 1}/3...")
         obs = video_env.reset()
         episode_reward = 0
         steps = 0
@@ -571,7 +429,7 @@ def generate_training_videos(model, xml_file, out_dir, eval_env=None):
             if done[0] if isinstance(done, np.ndarray) else done:
                 break
 
-        print(f"   Episode {episode + 1}: {steps} steps, reward: {episode_reward:.2f}")
+        print(f"  Episode {episode + 1}: {steps} steps, reward: {episode_reward:.2f}")
 
     video_env.close()
     print(f"✅ Videos saved to {out_dir}/videos/")
@@ -623,7 +481,7 @@ def create_demo_video(model, xml_file, out_dir):
             print(f"✅ Demo video saved to {demo_video_path}")
         except Exception as e:
             print(f"⚠️ Error creating demo video: {e}")
-            print("   Frames were captured but video creation failed")
+            print("  Frames were captured but video creation failed")
     else:
         print("⚠️ No frames captured for demo video")
 
@@ -657,12 +515,28 @@ def train_spider(xml_file, config=None):
     if config["num_envs"] > 1:
         env = SubprocVecEnv(
             [
-                make_env(xml_file, out_dir, curriculum_stage=1, rank=i)
+                make_env(
+                    xml_file,
+                    out_dir,
+                    curriculum_stage=1,
+                    rank=i,
+                    max_episode_steps=config["max_episode_steps"],
+                )
                 for i in range(config["num_envs"])
             ]
         )
     else:
-        env = DummyVecEnv([make_env(xml_file, out_dir, curriculum_stage=1, rank=0)])
+        env = DummyVecEnv(
+            [
+                make_env(
+                    xml_file,
+                    out_dir,
+                    curriculum_stage=1,
+                    rank=0,
+                    max_episode_steps=config["max_episode_steps"],
+                )
+            ]
+        )
 
     # Add normalization
     env = VecNormalize(
@@ -670,7 +544,17 @@ def train_spider(xml_file, config=None):
     )
 
     # Create evaluation environment with proper normalization
-    eval_env = DummyVecEnv([make_env(xml_file, out_dir, curriculum_stage=1, rank=99)])
+    eval_env = DummyVecEnv(
+        [
+            make_env(
+                xml_file,
+                out_dir,
+                curriculum_stage=1,
+                rank=99,
+                max_episode_steps=config["max_episode_steps"],
+            )
+        ]
+    )
     eval_env = VecNormalize(
         eval_env,
         norm_obs=True,
@@ -698,27 +582,26 @@ def train_spider(xml_file, config=None):
     )
 
     # Create callbacks
+    checkpoint_path = f"{out_dir}/checkpoints"
+    video_path = f"{out_dir}/videos"
     curriculum_callback = CurriculumCallback(
-        eval_env, config["stage_thresholds"], verbose=1, out_dir=out_dir
-    )
-    curriculum_callback.set_xml_file(xml_file)
-
-    eval_callback = CustomEvalCallback(
-        eval_env=eval_env,
-        save_path=f"{out_dir}/checkpoints",
-        log_path=f"{out_dir}/tensorboard_logs/",
+        eval_env,
+        verbose=1,
+        checkpoint_path=checkpoint_path,
+        video_path=video_path,
+        max_episode_steps=config["max_episode_steps"],
+        eval_episodes=config["eval_episodes"],
         eval_freq=config["eval_freq"],
-        n_eval_episodes=10,
-        patience=config["early_stopping_patience"],
-        min_improvement=config["early_stopping_min_improvement"],
-        early_stopping=config["early_stopping"],
-        curriculum_callback=curriculum_callback,
         stage_thresholds=config["stage_thresholds"],
+        min_improvement=config["early_stopping_min_improvement"],
+        patience=config["early_stopping_patience"],
+        early_stopping=config["early_stopping"],
+        xml_file=xml_file,
     )
 
     checkpoint_callback = CheckpointCallback(
         save_freq=config["checkpoint_freq"],
-        save_path=f"{out_dir}/checkpoints",
+        save_path=checkpoint_path,
         name_prefix="spider_model",
     )
 
@@ -728,11 +611,9 @@ def train_spider(xml_file, config=None):
     )
 
     # Combine callbacks
-    callbacks = CallbackList(
-        [curriculum_callback, eval_callback, checkpoint_callback, lr_callback]
-    )
+    callbacks = CallbackList([curriculum_callback, checkpoint_callback, lr_callback])
 
-    print("🎯 Starting training...")
+    print(f"🎯 Starting training...")
     print(f"   Total timesteps: {config['total_timesteps']:,}")
     print(f"   Evaluation frequency: {config['eval_freq']:,}")
     print(f"   Checkpoint frequency: {config['checkpoint_freq']:,}")
