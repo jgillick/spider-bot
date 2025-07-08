@@ -4,6 +4,7 @@ Comprehensive Training Script for Spider Robot
 
 import os
 import json
+import shutil
 import argparse
 import traceback
 import numpy as np
@@ -32,10 +33,11 @@ DEFAULT_NUM_ENVS = 8
 CONFIG = {
     "total_timesteps": 10_000_000,
     "max_episode_steps": 2_000,
-    "evaluation_steps": 1_000,
-    "checkpoint_freq": 100_000,
+    "evaluation_steps": 500,
+    "eval_video_steps_length": 500,
     "eval_freq": 50_000,
     "video_freq": 100_000,
+    "checkpoint_freq": 100_000,
     "eval_episodes": 10,
     "generate_videos": True,
     "plateau_after_n_evals": None,
@@ -98,8 +100,8 @@ class CurriculumCallback(BaseCallback):
         self.eval_env = eval_env
         self.checkpoint_path = checkpoint_path
         self.video_path = video_path
-        self.last_eval_step = 0
-        self.last_video_step = 0
+        self.next_eval_step = CONFIG["eval_freq"]
+        self.next_video_step = CONFIG["video_freq"]
 
         self.best_mean_reward = -np.inf
         self.steps_without_improvement = 0
@@ -137,15 +139,15 @@ class CurriculumCallback(BaseCallback):
         return (mean_reward, std_reward, mean_episode_length, std_episode_length)
 
     def _on_step(self) -> bool:
-        if self.num_timesteps >= self.last_eval_step + CONFIG["eval_freq"]:
+        if self.num_timesteps >= self.next_eval_step:
             print("⏳ Running evaluation...")
-            self.last_eval_step = self.num_timesteps
+            self.next_eval_step += CONFIG["eval_freq"]
             mean_reward, std_reward, mean_episode_length, std_episode_length = (
                 self.evaluate_model()
             )
             mean_reward = float(mean_reward)
             improvement = mean_reward - self.best_mean_reward
-            has_improved = improvement > 0
+            is_best = improvement > 0
 
             print(f"📊 Evaluation Results:")
             print(f"   Mean reward: {mean_reward:.2f} ± {std_reward:.2f}")
@@ -153,7 +155,7 @@ class CurriculumCallback(BaseCallback):
                 f"   Mean episode length: {mean_episode_length:.1f} ± {std_episode_length:.1f} steps"
             )
             print(f"   Best so far: {self.best_mean_reward:.2f}")
-            if not has_improved and self.best_step is not None:
+            if not is_best and self.best_step is not None:
                 self.steps_without_improvement += 1
                 print(
                     f"⚠️  No improvement for {self.steps_without_improvement} evaluation(s)"
@@ -165,7 +167,7 @@ class CurriculumCallback(BaseCallback):
             self.logger.record("eval/std_episode_length", std_episode_length)
 
             # Check for improvement
-            if has_improved:
+            if is_best:
                 print(f"✅ Improvement: +{improvement:.2f}")
                 self.best_mean_reward = mean_reward
                 self.steps_without_improvement = 0
@@ -183,10 +185,12 @@ class CurriculumCallback(BaseCallback):
                 print(f"🛑 Final stage plateau - stopping training")
                 return False
 
-            # Record video
-            if self.num_timesteps >= self.last_video_step + CONFIG["video_freq"]:
-                self._record_eval_video()
-                self.last_video_step = self.num_timesteps
+        # Record video
+        if self.num_timesteps >= self.next_video_step or is_best:
+            self.next_video_step += CONFIG["video_freq"]
+            video_path = self._record_eval_video()
+            if is_best and video_path is not None:
+                shutil.copyfile(video_path, f"{self.video_path}/best.mp4")
 
         return True
 
@@ -224,7 +228,7 @@ class CurriculumCallback(BaseCallback):
                 video_env,
                 video_folder=self.video_path,
                 record_video_trigger=lambda x: True,
-                video_length=CONFIG["evaluation_steps"],
+                video_length=CONFIG["eval_video_steps_length"],
                 name_prefix=f"eval",
             )
             video_env.step_id = self.num_timesteps
@@ -233,7 +237,7 @@ class CurriculumCallback(BaseCallback):
             obs = video_env.reset()
             steps = 0
 
-            for _ in range(CONFIG["evaluation_steps"]):
+            for _ in range(CONFIG["eval_video_steps_length"]):
                 action, _ = self.model.predict(obs, deterministic=True)  # type: ignore[arg-type]
                 obs, reward, done, info = video_env.step(action)
                 steps += 1
@@ -242,9 +246,11 @@ class CurriculumCallback(BaseCallback):
 
             video_env.close()
             print(f"✅ Video saved to {self.video_path}")
-
+            return self.video_path
         except Exception as e:
             print(f"⚠️ Failed to record video: {e}")
+
+        return None
 
 
 def make_env(out_dir, thread, video=False):
@@ -333,10 +339,15 @@ def train_spider(algorithm="PPO", num_envs=DEFAULT_NUM_ENVS):
     os.makedirs(f"{out_dir}/checkpoints", exist_ok=True)
     os.makedirs(f"{out_dir}/videos", exist_ok=True)
     os.makedirs(f"{out_dir}/monitor_logs", exist_ok=True)
+    os.makedirs(f"{out_dir}/code", exist_ok=True)
 
     # Save configuration
     with open(f"{out_dir}/config.json", "w") as f:
         json.dump(CONFIG, f, indent=2)
+
+    # Save current training code
+    shutil.copyfile(f"{THIS_DIR}/train.py", f"{out_dir}/code/train.py")
+    shutil.copyfile(f"{THIS_DIR}/environment.py", f"{out_dir}/code/environment.py")
 
     print(f"📁 Output directory: {out_dir}")
     print(f"🔧 Configuration: {num_envs} parallel environments")
@@ -386,14 +397,19 @@ def train_spider(algorithm="PPO", num_envs=DEFAULT_NUM_ENVS):
     curriculum_callback = CurriculumCallback(
         eval_env, verbose=1, checkpoint_path=checkpoint_path, video_path=video_path
     )
-    checkpoint_callback = CheckpointCallback(
-        save_freq=CONFIG["checkpoint_freq"],
-        save_path=checkpoint_path,
-        name_prefix="spider_model",
-    )
+    # checkpoint_callback = CheckpointCallback(
+    #     save_freq=CONFIG["checkpoint_freq"],
+    #     save_path=checkpoint_path,
+    #     name_prefix="spider_model",
+    # )
 
     # Combine callbacks
-    callbacks = CallbackList([curriculum_callback, checkpoint_callback])
+    callbacks = CallbackList(
+        [
+            curriculum_callback,
+            # checkpoint_callback,
+        ]
+    )
 
     print(f"🎯 Starting training...")
     print(f"   Total timesteps: {CONFIG['total_timesteps']:,}")
