@@ -13,7 +13,6 @@ from stable_baselines3 import PPO, SAC
 from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv, VecNormalize
 from stable_baselines3.common.callbacks import (
     CallbackList,
-    CheckpointCallback,
     BaseCallback,
 )
 from gymnasium.wrappers import TimeLimit
@@ -33,12 +32,12 @@ DEFAULT_NUM_ENVS = 8
 CONFIG = {
     "total_timesteps": 10_000_000,
     "max_episode_steps": 2_000,
+    "eval_episodes": 10,
     "evaluation_steps": 500,
     "eval_video_steps_length": 500,
     "eval_freq": 50_000,
     "video_freq": 100_000,
     "checkpoint_freq": 100_000,
-    "eval_episodes": 10,
     "generate_videos": True,
     "plateau_after_n_evals": None,
     "PPO_params": {
@@ -139,6 +138,7 @@ class CurriculumCallback(BaseCallback):
         return (mean_reward, std_reward, mean_episode_length, std_episode_length)
 
     def _on_step(self) -> bool:
+        is_best = False
         if self.num_timesteps >= self.next_eval_step:
             print("⏳ Running evaluation...")
             self.next_eval_step += CONFIG["eval_freq"]
@@ -245,8 +245,7 @@ class CurriculumCallback(BaseCallback):
                     break
 
             video_env.close()
-            print(f"✅ Video saved to {self.video_path}")
-            return self.video_path
+            return video_env.video_path
         except Exception as e:
             print(f"⚠️ Failed to record video: {e}")
 
