@@ -169,7 +169,7 @@ class SpiderRobotEnv(MujocoEnv):
     def step(self, action):
         """Perform a step in the environment."""
         torques = self._actions_to_torques(action)
-        self.last_xy_position = self.get_body_com("Body")[:2].copy()
+        self.last_xy_body_position = self.get_body_com("Body")[:2].copy()
         self.do_simulation(torques, self.frame_skip)
 
         observation = self._get_observation()
@@ -240,10 +240,8 @@ class SpiderRobotEnv(MujocoEnv):
         """Compute reward based on curriculum stage."""
 
         # Forward reward (base: 2, -2, total: -12 - 12)
-        xy_position_after = self.get_body_com("Body")[:2].copy()
-        xy_velocity = (xy_position_after - self.last_xy_position) / self.dt
-        x_velocity, _y_velocity = xy_velocity
-        forward_reward = 6.0 * x_velocity
+        forward_velocity = self._get_forward_velocity()
+        forward_reward = 6.0 * forward_velocity
 
         # Height reward (base: 0 - 1, total: 0 - 2)
         height = self.data.qpos[2]
@@ -253,7 +251,7 @@ class SpiderRobotEnv(MujocoEnv):
         # Simple gait reward (base: 0 - 8, total: 0 - 10)
         foot_contacts = self._get_foot_contacts()
         num_feet_on_ground = np.sum(foot_contacts)
-        foot_contact_reward = 10.0 if num_feet_on_ground >= 5 else 0.0
+        foot_contact_reward = 10.0 if num_feet_on_ground >= 4 else 0.0
 
         # Upright reward (base: 0 - 1, total: 0 - 2)
         # Convert quaternion to rotation matrix and extract up vector
@@ -287,11 +285,19 @@ class SpiderRobotEnv(MujocoEnv):
         # (base: 0 - 1536, total: -11 - 0)
         # control_cost = -0.007 * np.sum(np.square(torques))
         # (base: 0 - 24, total: -4.8 - 0)
-        control_cost = 0.2 * np.sum(np.square(action))
+        control_cost = -0.2 * np.sum(np.square(action))
 
         # Penalty for the robot touching the ground or bodies colliding
         # (base: 0 - 9, total: -9 - 0)
         contact_penalty = -1 * self._get_contact_penalty()
+
+        # Downward velocity penalty (penalize falling)
+        # (base: 0 - inf, typical: -20 - 0, extreme falls: -45 - 0)
+        z_velocity = self.data.qvel[2]
+        downward_velocity = max(0, -z_velocity)
+        # Quadratic penalty that increases with falling speed
+        # Scale factor of 5.0 makes a fall of 1 m/s cost -5, 2 m/s cost -20
+        downward_velocity_penalty = -5.0 * (downward_velocity**2)
 
         reward = (
             forward_reward
@@ -301,9 +307,34 @@ class SpiderRobotEnv(MujocoEnv):
             + control_cost
             + action_smoothness_penalty
             + contact_penalty
+            + downward_velocity_penalty
             # + direction_change_penalty
         )
         return reward
+
+    def _get_forward_velocity(self):
+        """
+        Get the forward velocity of the robot, regarless of world orientation.
+        """
+        # Body world position and XY velocity
+        xy_body_position = self.get_body_com("Body")[:2].copy()
+        xy_velocity = (xy_body_position - self.last_xy_body_position) / self.dt
+
+        # Orientation and forward direction
+        # Convert quaternion to yaw angle (rotation around z-axis)
+        body_quat = self.data.xquat[1]
+        yaw = np.arctan2(
+            2 * (body_quat[0] * body_quat[3] + body_quat[1] * body_quat[2]),
+            1 - 2 * (body_quat[2] ** 2 + body_quat[3] ** 2),
+        )
+
+        # Robot's forward direction in world coordinates
+        forward_vec = np.array([np.cos(yaw), np.sin(yaw)])
+
+        # Put it all together
+        forward_velocity = np.dot(xy_velocity, forward_vec)
+
+        return forward_velocity
 
     def _cache_foot_geom_ids(self):
         """Cache foot geom IDs by looking up their names."""
