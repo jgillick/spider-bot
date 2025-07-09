@@ -31,7 +31,7 @@ DEFAULT_NUM_ENVS = 8
 
 CONFIG = {
     "total_timesteps": 10_000_000,
-    "max_episode_steps": 2_000,
+    "max_episode_steps": 1_000,
     "eval_episodes": 10,
     "evaluation_steps": 500,
     "eval_video_steps_length": 500,
@@ -61,22 +61,27 @@ CONFIG = {
     },
     "SAC_params": {
         "verbose": 1,
-        "learning_rate": 3e-4,
-        "buffer_size": 1_000_000,
-        "learning_starts": 10_000,
-        "batch_size": 256,
+        "learning_rate": 1e-3,  # Increased from 3e-4 for faster learning
+        "buffer_size": 2_000_000,  # Increased from 1M for more diverse experience
+        "learning_starts": 50_000,  # Increased from 10k for better initial exploration
+        "batch_size": 512,  # Already good
         "tau": 0.005,
         "gamma": 0.99,
         "train_freq": 1,
         "gradient_steps": 1,
-        "ent_coef": "auto",
+        "ent_coef": 0.1,  # Increased from "auto" for more exploration
         "target_update_interval": 1,
         "target_entropy": "auto",
         "use_sde": False,
         "sde_sample_freq": -1,
         "use_sde_at_warmup": False,
         "policy_kwargs": {
-            "net_arch": [256, 256],
+            "net_arch": [
+                512,
+                256,
+                256,
+                128,
+            ],  # Deeper network for complex gait learning
             "n_critics": 2,
             "share_features_extractor": False,
         },
@@ -84,8 +89,8 @@ CONFIG = {
 }
 
 
-class CurriculumCallback(BaseCallback):
-    """Callback for curriculum progression."""
+class EvalCallback(BaseCallback):
+    """Callback to evaluate the model at regular intervals."""
 
     def __init__(
         self,
@@ -161,8 +166,8 @@ class CurriculumCallback(BaseCallback):
                     f"⚠️  No improvement for {self.steps_without_improvement} evaluation(s)"
                 )
 
-            self.logger.record("curriculum/mean_reward", mean_reward)
-            self.logger.record("curriculum/std_reward", std_reward)
+            self.logger.record("eval/mean_reward", mean_reward)
+            self.logger.record("eval/std_reward", std_reward)
             self.logger.record("eval/mean_episode_length", mean_episode_length)
             self.logger.record("eval/std_episode_length", std_episode_length)
 
@@ -186,8 +191,10 @@ class CurriculumCallback(BaseCallback):
                 return False
 
         # Record video
-        if self.num_timesteps >= self.next_video_step or is_best:
-            self.next_video_step += CONFIG["video_freq"]
+        is_video_timestep = self.num_timesteps >= self.next_video_step
+        if is_video_timestep or is_best:
+            if is_video_timestep:
+                self.next_video_step += CONFIG["video_freq"]
             video_path = self._record_eval_video()
             if is_best and video_path is not None:
                 shutil.copyfile(video_path, f"{self.video_path}/best.mp4")
@@ -250,6 +257,39 @@ class CurriculumCallback(BaseCallback):
             print(f"⚠️ Failed to record video: {e}")
 
         return None
+
+
+class LearningRateScheduler(BaseCallback):
+    """Callback to schedule learning rate decay during training."""
+
+    def __init__(
+        self, initial_lr=1e-3, final_lr=1e-4, decay_steps=5_000_000, verbose=0
+    ):
+        super().__init__(verbose)
+        self.initial_lr = initial_lr
+        self.final_lr = final_lr
+        self.decay_steps = decay_steps
+        self.current_lr = initial_lr
+
+    def _on_step(self) -> bool:
+        # Linear decay from initial_lr to final_lr over decay_steps
+        if self.num_timesteps <= self.decay_steps:
+            progress = self.num_timesteps / self.decay_steps
+            self.current_lr = (
+                self.initial_lr + (self.final_lr - self.initial_lr) * progress
+            )
+
+            # Update learning rate for SAC optimizers (SAC uses policy and critic optimizers)
+            if hasattr(self.model, "policy") and hasattr(
+                self.model.policy, "optimizer"
+            ):
+                for param_group in self.model.policy.optimizer.param_groups:
+                    param_group["lr"] = self.current_lr
+
+            if self.verbose > 0 and self.num_timesteps % 100_000 == 0:
+                print(f"📉 Learning rate: {self.current_lr:.2e}")
+
+        return True
 
 
 def make_env(out_dir, thread, video=False):
@@ -391,11 +431,24 @@ def train_spider(algorithm="PPO", num_envs=DEFAULT_NUM_ENVS):
         )
 
     # Create callbacks
+    callback_list = []
     checkpoint_path = f"{out_dir}/checkpoints"
     video_path = f"{out_dir}/videos"
-    curriculum_callback = CurriculumCallback(
+    eval_callback = EvalCallback(
         eval_env, verbose=1, checkpoint_path=checkpoint_path, video_path=video_path
     )
+    callback_list.append(eval_callback)
+
+    # Add learning rate scheduler to address training slowdown
+    if algorithm == "SAC":
+        lr_scheduler = LearningRateScheduler(
+            initial_lr=CONFIG["SAC_params"]["learning_rate"],
+            final_lr=1e-4,
+            decay_steps=5_000_000,
+            verbose=1,
+        )
+        callback_list.append(lr_scheduler)
+
     # checkpoint_callback = CheckpointCallback(
     #     save_freq=CONFIG["checkpoint_freq"],
     #     save_path=checkpoint_path,
@@ -403,12 +456,7 @@ def train_spider(algorithm="PPO", num_envs=DEFAULT_NUM_ENVS):
     # )
 
     # Combine callbacks
-    callbacks = CallbackList(
-        [
-            curriculum_callback,
-            # checkpoint_callback,
-        ]
-    )
+    callbacks = CallbackList(callback_list)
 
     print(f"🎯 Starting training...")
     print(f"   Total timesteps: {CONFIG['total_timesteps']:,}")
