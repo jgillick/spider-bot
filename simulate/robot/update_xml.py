@@ -17,7 +17,7 @@ HIP_RANGES = (
     "-1.8 0",  # Leg8
 )
 FEMUR_RANGE = "0 1.0"
-TIBIA_RANGE = "0.4 3.0"
+TIBIA_RANGE = "0.4 2.7"
 
 
 def main(tree, output_path, ground=False, light=False):
@@ -34,6 +34,7 @@ def main(tree, output_path, ground=False, light=False):
     tree = add_defaults(tree)
     tree = actuator_definitions(tree)
     tree = main_body(tree)
+    tree = add_foot_friction(tree)
 
     # Pretty print and output
     ET.indent(tree, space="  ")
@@ -345,6 +346,18 @@ def main_body(tree):
     # Adjust position of body
     root_body.set("pos", "0.0 0.0 0.134")
 
+    return tree
+
+
+def add_foot_friction(tree):
+    """
+    Add friction to the feet
+    """
+    for i in range(1, 9):
+        foot_name = f"Leg{i}_Tibia_Foot_geom"
+        foot = tree.find(f".//geom[@name='{foot_name}']")
+        if foot is not None:
+            foot.set("friction", "2.0 0.1 0.01")
     return tree
 
 
