@@ -81,8 +81,6 @@ class SpiderRobotEnv(MujocoEnv):
         self.max_state_duration = 15  # Maximum steps in any state
 
         # Track foot air/ground time
-        self.current_foot_air_time = np.zeros(8)
-        self.current_foot_ground_time = np.zeros(8)
         self.current_foot_state = np.zeros(8)
         self.current_foot_state_time = np.zeros(8)
         self.last_foot_state_time = np.zeros(8)
@@ -91,7 +89,7 @@ class SpiderRobotEnv(MujocoEnv):
         self.target_height = 0.134
         self.max_torque = 8.0
         self.position_gain = 15.0
-        self.velocity_gain = 0.8
+        self.velocity_gain = 0.2
 
         # Initialize MuJoCo environment
         observation_space = spaces.Box(
@@ -118,7 +116,7 @@ class SpiderRobotEnv(MujocoEnv):
         )
 
         # Cache model data
-        self._cache_foot_geom_ids()
+        self._cache_geom_ids()
         self._cache_joint_ranges()
 
         # Set initial joint positions
@@ -201,6 +199,7 @@ class SpiderRobotEnv(MujocoEnv):
     def reset_model(self):
         """Reset with curriculum-appropriate randomization."""
         self._initial_positions(joint_noise_scale=0.5)
+        self._randomize_joint_friction()
 
         self.episode_length = 0
         self.total_distance = 0.0
@@ -226,6 +225,22 @@ class SpiderRobotEnv(MujocoEnv):
 
         return self._get_observation()
 
+    def _randomize_joint_friction(self):
+        """Add random damping and friction loss to all joints except the free joint."""
+        # Reasonable ranges for robot joints
+        friction_range = (0.001, 0.05)
+        damping_range = (0.0, 0.1)
+
+        # Generate random damping and friction loss
+        random_damping = self.np_random.uniform(damping_range[0], damping_range[1])
+        random_friction = self.np_random.uniform(friction_range[0], friction_range[1])
+
+        # Apply to all actuated joints (indices 7-30, which correspond to joints 0-23 in the model)
+        for i in range(DOF):
+            joint_id = FIRST_JOINT_INDEX + i
+            self.model.dof_damping[joint_id] = random_damping
+            self.model.dof_frictionloss[joint_id] = random_friction
+
     def _get_observation(self):
         """Environment observations"""
         # Core observations
@@ -236,10 +251,10 @@ class SpiderRobotEnv(MujocoEnv):
         orientation = self.data.xquat[1]
 
         # Convert joint positions back to -1.0 - 1.0 range
-        joint_positions = self.data.qpos.copy()
+        positions = self.data.qpos.copy()
         for i, (low, high) in enumerate(self.joint_ranges):
             idx = FIRST_JOINT_INDEX + i
-            joint_positions[idx] = round((joint_positions[idx] - low) / (high - low), 2)
+            positions[idx] = round((positions[idx] - low) / (high - low), 2)
 
         # Foot contacts (binary)
         foot_contacts = self._get_foot_contacts()
@@ -248,7 +263,7 @@ class SpiderRobotEnv(MujocoEnv):
             [
                 [body_height],
                 orientation,
-                joint_positions,
+                positions,
                 velocities,
                 foot_contacts,
             ]
@@ -330,7 +345,7 @@ class SpiderRobotEnv(MujocoEnv):
 
     def _get_foot_air_time_reward(self, foot_contacts):
         """
-        Calculate reward for feet being in the air/ground evenly.
+        Calculate reward for proper walking gait with feet alternating between air and ground.
         Base reward: -10 - 10
         """
 
@@ -361,21 +376,27 @@ class SpiderRobotEnv(MujocoEnv):
                 cv = std_air_time / mean_air_time
                 distribution_reward = 6.0 * np.exp(-3.0 * cv)
 
-        # Additional reward for feet being in the air to encourage walking
-        # Base reward: 0 - 8
+        # Balanced air/ground reward - encourage proper gait
+        # Base reward: -2 - 4
         feet_in_air = np.sum(foot_contacts == 0)
-        air_time_reward = 0.5 * feet_in_air
+        feet_on_ground = np.sum(foot_contacts == 1)
+        if feet_in_air > 0 and feet_on_ground > 0:
+            gait_balance = min(feet_in_air, feet_on_ground)
+            air_time_reward = 1.0 * gait_balance
+        else:
+            # Penalty for all feet in same state
+            air_time_reward = -2.0
 
         # Calculate a penalty for staying in the same state for too long
         # This encourages feet to transition between air and ground states
         # Base reward: -10 - 0
-        MAX_STATE_TIME = 60.0
+        MAX_STATE_TIME = 30.0  # Reduced from 60 to encourage more frequent transitions
         stagnant_time_penalty = 0.0
         stagnant_foot_time = np.max(self.current_foot_state_time)
         if stagnant_foot_time > MAX_STATE_TIME:
             capped_state_time = np.minimum(stagnant_foot_time, MAX_STATE_TIME * 2)
             over_time = capped_state_time - MAX_STATE_TIME
-            stagnant_time_penalty = -0.5 * np.exp(0.05 * over_time)
+            stagnant_time_penalty = -0.5 * np.exp(0.1 * over_time)
 
         total_reward = distribution_reward + stagnant_time_penalty + air_time_reward
         return total_reward
@@ -404,11 +425,12 @@ class SpiderRobotEnv(MujocoEnv):
 
         return forward_velocity
 
-    def _cache_foot_geom_ids(self):
-        """Cache foot geom IDs by looking up their names."""
+    def _cache_geom_ids(self):
+        """Cache geom IDs by looking up their names."""
         self.foot_geom_ids = []
+        self.ground_plane_id = mj_name2id(self.model, mjtObj.mjOBJ_GEOM, "floor")
 
-        # Look for foot geoms by name pattern "LegX_Tibia_foot"
+        # Foot geoms
         for leg_num in range(1, 9):  # Legs 1-8
             foot_name = f"Leg{leg_num}_Tibia_Foot_geom"
             foot_id = mj_name2id(self.model, mjtObj.mjOBJ_GEOM, foot_name)
@@ -448,13 +470,15 @@ class SpiderRobotEnv(MujocoEnv):
             # This allows: foot-foot, foot-ground, foot-robot_part
             # But penalizes: robot_part-robot_part, robot_part-ground
             if not geom1_is_foot and not geom2_is_foot:
-                # Check if one of them is ground (geom 0)
-                if contact.geom1 == 0 or contact.geom2 == 0:
-                    # Moderate penalty for non-foot touching ground
+                # Penalty for ground contact
+                if (
+                    contact.geom1 == self.ground_plane_id
+                    or contact.geom2 == self.ground_plane_id
+                ):
                     penalty += 2.0
                 else:
-                    # Very mild penalty for robot parts touching each other
-                    penalty += 0.1
+                    # Mild penalty for robot part collision
+                    penalty += 0.2
 
         return penalty
 
