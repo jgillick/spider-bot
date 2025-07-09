@@ -307,28 +307,28 @@ def main_body(tree):
 
     # Bottom planes that should cover the entire bottom of the robot
     # (this makes it easier to detect when the robot is on the ground)
-    bottom1 = ET.Element(
-        "geom",
-        {
-            "name": "body_bottom1",
-            "pos": "0.24115 0 -0.075",
-            "size": "0.17 0.175 0.0001",
-            "type": "box",
-            "rgba": "1 0 0 0",
-        },
-    )
-    bottom2 = ET.Element(
-        "geom",
-        {
-            "name": "body_bottom2",
-            "pos": "0.24115 0 -0.075",
-            "size": "0.3 0.12 0.0001",
-            "type": "box",
-            "rgba": "1 0 0 0",
-        },
-    )
-    root_body.insert(0, bottom1)
-    root_body.insert(0, bottom2)
+    # bottom1 = ET.Element(
+    #     "geom",
+    #     {
+    #         "name": "body_bottom1",
+    #         "pos": "0.24115 0 -0.075",
+    #         "size": "0.17 0.175 0.0001",
+    #         "type": "box",
+    #         "rgba": "1 0 0 0",
+    #     },
+    # )
+    # bottom2 = ET.Element(
+    #     "geom",
+    #     {
+    #         "name": "body_bottom2",
+    #         "pos": "0.24115 0 -0.075",
+    #         "size": "0.3 0.12 0.0001",
+    #         "type": "box",
+    #         "rgba": "1 0 0 0",
+    #     },
+    # )
+    # root_body.insert(0, bottom1)
+    # root_body.insert(0, bottom2)
 
     root_body.insert(0, head)
     root_body.insert(0, imu_site)
