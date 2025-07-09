@@ -235,9 +235,10 @@ class SpiderRobotEnv(MujocoEnv):
         random_damping = self.np_random.uniform(damping_range[0], damping_range[1])
         random_friction = self.np_random.uniform(friction_range[0], friction_range[1])
 
-        # Apply to all actuated joints (indices 7-30, which correspond to joints 0-23 in the model)
+        # Apply to all actuated joints
+        first_index = len(self.model.dof_damping) - DOF
         for i in range(DOF):
-            joint_id = FIRST_JOINT_INDEX + i
+            joint_id = first_index + i
             self.model.dof_damping[joint_id] = random_damping
             self.model.dof_frictionloss[joint_id] = random_friction
 
@@ -275,33 +276,28 @@ class SpiderRobotEnv(MujocoEnv):
         """Compute reward based on curriculum stage."""
         foot_contacts = self._get_foot_contacts()
 
-        # Forward velocity reward (base: 2, -2, total: -16 - 16)
+        # Forward velocity reward
+        # Base reward: 2, -2, total: -16 - 16
         forward_velocity = self._get_forward_velocity()
         forward_reward = 8.0 * forward_velocity
 
         # Progress reward
         # Encourages movement (distance) in any direction
+        # Base reward: 0 - ~0.2+, total: 0 - ~1.0+
         progress_reward = 0.0
         if self.last_xy_body_position is not None:
             current_pos = self.get_body_com("Body")[:2]
             progress = np.linalg.norm(current_pos - self.last_xy_body_position)
-            progress_reward = 2.0 * progress
+            progress_reward = 5.0 * progress
 
         # Height reward
+        # Base reward: 0 - 2, total: 0 - 6
         height = self.data.qpos[2]
         height_error = abs(height - self.target_height)
-        height_reward = 2.0 * (1.0 - min(float(height_error), 0.1) / 0.1)
+        height_reward = 3.0 * (1.0 - min(float(height_error), 0.1) / 0.1)
 
-        # Simple gait reward (base: 0 - 8, total: 0 - 10)
-        # num_feet_on_ground = np.sum(foot_contacts)
-        # foot_contact_reward = 10.0 if num_feet_on_ground >= 4 else 0.0
-
-        # Alternative foot contact reward
-        # Base reward: 0 - 2.0
-        # Creates a bell curve with a peak at 4 feet on the ground
-        # foot_contact_reward = 2.0 * np.exp(-2 * (num_feet_on_ground - 4) ** 2)
-
-        # Upright reward - make it more linear
+        # Upright reward
+        # Base reward: 0 - 2, total: 0 - 4
         body_quat = self.data.xquat[1]
         w, x, y, z = body_quat
         up_vector = np.array(
@@ -310,14 +306,15 @@ class SpiderRobotEnv(MujocoEnv):
         upright_error = np.linalg.norm(up_vector - np.array([0, 0, 1]))
         upright_reward = 2.0 * (1.0 - min(float(upright_error), 0.5) / 0.5)
 
-        # Penalty for large action changes (base: 0 - 96, total: -4.5 - 0)
+        # Penalty for large action changes
+        # (base: 0 - 96, total: -3.84 - 0)
         if self.previous_action is not None:
             action_change = np.sum((action - self.previous_action) ** 2)
-            action_smoothness_penalty = -0.05 * action_change
+            action_smoothness_penalty = -0.04 * action_change
         else:
             action_smoothness_penalty = 0.0
 
-        # Penalty for the robot touching the ground or bodies colliding
+        # Penalty for the robot bodies touching the ground or bodies colliding
         # (base: 0 - 9, total: -4.5 - 0)
         contact_penalty = -0.5 * self._get_contact_penalty()
 
@@ -359,7 +356,7 @@ class SpiderRobotEnv(MujocoEnv):
             self.current_foot_state_time[i] += 1
 
         # Reward based on an even distribution of foot steps value
-        # This encourages all feet to have similar air time durations
+        # This encourages all feet to have similar air/ground time durations
         # Base reward: 0 - 1
         distribution_reward = 0.0
         if np.any(self.last_foot_state_time > 0):
@@ -374,7 +371,7 @@ class SpiderRobotEnv(MujocoEnv):
                     self.last_foot_state_time[self.last_foot_state_time > 0]
                 )
                 cv = std_air_time / mean_air_time
-                distribution_reward = 6.0 * np.exp(-3.0 * cv)
+                distribution_reward = 4.0 * np.exp(-3.0 * cv)
 
         # Balanced air/ground reward - encourage proper gait
         # Base reward: -2 - 4
@@ -387,18 +384,30 @@ class SpiderRobotEnv(MujocoEnv):
             # Penalty for all feet in same state
             air_time_reward = -2.0
 
-        # Calculate a penalty for staying in the same state for too long
-        # This encourages feet to transition between air and ground states
-        # Base reward: -10 - 0
-        MAX_STATE_TIME = 30.0  # Reduced from 60 to encourage more frequent transitions
-        stagnant_time_penalty = 0.0
-        stagnant_foot_time = np.max(self.current_foot_state_time)
-        if stagnant_foot_time > MAX_STATE_TIME:
-            capped_state_time = np.minimum(stagnant_foot_time, MAX_STATE_TIME * 2)
-            over_time = capped_state_time - MAX_STATE_TIME
-            stagnant_time_penalty = -0.5 * np.exp(0.1 * over_time)
+        # Bell curve reward for optimal foot state duration
+        # Encourage feet to spend optimal time in each state (not too short, not too long)
+        # Base reward: -4 - 4
+        OPTIMAL_STATE_TIME = 40.0  # Optimal duration in each state
+        STATE_TIME_TOLERANCE = 15.0  # Acceptable range around optimal
+        foot_state_reward = 0.0
+        for foot_time in self.current_foot_state_time:
+            # Only consider feet that have been in a state
+            if foot_time > 0:
+                time_diff = abs(foot_time - OPTIMAL_STATE_TIME)
 
-        total_reward = distribution_reward + stagnant_time_penalty + air_time_reward
+                # Bell curve: reward peaks at optimal time, decreases as we move away
+                if time_diff <= STATE_TIME_TOLERANCE:
+                    normalized_diff = time_diff / STATE_TIME_TOLERANCE
+                    bell_reward = 4.0 * np.exp(-2.0 * normalized_diff**2)
+                    foot_state_reward += bell_reward
+                else:
+                    # Outside tolerance - penalty
+                    over_tolerance = time_diff - STATE_TIME_TOLERANCE
+                    penalty = max(-0.5 * np.exp(0.1 * over_tolerance), 4.0)
+                    foot_state_reward += penalty
+        foot_state_reward /= 8.0  # averaged across all feet
+
+        total_reward = distribution_reward + air_time_reward + foot_state_reward
         return total_reward
 
     def _get_forward_velocity(self):
