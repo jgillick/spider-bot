@@ -72,6 +72,21 @@ class SpiderRobotEnv(MujocoEnv):
             0  # Track when we last moved significantly
         )
 
+        # Simple foot air time tracking
+        self.foot_contact_history = []  # Track contact history for each foot
+        self.foot_state_duration = np.zeros(
+            8
+        )  # How long each foot has been in current state
+        self.foot_current_state = np.zeros(8)  # Current state: 0=ground, 1=air
+        self.max_state_duration = 15  # Maximum steps in any state
+
+        # Track foot air/ground time
+        self.current_foot_air_time = np.zeros(8)
+        self.current_foot_ground_time = np.zeros(8)
+        self.current_foot_state = np.zeros(8)
+        self.current_foot_state_time = np.zeros(8)
+        self.last_foot_state_time = np.zeros(8)
+
         # Core parameters
         self.target_height = 0.134
         self.max_torque = 8.0
@@ -204,6 +219,11 @@ class SpiderRobotEnv(MujocoEnv):
         self.position_history = []
         self.last_significant_movement_step = 0
 
+        # Reset foot tracking
+        self.foot_contact_history = []
+        self.foot_state_duration = np.zeros(8)
+        self.foot_current_state = np.zeros(8)
+
         return self._get_observation()
 
     def _get_observation(self):
@@ -238,79 +258,127 @@ class SpiderRobotEnv(MujocoEnv):
 
     def _calculate_rewards(self, action, torques):
         """Compute reward based on curriculum stage."""
+        foot_contacts = self._get_foot_contacts()
 
-        # Forward reward (base: 2, -2, total: -12 - 12)
+        # Forward velocity reward (base: 2, -2, total: -16 - 16)
         forward_velocity = self._get_forward_velocity()
-        forward_reward = 6.0 * forward_velocity
+        forward_reward = 8.0 * forward_velocity
 
-        # Height reward (base: 0 - 1, total: 0 - 2)
+        # Progress reward
+        # Encourages movement (distance) in any direction
+        progress_reward = 0.0
+        if self.last_xy_body_position is not None:
+            current_pos = self.get_body_com("Body")[:2]
+            progress = np.linalg.norm(current_pos - self.last_xy_body_position)
+            progress_reward = 2.0 * progress
+
+        # Height reward
         height = self.data.qpos[2]
         height_error = abs(height - self.target_height)
-        height_reward = 2.0 * np.exp(-30 * height_error**2)
+        height_reward = 2.0 * (1.0 - min(float(height_error), 0.1) / 0.1)
 
         # Simple gait reward (base: 0 - 8, total: 0 - 10)
-        foot_contacts = self._get_foot_contacts()
-        num_feet_on_ground = np.sum(foot_contacts)
-        foot_contact_reward = 10.0 if num_feet_on_ground >= 4 else 0.0
+        # num_feet_on_ground = np.sum(foot_contacts)
+        # foot_contact_reward = 10.0 if num_feet_on_ground >= 4 else 0.0
 
-        # Upright reward (base: 0 - 1, total: 0 - 2)
-        # Convert quaternion to rotation matrix and extract up vector
-        # For a quaternion [w, x, y, z], the up vector is the third column of rotation matrix
+        # Alternative foot contact reward
+        # Base reward: 0 - 2.0
+        # Creates a bell curve with a peak at 4 feet on the ground
+        # foot_contact_reward = 2.0 * np.exp(-2 * (num_feet_on_ground - 4) ** 2)
+
+        # Upright reward - make it more linear
         body_quat = self.data.xquat[1]
         w, x, y, z = body_quat
         up_vector = np.array(
             [2 * (x * z - w * y), 2 * (y * z + w * x), 1 - 2 * (x * x + y * y)]
         )
-        # Perfectly upright means up_vector should be [0, 0, 1]
         upright_error = np.linalg.norm(up_vector - np.array([0, 0, 1]))
-        upright_reward = 2 * np.exp(-8 * upright_error**2)
+        upright_reward = 2.0 * (1.0 - min(float(upright_error), 0.5) / 0.5)
 
-        # Penalty for large action changes (base: 0 - 96, total: -9.6 - 0)
+        # Penalty for large action changes (base: 0 - 96, total: -4.5 - 0)
         if self.previous_action is not None:
             action_change = np.sum((action - self.previous_action) ** 2)
-            action_smoothness_penalty = -0.1 * action_change
+            action_smoothness_penalty = -0.05 * action_change
         else:
             action_smoothness_penalty = 0.0
 
-        # Penalty for actuator direction changes (base: 0 - 24, total: -7 - 0)
-        # direction_change_penalty = 0.0
-        # if self.previous_torque is not None:
-        #     sign_flips = np.sign(self.previous_torque) != np.sign(torques)
-        #     nonzero_flip = (self.previous_torque != 0) & (torques != 0)
-        #     actual_flips = sign_flips & nonzero_flip
-        #     num_flips = np.sum(actual_flips)
-        #     direction_change_penalty = -0.3 * num_flips
-
-        # Control cost
-        # (base: 0 - 1536, total: -11 - 0)
-        # control_cost = -0.007 * np.sum(np.square(torques))
-        # (base: 0 - 24, total: -4.8 - 0)
-        control_cost = -0.2 * np.sum(np.square(action))
-
         # Penalty for the robot touching the ground or bodies colliding
-        # (base: 0 - 9, total: -9 - 0)
-        contact_penalty = -1 * self._get_contact_penalty()
+        # (base: 0 - 9, total: -4.5 - 0)
+        contact_penalty = -0.5 * self._get_contact_penalty()
 
         # Downward velocity penalty (penalize falling)
-        # (base: 0 - inf, typical: -20 - 0, extreme falls: -45 - 0)
+        # (base: 0 - inf, typical: 0 - 20
         z_velocity = self.data.qvel[2]
         downward_velocity = max(0, -z_velocity)
-        # Quadratic penalty that increases with falling speed
-        # Scale factor of 5.0 makes a fall of 1 m/s cost -5, 2 m/s cost -20
-        downward_velocity_penalty = -5.0 * (downward_velocity**2)
+        downward_velocity_penalty = -2.0 * downward_velocity
+
+        # Foot air time reward (balanced air time across all feet)
+        # Base reward: -10 - 10
+        foot_air_time_reward = self._get_foot_air_time_reward(foot_contacts)
 
         reward = (
             forward_reward
             + height_reward
             + upright_reward
-            + foot_contact_reward
-            + control_cost
             + action_smoothness_penalty
             + contact_penalty
             + downward_velocity_penalty
-            # + direction_change_penalty
+            + foot_air_time_reward
+            + progress_reward
         )
         return reward
+
+    def _get_foot_air_time_reward(self, foot_contacts):
+        """
+        Calculate reward for feet being in the air/ground evenly.
+        Base reward: -10 - 10
+        """
+
+        # Track how long each foot has been in the current state
+        # States: 1 = ground, 0 = air
+        for i, state in enumerate(foot_contacts):
+            if state != self.current_foot_state[i]:
+                self.current_foot_state[i] = state
+                self.last_foot_state_time[i] = self.current_foot_state_time[i]
+                self.current_foot_state_time[i] = 0
+            self.current_foot_state_time[i] += 1
+
+        # Reward based on an even distribution of foot steps value
+        # This encourages all feet to have similar air time durations
+        # Base reward: 0 - 1
+        distribution_reward = 0.0
+        if np.any(self.last_foot_state_time > 0):
+            # Filter out feet that have not completed a step yet
+            mean_air_time = np.mean(
+                self.last_foot_state_time[self.last_foot_state_time > 0]
+            )
+            if mean_air_time > 0:
+                # Calculate coefficient of variation (std/mean) - lower is better
+                # Reward for low variation (even distribution)
+                std_air_time = np.std(
+                    self.last_foot_state_time[self.last_foot_state_time > 0]
+                )
+                cv = std_air_time / mean_air_time
+                distribution_reward = 6.0 * np.exp(-3.0 * cv)
+
+        # Additional reward for feet being in the air to encourage walking
+        # Base reward: 0 - 8
+        feet_in_air = np.sum(foot_contacts == 0)
+        air_time_reward = 0.5 * feet_in_air
+
+        # Calculate a penalty for staying in the same state for too long
+        # This encourages feet to transition between air and ground states
+        # Base reward: -10 - 0
+        MAX_STATE_TIME = 60.0
+        stagnant_time_penalty = 0.0
+        stagnant_foot_time = np.max(self.current_foot_state_time)
+        if stagnant_foot_time > MAX_STATE_TIME:
+            capped_state_time = np.minimum(stagnant_foot_time, MAX_STATE_TIME * 2)
+            over_time = capped_state_time - MAX_STATE_TIME
+            stagnant_time_penalty = -0.5 * np.exp(0.05 * over_time)
+
+        total_reward = distribution_reward + stagnant_time_penalty + air_time_reward
+        return total_reward
 
     def _get_forward_velocity(self):
         """
