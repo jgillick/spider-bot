@@ -66,14 +66,14 @@ CONFIG = {
     "SAC_params": {
         "verbose": 0,
         "learning_rate": 3e-4,
-        "buffer_size": 1_000_000,
+        "buffer_size": 2_000_000,  # Increased from 1M to retain more experiences
         "learning_starts": 10_000,
         "batch_size": 512,
-        "tau": 0.005,
+        "tau": 0.01,  # Increased from 0.005 for faster target updates
         "gamma": 0.99,
         "train_freq": 1,
         "gradient_steps": 1,
-        "ent_coef": "auto",
+        "ent_coef": 0.1,  # Fixed entropy coefficient instead of "auto"
         "target_update_interval": 1,
         "target_entropy": "auto",
         "use_sde": False,
@@ -102,9 +102,11 @@ class EvalCallback(BaseCallback):
         video_path,
         verbose=0,
         out_dir=None,
+        train_env=None,
     ):
         super().__init__(verbose)
         self.eval_env = eval_env
+        self.train_env = train_env
         self.checkpoint_path = checkpoint_path
         self.video_path = video_path
         self.next_eval_step = CONFIG["eval_freq"]
@@ -117,6 +119,14 @@ class EvalCallback(BaseCallback):
 
     def evaluate_model(self):
         """Manually evaluate the model at this point."""
+        # Sync normalization statistics before evaluation
+        if self.train_env is not None and hasattr(self.train_env, "obs_rms"):
+            if hasattr(self.eval_env, "obs_rms"):
+                self.eval_env.obs_rms = self.train_env.obs_rms
+        if self.train_env is not None and hasattr(self.train_env, "ret_rms"):
+            if hasattr(self.eval_env, "ret_rms"):
+                self.eval_env.ret_rms = self.train_env.ret_rms
+
         episode_rewards = []
         episode_lengths = []
         for _ in range(CONFIG["eval_episodes"]):
@@ -414,19 +424,11 @@ def train_spider(algorithm="PPO", num_envs=DEFAULT_NUM_ENVS):
     else:
         env = DummyVecEnv([make_env(out_dir, thread=0)])
 
-    # Add normalization
-    env = VecNormalize(
-        env, norm_obs=True, norm_reward=True, clip_obs=10.0, clip_reward=10.0
-    )
-
-    # Evaluation environment with proper normalization
+    # Consistent normalization
+    env = VecNormalize(env, norm_obs=True, norm_reward=True, clip_reward=10.0)
     eval_env = DummyVecEnv([make_env(out_dir, thread="env")])
     eval_env = VecNormalize(
-        eval_env,
-        norm_obs=True,
-        norm_reward=False,  # Don't normalize rewards for evaluation
-        clip_obs=10.0,
-        training=False,
+        eval_env, norm_obs=True, norm_reward=True, training=False, clip_reward=10.0
     )
 
     # Create model
@@ -452,7 +454,11 @@ def train_spider(algorithm="PPO", num_envs=DEFAULT_NUM_ENVS):
     checkpoint_path = f"{out_dir}/checkpoints"
     video_path = f"{out_dir}/videos"
     eval_callback = EvalCallback(
-        eval_env, verbose=1, checkpoint_path=checkpoint_path, video_path=video_path
+        eval_env,
+        verbose=1,
+        checkpoint_path=checkpoint_path,
+        video_path=video_path,
+        train_env=env,
     )
     callback_list.append(eval_callback)
 

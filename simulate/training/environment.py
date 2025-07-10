@@ -6,7 +6,6 @@ Focuses on core objectives with progressive difficulty
 import numpy as np
 from gymnasium import spaces
 from gymnasium.envs.mujoco.mujoco_env import MujocoEnv
-from mujoco import mjtObj, mj_name2id
 
 INITIAL_JOINT_POSITIONS = (
     -1.0,  # Leg 1 - Hip
@@ -54,11 +53,13 @@ class SpiderRobotEnv(MujocoEnv):
         self.episode_length = 0
         self.total_distance = 0.0
         self.initial_x_position = 0.0
+        self.last_xy_body_position = None
 
         self.previous_action = np.zeros(24)
         self.previous_torque = np.zeros(24)
         self.feet_contact_count = 0
         self.previous_foot_contacts = np.zeros(8)  # Track foot contact changes
+        self.last_foot_contacts = np.zeros(8)  # For alternation reward
         self.previous_forward_velocity = 0.0  # Track velocity changes
 
         # Episode stability tracking
@@ -151,10 +152,15 @@ class SpiderRobotEnv(MujocoEnv):
 
     def step(self, action):
         """Perform a step in the environment."""
+        current_foot_contacts = self._get_foot_contacts()
+        self.last_foot_contacts = current_foot_contacts.copy()
+
         torques = self._actions_to_torques(action)
         self.last_torques = torques.copy()
         self.last_xy_body_position = self.get_body_com("Body")[:2].copy()
         self.do_simulation(torques, self.frame_skip)
+
+        self.episode_length += 1
 
         observation = self._get_observation()
         reward = self._calculate_rewards(action, torques)
@@ -169,16 +175,18 @@ class SpiderRobotEnv(MujocoEnv):
 
     def reset_model(self):
         """Reset with curriculum-appropriate randomization."""
-        self._initial_positions(joint_noise_scale=0.5)
+        self._initial_positions(joint_noise_scale=0.1)
         self._randomize_joint_friction()
 
         self.episode_length = 0
         self.total_distance = 0.0
         self.initial_x_position = self.data.qpos[0]
         self.target_height = self.data.qpos[2]
+        self.last_xy_body_position = self.get_body_com("Body")[:2].copy()
         self.previous_action = np.zeros(24)  # 24 actuators
         self.feet_contact_count = 0
         self.previous_foot_contacts = np.zeros(8)  # Reset foot contact tracking
+        self.last_foot_contacts = np.zeros(8)  # Reset for alternation reward
         self.previous_forward_velocity = 0.0  # Reset velocity tracking
 
         # Reset stability tracking
@@ -212,7 +220,6 @@ class SpiderRobotEnv(MujocoEnv):
 
         # Foot contacts (binary)
         foot_contacts = self._get_foot_contacts()
-        self.last_foot_contacts = foot_contacts.copy()
 
         observation = np.concatenate(
             [
@@ -230,57 +237,61 @@ class SpiderRobotEnv(MujocoEnv):
         """Compute reward based on curriculum stage."""
         foot_contacts = self._get_foot_contacts()
 
-        # Forward velocity reward
-        # Base reward: 2, -2, total: -16 - 16
+        # Forward velocity reward (moderate scale)
+        # Base reward: -4 to +4
         forward_velocity = self._get_forward_velocity()
-        forward_reward = 8.0 * forward_velocity
+        forward_reward = 2.0 * forward_velocity
 
         # Progress reward
         # Encourages movement (distance) in any direction
-        # Base reward: 0 - ~0.2+, total: 0 - ~1.0+
+        # Base reward: 0 - ~0.5+
         progress_reward = 0.0
         if self.last_xy_body_position is not None:
             current_pos = self.get_body_com("Body")[:2]
             progress = np.linalg.norm(current_pos - self.last_xy_body_position)
-            progress_reward = 5.0 * progress
+            progress_reward = 2.5 * progress
 
-        # Height reward
-        # Base reward: 0 - 2, total: 0 - 6
+        # Height reward (critical for staying upright)
+        # Base reward: 0 - 3
         height = self.data.qpos[2]
         height_error = abs(height - self.target_height)
-        height_reward = 3.0 * (1.0 - min(float(height_error), 0.1) / 0.1)
+        height_reward = 1.5 * (1.0 - min(float(height_error), 0.1) / 0.1)
 
-        # Upright reward
-        # Base reward: 0 - 2, total: 0 - 4
+        # Upright reward (critical for stability)
+        # Base reward: 0 - 2
         body_quat = self.data.xquat[1]
         w, x, y, z = body_quat
         up_vector = np.array(
             [2 * (x * z - w * y), 2 * (y * z + w * x), 1 - 2 * (x * x + y * y)]
         )
         upright_error = np.linalg.norm(up_vector - np.array([0, 0, 1]))
-        upright_reward = 2.0 * (1.0 - min(float(upright_error), 0.5) / 0.5)
+        upright_reward = 1.0 * (1.0 - min(float(upright_error), 0.5) / 0.5)
 
         # Penalty for large action changes
-        # (base: 0 - 96, total: -3.84 - 0)
+        # (base: 0 - 96, total: -1.92 - 0)
         if self.previous_action is not None:
             action_change = np.sum((action - self.previous_action) ** 2)
-            action_smoothness_penalty = -0.04 * action_change
+            action_smoothness_penalty = -0.02 * action_change
         else:
             action_smoothness_penalty = 0.0
 
         # Penalty for the robot bodies touching the ground or bodies colliding
-        # (base: 0 - 9, total: -4.5 - 0)
-        contact_penalty = -0.5 * self._get_contact_penalty()
+        # Moderate penalty to prevent body ground contact
+        contact_penalty = -0.25 * self._get_contact_penalty(foot_contacts)
 
-        # Downward velocity penalty (penalize falling)
-        # (base: 0 - inf, typical: 0 - 20
+        # Downward velocity penalty with cap
+        # (base: 0 - 2.0, total: -2.0 - 0)
         z_velocity = self.data.qvel[2]
         downward_velocity = max(0, -z_velocity)
-        downward_velocity_penalty = -2.0 * downward_velocity
+        downward_velocity = min(downward_velocity, 2.0)  # Cap at 2.0 m/s
+        downward_velocity_penalty = -1.0 * downward_velocity
 
-        # Foot air time reward (balanced air time across all feet)
-        # Base reward: -10 - 10
-        foot_air_time_reward = self._get_foot_air_time_reward(foot_contacts)
+        # Simplified foot air time reward
+        # Base reward: -1.25 - 1.25
+        foot_air_time_reward = self._get_simplified_foot_reward(foot_contacts) * 0.125
+
+        # Survival bonus to encourage staying upright
+        survival_reward = 0.5
 
         reward = (
             forward_reward
@@ -291,8 +302,54 @@ class SpiderRobotEnv(MujocoEnv):
             + downward_velocity_penalty
             + foot_air_time_reward
             + progress_reward
+            + survival_reward
         )
+
         return reward
+
+    def _get_simplified_foot_reward(self, foot_contacts):
+        """
+        Simplified foot reward focusing on basic gait patterns.
+        Returns value in range [-10, 10] before external scaling.
+        """
+        # Track foot state changes
+        for i, state in enumerate(foot_contacts):
+            if state != self.current_foot_state[i]:
+                self.current_foot_state[i] = state
+                self.last_foot_state_time[i] = self.current_foot_state_time[i]
+                self.current_foot_state_time[i] = 0
+            self.current_foot_state_time[i] += 1
+
+        # Basic gait balance reward - encourage some feet in air, some on ground
+        feet_in_air = np.sum(foot_contacts == 0)
+        feet_on_ground = np.sum(foot_contacts == 1)
+
+        # Optimal is 3-5 feet on ground
+        if 3 <= feet_on_ground <= 5:
+            gait_balance_reward = 5.0
+        elif feet_on_ground == 2 or feet_on_ground == 6:
+            gait_balance_reward = 2.0
+        elif feet_on_ground == 1 or feet_on_ground == 7:
+            gait_balance_reward = 0.0
+        else:
+            # All feet in same state - bad
+            gait_balance_reward = -5.0
+
+        # Simple alternation reward - reward switching feet
+        foot_switches = np.sum(foot_contacts != self.last_foot_contacts)
+        alternation_reward = min(foot_switches * 0.5, 3.0)  # Cap at 3.0
+
+        # Diagonal gait bonus (spider-like walking pattern)
+        diagonal_pairs = [
+            (foot_contacts[0] and foot_contacts[6]),  # Leg1 & Leg7
+            (foot_contacts[1] and foot_contacts[7]),  # Leg2 & Leg8
+            (foot_contacts[2] and foot_contacts[4]),  # Leg3 & Leg5
+            (foot_contacts[3] and foot_contacts[5]),  # Leg4 & Leg6
+        ]
+        diagonal_bonus = sum(diagonal_pairs) * 0.5
+
+        total_reward = gait_balance_reward + alternation_reward + diagonal_bonus
+        return total_reward
 
     def _actions_to_torques(self, action):
         """
@@ -438,16 +495,25 @@ class SpiderRobotEnv(MujocoEnv):
     def _cache_geom_ids(self):
         """Cache geom IDs by looking up their names."""
         self.foot_geom_ids = []
-        self.ground_plane_id = mj_name2id(self.model, mjtObj.mjOBJ_GEOM, "floor")
+        self.tibia_geom_ids = []
+        self.ground_plane_id = self.model.geom("floor").id
 
         # Foot geoms
         for leg_num in range(1, 9):  # Legs 1-8
             foot_name = f"Leg{leg_num}_Tibia_Foot_geom"
-            foot_id = mj_name2id(self.model, mjtObj.mjOBJ_GEOM, foot_name)
-            if foot_id is not None:
-                self.foot_geom_ids.append(foot_id)
+            foot_geom = self.model.geom(foot_name)
+
+            if foot_geom is not None:
+                self.foot_geom_ids.append(foot_geom.id)
             else:
-                print(f"⚠️ Warning: Could not find geom '{foot_name}'")
+                raise Exception(f"Could not find geom '{foot_name}'")
+
+            tibia_name = f"Leg{leg_num}_Tibia_Leg_geom"
+            tibia_geom = self.model.geom(tibia_name)
+            if tibia_geom is not None:
+                self.tibia_geom_ids.append(tibia_geom.id)
+            else:
+                raise Exception(f"Warning: Could not find geom '{tibia_name}'")
 
     def _cache_joint_ranges(self):
         """Cache the join position ranges."""
@@ -464,27 +530,48 @@ class SpiderRobotEnv(MujocoEnv):
             else:
                 self.joint_ranges.append((-np.pi, np.pi))
 
-    def _get_contact_penalty(self):
+    def _get_contact_penalty(self, foot_contacts):
         """Penalize contact with non-foot parts of the robot."""
         penalty = 0.0
 
         # Check each contact in the simulation
         for i in range(self.data.ncon):
             contact = self.data.contact[i]
+            geom1_name = self.model.geom(contact.geom1).name
+            geom2_name = self.model.geom(contact.geom2).name
 
-            # Use cached foot geom IDs
-            geom1_is_foot = contact.geom1 in self.foot_geom_ids
-            geom2_is_foot = contact.geom2 in self.foot_geom_ids
+            ground_contact = (
+                contact.geom1 == self.ground_plane_id
+                or contact.geom2 == self.ground_plane_id
+            )
+            foot_contact = (
+                contact.geom1 in self.foot_geom_ids
+                or contact.geom2 in self.foot_geom_ids
+            )
+            tibia_contact = (
+                contact.geom1 in self.tibia_geom_ids
+                or contact.geom2 in self.tibia_geom_ids
+            )
 
-            # Only penalize if BOTH geoms are non-foot parts
-            # This allows: foot-foot, foot-ground, foot-robot_part
-            # But penalizes: robot_part-robot_part, robot_part-ground
-            if not geom1_is_foot and not geom2_is_foot:
-                # Penalty for ground contact
-                if (
-                    contact.geom1 == self.ground_plane_id
-                    or contact.geom2 == self.ground_plane_id
-                ):
+            # Ignore tibia contact if this foot is also on the ground
+            # Sometimes the foot sinks below the ground plane and the tibia makes contact
+            if tibia_contact and ground_contact:
+                tibia_geom_id = (
+                    contact.geom1
+                    if contact.geom1 in self.tibia_geom_ids
+                    else contact.geom2
+                )
+                tibia_index = self.tibia_geom_ids.index(tibia_geom_id)
+                if foot_contacts[tibia_index] == 1:
+                    continue
+
+            # Only penalize if it's not a foot on ground contact
+            if not (foot_contact and ground_contact):
+                print(
+                    f"- Penalty for {geom1_name} ({contact.geom1}) <-> {geom2_name} ({contact.geom2})"
+                )
+                if ground_contact:
+                    # Penalty for any other body on the ground
                     penalty += 2.0
                 else:
                     # Mild penalty for robot part collision
@@ -494,8 +581,13 @@ class SpiderRobotEnv(MujocoEnv):
 
     def _get_gyro_stability(self):
         """Get gyro sensor stability measurement."""
-        # Get gyro sensor data (angular velocity)
-        gyro_sensor_id = mj_name2id(self.model, mjtObj.mjOBJ_SENSOR, "gyro_sensor")
+        # Try to find gyro sensor by iterating through sensors
+        gyro_sensor_id = None
+        for i in range(self.model.nsensor):
+            if self.model.sensor(i).name == "gyro_sensor":
+                gyro_sensor_id = i
+                break
+
         if gyro_sensor_id is not None:
             gyro_data = self.data.sensordata[gyro_sensor_id : gyro_sensor_id + 3]
             angular_velocity_magnitude = np.linalg.norm(gyro_data)
@@ -507,7 +599,6 @@ class SpiderRobotEnv(MujocoEnv):
             return stability
         else:
             # Fallback if gyro sensor not found
-            print("⚠️ Warning: gyro_sensor not found, using fallback stability")
             # Use body angular velocity as fallback
             body_angular_vel = self.data.qvel[3:6]  # Roll, pitch, yaw velocities
             angular_velocity_magnitude = np.linalg.norm(body_angular_vel)
@@ -546,10 +637,16 @@ class SpiderRobotEnv(MujocoEnv):
         # Check each contact in the simulation
         for i in range(self.data.ncon):
             contact = self.data.contact[i]
-            if (
+            has_foot_contact = (
                 contact.geom1 in self.foot_geom_ids
                 or contact.geom2 in self.foot_geom_ids
-            ):
+            )
+            has_ground_contact = (
+                contact.geom1 == self.ground_plane_id
+                or contact.geom2 == self.ground_plane_id
+            )
+
+            if has_foot_contact and has_ground_contact:
                 foot_geom_id = (
                     contact.geom1
                     if contact.geom1 in self.foot_geom_ids
