@@ -567,9 +567,6 @@ class SpiderRobotEnv(MujocoEnv):
 
             # Only penalize if it's not a foot on ground contact
             if not (foot_contact and ground_contact):
-                print(
-                    f"- Penalty for {geom1_name} ({contact.geom1}) <-> {geom2_name} ({contact.geom2})"
-                )
                 if ground_contact:
                     # Penalty for any other body on the ground
                     penalty += 2.0
