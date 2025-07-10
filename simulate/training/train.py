@@ -37,9 +37,13 @@ CONFIG = {
     "eval_video_steps_length": 500,
     "eval_freq": 50_000,
     "video_freq": 100_000,
-    "checkpoint_freq": 100_000,
     "generate_videos": True,
     "plateau_after_n_evals": None,
+    "learning_decay": {
+        "initial_lr": 3e-4,
+        "final_lr": 1e-4,
+        "decay_steps": 3_000_000,
+    },
     "PPO_params": {
         "verbose": 1,
         "learning_rate": 3e-4,
@@ -60,16 +64,16 @@ CONFIG = {
         },
     },
     "SAC_params": {
-        "verbose": 1,
-        "learning_rate": 1e-3,  # Increased from 3e-4 for faster learning
-        "buffer_size": 2_000_000,  # Increased from 1M for more diverse experience
-        "learning_starts": 50_000,  # Increased from 10k for better initial exploration
-        "batch_size": 512,  # Already good
+        "verbose": 0,
+        "learning_rate": 3e-4,
+        "buffer_size": 1_000_000,
+        "learning_starts": 10_000,
+        "batch_size": 512,
         "tau": 0.005,
         "gamma": 0.99,
         "train_freq": 1,
         "gradient_steps": 1,
-        "ent_coef": 0.1,  # Increased from "auto" for more exploration
+        "ent_coef": "auto",
         "target_update_interval": 1,
         "target_entropy": "auto",
         "use_sde": False,
@@ -77,11 +81,10 @@ CONFIG = {
         "use_sde_at_warmup": False,
         "policy_kwargs": {
             "net_arch": [
-                512,
                 256,
                 256,
                 128,
-            ],  # Deeper network for complex gait learning
+            ],
             "n_critics": 2,
             "share_features_extractor": False,
         },
@@ -110,6 +113,7 @@ class EvalCallback(BaseCallback):
         self.best_mean_reward = -np.inf
         self.steps_without_improvement = 0
         self.best_step = None
+        self.last_mean = 0
 
     def evaluate_model(self):
         """Manually evaluate the model at this point."""
@@ -145,21 +149,27 @@ class EvalCallback(BaseCallback):
     def _on_step(self) -> bool:
         is_best = False
         if self.num_timesteps >= self.next_eval_step:
-            print("⏳ Running evaluation...")
+            print("-" * 50)
+            print(f"Step: {self.num_timesteps:,}")
+            print("📊 Running evaluation...")
             self.next_eval_step += CONFIG["eval_freq"]
             mean_reward, std_reward, mean_episode_length, std_episode_length = (
                 self.evaluate_model()
             )
             mean_reward = float(mean_reward)
-            improvement = mean_reward - self.best_mean_reward
-            is_best = improvement > 0
+            best_improvement = mean_reward - self.best_mean_reward
+            last_eval_improvement = mean_reward - self.last_mean
+            is_best = best_improvement > 0
+            self.last_mean = mean_reward
+            diff_sign = "+" if last_eval_improvement > 0 else ""
 
-            print(f"📊 Evaluation Results:")
-            print(f"   Mean reward: {mean_reward:.2f} ± {std_reward:.2f}")
+            print(f"   Mean reward: {mean_reward:,.2f} ± {std_reward:,.2f}")
+            print(f"   Dif to last: {diff_sign}{last_eval_improvement:.2f}")
             print(
-                f"   Mean episode length: {mean_episode_length:.1f} ± {std_episode_length:.1f} steps"
+                f"   Mean length: {mean_episode_length:.1f} ± {std_episode_length:.1f} steps"
             )
-            print(f"   Best so far: {self.best_mean_reward:.2f}")
+
+            print(f"✅ Best so far: {self.best_mean_reward:,.2f}")
             if not is_best and self.best_step is not None:
                 self.steps_without_improvement += 1
                 print(
@@ -173,7 +183,7 @@ class EvalCallback(BaseCallback):
 
             # Check for improvement
             if is_best:
-                print(f"✅ Improvement: +{improvement:.2f}")
+                print(f"🚀 Overall Improvement: +{best_improvement:,.2f}")
                 self.best_mean_reward = mean_reward
                 self.steps_without_improvement = 0
                 self.best_step = self.num_timesteps
@@ -181,9 +191,8 @@ class EvalCallback(BaseCallback):
                 # Save best model
                 best_model_path = os.path.join(self.checkpoint_path, "best_model")
                 self.model.save(best_model_path)
-                print(f"💾 Best model saved to {best_model_path}")
             # Has plateaued
-            if (
+            elif (
                 CONFIG["plateau_after_n_evals"] is not None
                 and self.steps_without_improvement >= CONFIG["plateau_after_n_evals"]
             ):
@@ -272,21 +281,28 @@ class LearningRateScheduler(BaseCallback):
         self.current_lr = initial_lr
 
     def _on_step(self) -> bool:
-        # Linear decay from initial_lr to final_lr over decay_steps
         if self.num_timesteps <= self.decay_steps:
             progress = self.num_timesteps / self.decay_steps
             self.current_lr = (
                 self.initial_lr + (self.final_lr - self.initial_lr) * progress
             )
 
-            # Update learning rate for SAC optimizers (SAC uses policy and critic optimizers)
-            if hasattr(self.model, "policy") and hasattr(
-                self.model.policy, "optimizer"
-            ):
+            # Update learning rate based on algorithm type
+            if hasattr(self.model.policy, "optimizer"):
+                # PPO has a single optimizer
                 for param_group in self.model.policy.optimizer.param_groups:
                     param_group["lr"] = self.current_lr
+            elif hasattr(self.model, "actor") and hasattr(self.model, "critic"):
+                # SAC has separate actor and critic optimizers
+                actor = getattr(self.model, "actor")
+                critic = getattr(self.model, "critic")
+                for param_group in actor.optimizer.param_groups:
+                    param_group["lr"] = self.current_lr
+                for param_group in critic.optimizer.param_groups:
+                    param_group["lr"] = self.current_lr
 
-            if self.verbose > 0 and self.num_timesteps % 100_000 == 0:
+            # Logging
+            if self.verbose and self.num_timesteps % 100_000 == 0:
                 print(f"📉 Learning rate: {self.current_lr:.2e}")
 
         return True
@@ -416,6 +432,7 @@ def train_spider(algorithm="PPO", num_envs=DEFAULT_NUM_ENVS):
     # Create model
     tensorboard_log = f"{out_dir}/tensorboard/"
     if algorithm == "PPO":
+        learning_rate = CONFIG["PPO_params"]["learning_rate"]
         model = PPO(
             "MlpPolicy",
             env,
@@ -440,20 +457,13 @@ def train_spider(algorithm="PPO", num_envs=DEFAULT_NUM_ENVS):
     callback_list.append(eval_callback)
 
     # Add learning rate scheduler to address training slowdown
-    if algorithm == "SAC":
-        lr_scheduler = LearningRateScheduler(
-            initial_lr=CONFIG["SAC_params"]["learning_rate"],
-            final_lr=1e-4,
-            decay_steps=5_000_000,
-            verbose=1,
-        )
-        callback_list.append(lr_scheduler)
-
-    # checkpoint_callback = CheckpointCallback(
-    #     save_freq=CONFIG["checkpoint_freq"],
-    #     save_path=checkpoint_path,
-    #     name_prefix="spider_model",
-    # )
+    lr_scheduler = LearningRateScheduler(
+        verbose=1,
+        initial_lr=CONFIG["learning_decay"]["initial_lr"],
+        final_lr=CONFIG["learning_decay"]["final_lr"],
+        decay_steps=CONFIG["learning_decay"]["decay_steps"],
+    )
+    callback_list.append(lr_scheduler)
 
     # Combine callbacks
     callbacks = CallbackList(callback_list)
@@ -462,7 +472,6 @@ def train_spider(algorithm="PPO", num_envs=DEFAULT_NUM_ENVS):
     print(f"   Total timesteps: {CONFIG['total_timesteps']:,}")
     print(f"   Evaluation frequency: {CONFIG['eval_freq']:,}")
     print(f"   Video frequency: {CONFIG['video_freq']:,}")
-    print(f"   Checkpoint frequency: {CONFIG['checkpoint_freq']:,}")
 
     try:
         # Train the model

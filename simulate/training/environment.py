@@ -95,7 +95,7 @@ class SpiderRobotEnv(MujocoEnv):
         observation_space = spaces.Box(
             low=-np.inf,
             high=np.inf,
-            shape=(74,),
+            shape=(81,),
             dtype=np.float64,
         )
 
@@ -149,39 +149,10 @@ class SpiderRobotEnv(MujocoEnv):
         # Update the state
         self.set_state(qpos, qvel)
 
-    def _actions_to_torques(self, action):
-        """
-        Convert actions to torques using PD control
-        """
-        # Scale actions to joint ranges
-        target_positions = []
-        for i, (low, high) in enumerate(self.joint_ranges):
-            scaled_pos = low + (action[i] + 1.0) * 0.5 * (high - low)
-            target_positions.append(scaled_pos)
-        target_positions = np.array(target_positions)
-
-        # PD control
-        current_positions = self.data.qpos[-DOF:]
-        current_velocities = self.data.qvel[-DOF:]
-
-        # Calculate torques with safety checks
-        position_errors = target_positions - current_positions
-        velocity_errors = current_velocities
-
-        # Clip position & velocity errors to prevent extreme corrections
-        position_errors = np.clip(position_errors, -0.5, 0.5)
-        velocity_errors = np.clip(velocity_errors, -5.0, 5.0)
-
-        torques = (
-            self.position_gain * position_errors - self.velocity_gain * velocity_errors
-        )
-        torques = np.clip(torques, -self.max_torque, self.max_torque)
-
-        return torques
-
     def step(self, action):
         """Perform a step in the environment."""
         torques = self._actions_to_torques(action)
+        self.last_torques = torques.copy()
         self.last_xy_body_position = self.get_body_com("Body")[:2].copy()
         self.do_simulation(torques, self.frame_skip)
 
@@ -225,27 +196,9 @@ class SpiderRobotEnv(MujocoEnv):
 
         return self._get_observation()
 
-    def _randomize_joint_friction(self):
-        """Add random damping and friction loss to all joints except the free joint."""
-        # Reasonable ranges for robot joints
-        friction_range = (0.001, 0.05)
-        damping_range = (0.0, 0.1)
-
-        # Generate random damping and friction loss
-        random_damping = self.np_random.uniform(damping_range[0], damping_range[1])
-        random_friction = self.np_random.uniform(friction_range[0], friction_range[1])
-
-        # Apply to all actuated joints
-        first_index = len(self.model.dof_damping) - DOF
-        for i in range(DOF):
-            joint_id = first_index + i
-            self.model.dof_damping[joint_id] = random_damping
-            self.model.dof_frictionloss[joint_id] = random_friction
-
     def _get_observation(self):
         """Environment observations"""
         # Core observations
-        body_height = self.data.qpos[2]
         velocities = self.data.qvel
 
         # Orientation as rotation matrix (flattened)
@@ -259,14 +212,15 @@ class SpiderRobotEnv(MujocoEnv):
 
         # Foot contacts (binary)
         foot_contacts = self._get_foot_contacts()
+        self.last_foot_contacts = foot_contacts.copy()
 
         observation = np.concatenate(
             [
-                [body_height],
                 orientation,
                 positions,
                 velocities,
                 foot_contacts,
+                self.current_foot_state_time,
             ]
         )
         # print(f"Observable space: {len(observation)}")
@@ -339,6 +293,53 @@ class SpiderRobotEnv(MujocoEnv):
             + progress_reward
         )
         return reward
+
+    def _actions_to_torques(self, action):
+        """
+        Convert actions to torques using PD control
+        """
+        # Scale actions to joint ranges
+        target_positions = []
+        for i, (low, high) in enumerate(self.joint_ranges):
+            scaled_pos = low + (action[i] + 1.0) * 0.5 * (high - low)
+            target_positions.append(scaled_pos)
+        target_positions = np.array(target_positions)
+
+        # PD control
+        current_positions = self.data.qpos[-DOF:]
+        current_velocities = self.data.qvel[-DOF:]
+
+        # Calculate torques with safety checks
+        position_errors = target_positions - current_positions
+        velocity_errors = current_velocities
+
+        # Clip position & velocity errors to prevent extreme corrections
+        position_errors = np.clip(position_errors, -0.5, 0.5)
+        velocity_errors = np.clip(velocity_errors, -5.0, 5.0)
+
+        torques = (
+            self.position_gain * position_errors - self.velocity_gain * velocity_errors
+        )
+        torques = np.clip(torques, -self.max_torque, self.max_torque)
+
+        return torques
+
+    def _randomize_joint_friction(self):
+        """Add random damping and friction loss to all joints except the free joint."""
+        # Reasonable ranges for robot joints
+        friction_range = (0.001, 0.05)
+        damping_range = (0.0, 0.1)
+
+        # Generate random damping and friction loss
+        random_damping = self.np_random.uniform(damping_range[0], damping_range[1])
+        random_friction = self.np_random.uniform(friction_range[0], friction_range[1])
+
+        # Apply to all actuated joints
+        first_index = len(self.model.dof_damping) - DOF
+        for i in range(DOF):
+            joint_id = first_index + i
+            self.model.dof_damping[joint_id] = random_damping
+            self.model.dof_frictionloss[joint_id] = random_friction
 
     def _get_foot_air_time_reward(self, foot_contacts):
         """
