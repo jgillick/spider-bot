@@ -7,31 +7,34 @@ import numpy as np
 from gymnasium import spaces
 from gymnasium.envs.mujoco.mujoco_env import MujocoEnv
 
+FEMUR_INIT_POSITION = 1.0
+TIBIA_INIT_POSITION = 1.25
+
 INITIAL_JOINT_POSITIONS = (
     -1.0,  # Leg 1 - Hip
-    0.75,  # Leg 1 - Femur
-    1.0,  # Leg 1 - Tibia
+    FEMUR_INIT_POSITION,  # Leg 1 - Femur
+    TIBIA_INIT_POSITION,  # Leg 1 - Tibia
     -1.0,  # Leg 2 - Hip
-    0.75,  # Leg 2 - Femur
-    1.0,  # Leg 2 - Tibia
+    FEMUR_INIT_POSITION,  # Leg 2 - Femur
+    TIBIA_INIT_POSITION,  # Leg 2 - Tibia
     1.0,  # Leg 3 - Hip
-    0.75,  # Leg 3 - Femur
-    1.0,  # Leg 3 - Tibia
+    FEMUR_INIT_POSITION,  # Leg 3 - Femur
+    TIBIA_INIT_POSITION,  # Leg 3 - Tibia
     1.0,  # Leg 4 - Hip
-    0.75,  # Leg 4 - Femur
-    1.0,  # Leg 4 - Tibia
+    FEMUR_INIT_POSITION,  # Leg 4 - Femur
+    TIBIA_INIT_POSITION,  # Leg 4 - Tibia
     1.0,  # Leg 5 - Hip
-    0.75,  # Leg 5 - Femur
-    1.0,  # Leg 5 - Tibia
+    FEMUR_INIT_POSITION,  # Leg 5 - Femur
+    TIBIA_INIT_POSITION,  # Leg 5 - Tibia
     1.0,  # Leg 6 - Hip
-    0.75,  # Leg 6 - Femur
-    1.0,  # Leg 6 - Tibia
+    FEMUR_INIT_POSITION,  # Leg 6 - Femur
+    TIBIA_INIT_POSITION,  # Leg 6 - Tibia
     -1.0,  # Leg 7 - Hip
-    0.75,  # Leg 7 - Femur
-    1.0,  # Leg 7 - Tibia
+    FEMUR_INIT_POSITION,  # Leg 7 - Femur
+    TIBIA_INIT_POSITION,  # Leg 7 - Tibia
     -1.0,  # Leg 8 - Hip
-    0.75,  # Leg 8 - Femur
-    1.0,  # Leg 8 - Tibia
+    FEMUR_INIT_POSITION,  # Leg 8 - Femur
+    TIBIA_INIT_POSITION,  # Leg 8 - Tibia
 )
 
 DOF = 24
@@ -87,7 +90,7 @@ class SpiderRobotEnv(MujocoEnv):
         self.last_foot_state_time = np.zeros(8)
 
         # Core parameters
-        self.target_height = 0.134
+        self.target_height = 0.14
         self.max_torque = 8.0
         self.position_gain = 15.0
         self.velocity_gain = 0.2
@@ -145,7 +148,7 @@ class SpiderRobotEnv(MujocoEnv):
 
         # Ensure the robot starts at a reasonable height
         # Set the z-position (height) to be above ground
-        qpos[2] = 0.134
+        qpos[2] = self.target_height  # Start at target height
 
         # Update the state
         self.set_state(qpos, qvel)
@@ -277,6 +280,7 @@ class SpiderRobotEnv(MujocoEnv):
 
         # Penalty for the robot bodies touching the ground or bodies colliding
         # Moderate penalty to prevent body ground contact
+        # Base reward: -32 - 0
         contact_penalty = -0.25 * self._get_contact_penalty(foot_contacts)
 
         # Downward velocity penalty with cap
@@ -293,6 +297,23 @@ class SpiderRobotEnv(MujocoEnv):
         # Survival bonus to encourage staying upright
         survival_reward = 0.5
 
+        # Recovery reward - encourage getting up when fallen
+        # Base reward: -2.0 to +2.0
+        recovery_reward = 0.0
+        feet_on_ground = np.sum(foot_contacts == 1)
+        if height < 0.1:  # Robot is fallen/very low
+            # Reward any upward movement
+            if hasattr(self, "previous_height"):
+                height_change = height - self.previous_height
+                if height_change > 0:
+                    recovery_reward = (
+                        20.0 * height_change
+                    )  # Strong reward for lifting up
+            # Reward for having any feet on ground (needed to push up)
+            if feet_on_ground > 0:
+                recovery_reward += 0.5
+        self.previous_height = height
+
         reward = (
             forward_reward
             + height_reward
@@ -303,6 +324,7 @@ class SpiderRobotEnv(MujocoEnv):
             + foot_air_time_reward
             + progress_reward
             + survival_reward
+            + recovery_reward
         )
 
         return reward
@@ -321,15 +343,14 @@ class SpiderRobotEnv(MujocoEnv):
             self.current_foot_state_time[i] += 1
 
         # Basic gait balance reward - encourage some feet in air, some on ground
-        feet_in_air = np.sum(foot_contacts == 0)
         feet_on_ground = np.sum(foot_contacts == 1)
 
-        # Optimal is 3-5 feet on ground
-        if 3 <= feet_on_ground <= 5:
+        # Optimal is 4-5 feet on ground
+        if 4 <= feet_on_ground <= 5:
             gait_balance_reward = 5.0
-        elif feet_on_ground == 2 or feet_on_ground == 6:
+        elif feet_on_ground == 6:
             gait_balance_reward = 2.0
-        elif feet_on_ground == 1 or feet_on_ground == 7:
+        elif feet_on_ground == 7:
             gait_balance_reward = 0.0
         else:
             # All feet in same state - bad
@@ -341,10 +362,10 @@ class SpiderRobotEnv(MujocoEnv):
 
         # Diagonal gait bonus (spider-like walking pattern)
         diagonal_pairs = [
-            (foot_contacts[0] and foot_contacts[6]),  # Leg1 & Leg7
-            (foot_contacts[1] and foot_contacts[7]),  # Leg2 & Leg8
-            (foot_contacts[2] and foot_contacts[4]),  # Leg3 & Leg5
-            (foot_contacts[3] and foot_contacts[5]),  # Leg4 & Leg6
+            (foot_contacts[0] and foot_contacts[5]),  # Leg L1 & Leg R2
+            (foot_contacts[1] and foot_contacts[4]),  # Leg L2 & Leg R1
+            (foot_contacts[2] and foot_contacts[7]),  # Leg L3 & Leg R4
+            (foot_contacts[3] and foot_contacts[6]),  # Leg L4 & Leg R3
         ]
         diagonal_bonus = sum(diagonal_pairs) * 0.5
 
@@ -537,8 +558,6 @@ class SpiderRobotEnv(MujocoEnv):
         # Check each contact in the simulation
         for i in range(self.data.ncon):
             contact = self.data.contact[i]
-            geom1_name = self.model.geom(contact.geom1).name
-            geom2_name = self.model.geom(contact.geom2).name
 
             ground_contact = (
                 contact.geom1 == self.ground_plane_id
