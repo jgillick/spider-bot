@@ -64,29 +64,21 @@ CONFIG = {
         },
     },
     "SAC_params": {
-        "verbose": 0,
+        "verbose": 1,
         "learning_rate": 3e-4,
-        "buffer_size": 2_000_000,  # Increased from 1M to retain more experiences
+        "buffer_size": 2_000_000,  # Increased from 1M
         "learning_starts": 10_000,
-        "batch_size": 512,
+        "batch_size": 256,
         "tau": 0.01,  # Increased from 0.005 for faster target updates
         "gamma": 0.99,
-        "train_freq": 1,
-        "gradient_steps": 1,
-        "ent_coef": 0.1,  # Fixed entropy coefficient instead of "auto"
+        "ent_coef": 0.1,  # Fixed entropy coefficient
         "target_update_interval": 1,
         "target_entropy": "auto",
-        "use_sde": False,
-        "sde_sample_freq": -1,
-        "use_sde_at_warmup": False,
+        "use_sde": True,  # Use State Dependent Exploration
+        "sde_sample_freq": 64,  # How often to sample new noise
         "policy_kwargs": {
-            "net_arch": [
-                256,
-                256,
-                128,
-            ],
-            "n_critics": 2,
-            "share_features_extractor": False,
+            "net_arch": [256, 256, 128],
+            "log_std_init": -2.0,  # Start with smaller exploration
         },
     },
 }
@@ -406,6 +398,15 @@ def train_spider(algorithm="PPO", num_envs=DEFAULT_NUM_ENVS):
     os.makedirs(f"{out_dir}/monitor_logs", exist_ok=True)
     os.makedirs(f"{out_dir}/code", exist_ok=True)
 
+    print()
+    print(f"📜 Algorithm: {algorithm}")
+    print(f"📁 Output directory: {out_dir}")
+    print(f"🏋️‍♀️ Training for {CONFIG['total_timesteps']:,} timesteps")
+    print(f"👯 Parallel environments: {num_envs}")
+    print(f"⏰ Evaluation frequency: {CONFIG['eval_freq']:,}")
+    print(f"🎥 Video frequency: {CONFIG['video_freq']:,}")
+    print()
+
     # Save configuration
     with open(f"{out_dir}/config.json", "w") as f:
         json.dump(CONFIG, f, indent=2)
@@ -413,9 +414,6 @@ def train_spider(algorithm="PPO", num_envs=DEFAULT_NUM_ENVS):
     # Save current training code
     shutil.copyfile(f"{THIS_DIR}/train.py", f"{out_dir}/code/train.py")
     shutil.copyfile(f"{THIS_DIR}/environment.py", f"{out_dir}/code/environment.py")
-
-    print(f"📁 Output directory: {out_dir}")
-    print(f"🔧 Configuration: {num_envs} parallel environments")
 
     # Create parallel training environments
     # Use DummyVecEnv for stability (SubprocVecEnv can deadlock)
@@ -473,11 +471,6 @@ def train_spider(algorithm="PPO", num_envs=DEFAULT_NUM_ENVS):
 
     # Combine callbacks
     callbacks = CallbackList(callback_list)
-
-    print(f"🎯 Starting training...")
-    print(f"   Total timesteps: {CONFIG['total_timesteps']:,}")
-    print(f"   Evaluation frequency: {CONFIG['eval_freq']:,}")
-    print(f"   Video frequency: {CONFIG['video_freq']:,}")
 
     try:
         # Train the model
@@ -563,14 +556,6 @@ def main():
 
     print("🕷️ Spider Robot Training")
     print("=" * 50)
-
-    # Print configuration details
-    print(f"\n🚀 Starting training")
-    print(f"📜 Algorithm: {args.algorithm}")
-    print(f"🤖 Robot XML: {XML_FILE}")
-    print(f"🔧 Configuration: {args.num_envs} parallel environments")
-    print(f"⏱️ Training for {CONFIG['total_timesteps']:,} timesteps")
-    print()
 
     try:
         # Train the model
