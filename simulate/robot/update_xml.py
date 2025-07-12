@@ -1,5 +1,7 @@
 import re
 import os
+import math
+import numpy as np
 import argparse
 import xml.etree.ElementTree as ET
 
@@ -35,6 +37,7 @@ def main(tree, output_path, ground=False, light=False):
     tree = actuator_definitions(tree)
     tree = main_body(tree)
     tree = add_foot_friction(tree)
+    tree = convert_euler_to_quat(tree)
 
     # Pretty print and output
     ET.indent(tree, space="  ")
@@ -358,6 +361,109 @@ def add_foot_friction(tree):
         foot = tree.find(f".//geom[@name='{foot_name}']")
         if foot is not None:
             foot.set("friction", "2.0 0.1 0.01")
+    return tree
+
+
+def multiply_quat(qa, qb):
+    """
+    Multiply two quaternions.
+    Ported from mujoco's mju_mulQuat
+
+    Args:
+        qa: First quaternion [w, x, y, z]
+        qb: Second quaternion [w, x, y, z]
+
+    Returns:
+        Result quaternion [w, x, y, z]
+    """
+    result = np.array(
+        [
+            qa[0] * qb[0] - qa[1] * qb[1] - qa[2] * qb[2] - qa[3] * qb[3],
+            qa[0] * qb[1] + qa[1] * qb[0] + qa[2] * qb[3] - qa[3] * qb[2],
+            qa[0] * qb[2] - qa[1] * qb[3] + qa[2] * qb[0] + qa[3] * qb[1],
+            qa[0] * qb[3] + qa[1] * qb[2] - qa[2] * qb[1] + qa[3] * qb[0],
+        ]
+    )
+    return result
+
+
+def mujoco_euler_to_quat(euler, seq="XYZ"):
+    """
+    Convert Euler angles to quaternion using MuJoCo's logic.
+
+    This function follows MuJoCo's mju_euler2Quat implementation:
+    - For extrinsic sequences (XYZ, ZYX, etc.): applies rotations in world frame
+    - For intrinsic sequences (xyz, zyx, etc.): applies rotations in body frame
+
+    Args:
+        euler: [x, y, z] angles in radians
+        euler_seq: Euler sequence ('XYZ', 'xyz', 'ZYX', 'zyx', etc.)
+
+    Returns:
+        quaternion: [w, x, y, z] in MuJoCo format
+    """
+    try:
+        tmp = np.array([1.0, 0.0, 0.0, 0.0])
+
+        for i in range(3):
+            # Construct quaternion rotation
+            half_angle = euler[i] / 2
+            rot = np.array([math.cos(half_angle), 0.0, 0.0, 0.0])
+            sa = math.sin(half_angle)
+
+            axis = seq[i].lower()
+            if axis == "x":
+                rot[1] = sa
+            elif axis == "y":
+                rot[2] = sa
+            elif axis == "z":
+                rot[3] = sa
+            else:
+                raise ValueError(
+                    f"seq[{i}] is '{seq[i]}', should be one of x, y, z, X, Y, Z"
+                )
+
+            # Accumulate rotation
+            if seq[i].islower():  # intrinsic: moving axes, post-multiply
+                tmp = multiply_quat(tmp, rot)
+            else:  # extrinsic: fixed axes, pre-multiply
+                tmp = multiply_quat(rot, tmp)
+
+        return tmp
+
+    except Exception as e:
+        print(f"Error converting Euler angles {euler} with sequence {seq}: {e}")
+        return None
+
+
+def convert_euler_to_quat(tree):
+    """
+    Convert all euler attributes to quat attributes in the XML tree.
+    """
+    # Get euler sequence from compiler
+    eulerseq = "xyz"
+    compiler = tree.find("./compiler")
+    if compiler is not None:
+        if "eulerseq" in compiler.attrib:
+            eulerseq = compiler.attrib["eulerseq"]
+
+    # Convert all euler attributes to quat attributes
+    for elem in tree.iter():
+        if "euler" in elem.attrib:
+            euler_str = elem.attrib["euler"]
+            euler = [float(x) for x in euler_str.strip().split()]
+
+            quat = mujoco_euler_to_quat(euler, eulerseq)
+            if quat is not None:
+                quat_str = (
+                    f"{quat[0]:.15g} {quat[1]:.15g} {quat[2]:.15g} {quat[3]:.15g}"
+                )
+                elem.attrib["quat"] = quat_str
+                del elem.attrib["euler"]
+
+    if compiler is not None:
+        del compiler.attrib["eulerseq"]
+
     return tree
 
 
