@@ -5,7 +5,7 @@ from isaaclab.utils import configclass
 import isaaclab.sim as sim_utils
 
 # Import the base configuration
-from .spider_env_cfg import SpiderLocomotionEnvCfg, SpiderSceneCfg
+from .spider_env_cfg import SpiderLocomotionEnvCfg, SpiderSceneCfg, CurriculumCfg
 
 
 @configclass
@@ -29,13 +29,13 @@ class SpiderFlatSceneCfg(SpiderSceneCfg):
 
 @configclass
 class SpiderLocomotionFlatEnvCfg(SpiderLocomotionEnvCfg):
-    """Configuration for spider locomotion on flat terrain."""
+    """Configuration for spider locomotion on flat terrain"""
 
     # Override scene with flat terrain
     scene: SpiderFlatSceneCfg = SpiderFlatSceneCfg(num_envs=4096, env_spacing=2.5)
 
     # Disable curriculum for flat terrain
-    curriculum = None
+    curriculum = CurriculumCfg()
 
     def __post_init__(self):
         """Post initialization."""

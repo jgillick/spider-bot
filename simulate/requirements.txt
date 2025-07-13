@@ -1,8 +1,9 @@
 gymnasium
 mujoco>=2.3.0
+mujoco[usd]>=2.3.0
 stable-baselines3
 tensorboard
 tensorflow
 numpy
 moviepy>=2.0.0
-opencv-python
+

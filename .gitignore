@@ -211,3 +211,4 @@ __marimo__/
 simulate/robot/export/
 simulate/out*
 simulate/training/out/
+simulate/issac/cloud.cfg

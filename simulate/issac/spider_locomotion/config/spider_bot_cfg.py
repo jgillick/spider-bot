@@ -6,32 +6,37 @@ from isaaclab.assets.articulation import ArticulationCfg
 from isaaclab.utils import configclass
 import isaaclab.sim as sim_utils
 
-# Get the path to the SpiderBot XML file
+# Get the path to the SpiderBot USD file
+# Try multiple possible locations for different installation methods
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
-SPIDER_BOT_XML_PATH = os.path.abspath(
-    os.path.join(
-        "../../..",
-        THIS_DIR,
-        "robot",
-        "SpiderBotNoGround.xml",
-    )
-)
+
+# Try different possible paths for the USD file
+SPIDER_BOT_FILE = "SpiderBot.usd"
+ASSETS_DIR = os.path.abspath(os.path.join(THIS_DIR, "../assets"))
+SPIDER_BOT_USD_PATH = os.path.join(ASSETS_DIR, SPIDER_BOT_FILE)
 
 
 @configclass
 class SpiderBotCfg(ArticulationCfg):
-    """Configuration for the 8-legged spider robot."""
+    """Configuration for the 8-legged spider robot"""
 
-    spawn = sim_utils.MjcfFileCfg(
-        asset_path=SPIDER_BOT_XML_PATH,
-        fix_base=False,
-        # MuJoCo to Isaac Sim conversion settings
-        import_inertia_tensor=True,
-        import_sites=False,
+    if not os.path.exists(SPIDER_BOT_USD_PATH):
+        raise FileNotFoundError(f"{SPIDER_BOT_FILE} not found in {ASSETS_DIR}")
+
+    spawn = sim_utils.UsdFileCfg(
+        usd_path=SPIDER_BOT_USD_PATH,
+        activate_contact_sensors=True,
+        articulation_props=sim_utils.ArticulationRootPropertiesCfg(
+            enabled_self_collisions=True,
+            solver_position_iteration_count=4,
+            solver_velocity_iteration_count=0,
+            sleep_threshold=0.005,
+            stabilization_threshold=0.001,
+        ),
     )
 
     init_state = ArticulationCfg.InitialStateCfg(
-        pos=(0.0, 0.0, 0.15),  # Start 15cm above ground
+        pos=(0.0, 0.0, 0.14),  # Start 15cm above ground
         joint_pos={
             # Hip joints
             "Leg1_Hip": -1.0,
@@ -43,9 +48,9 @@ class SpiderBotCfg(ArticulationCfg):
             "Leg7_Hip": -1.0,
             "Leg8_Hip": -1.0,
             # Femur joints
-            ".*_Femur": 0.75,
+            ".*_Femur": 1.0,
             # Tibia joints
-            ".*_Tibia": 1.0,
+            ".*_Tibia": 1.25,
         },
         joint_vel={".*": 0.0},
     )
@@ -53,18 +58,10 @@ class SpiderBotCfg(ArticulationCfg):
     actuators = {
         "legs": ImplicitActuatorCfg(
             joint_names_expr=[".*"],
-            effort_limit=8.0,  # Based on the original max_torque
+            effort_limit=8.0,
             velocity_limit=10.0,
-            stiffness={
-                ".*_Hip": 15.0,  # Based on original position_gain
-                ".*_Femur": 15.0,
-                ".*_Tibia": 15.0,
-            },
-            damping={
-                ".*_Hip": 0.8,  # Based on original velocity_gain
-                ".*_Femur": 0.8,
-                ".*_Tibia": 0.8,
-            },
+            stiffness={".*": 15.0},
+            damping={".*": 0.2},
         ),
     }
 
