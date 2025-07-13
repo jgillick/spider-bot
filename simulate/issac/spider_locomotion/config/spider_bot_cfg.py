@@ -30,8 +30,15 @@ class SpiderBotCfg(ArticulationCfg):
             enabled_self_collisions=True,
             solver_position_iteration_count=4,
             solver_velocity_iteration_count=0,
-            sleep_threshold=0.005,
-            stabilization_threshold=0.001,
+        ),
+        rigid_props=sim_utils.RigidBodyPropertiesCfg(
+            disable_gravity=False,
+            retain_accelerations=False,
+            linear_damping=0.0,
+            angular_damping=0.0,
+            max_linear_velocity=1000.0,
+            max_angular_velocity=1000.0,
+            max_depenetration_velocity=1.0,
         ),
     )
 
@@ -64,6 +71,7 @@ class SpiderBotCfg(ArticulationCfg):
             damping={".*": 0.2},
         ),
     }
+    soft_joint_pos_limit_factor = 0.95
 
     # Define collision properties for better simulation
     collision_props = sim_utils.CollisionPropertiesCfg(
