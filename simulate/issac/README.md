@@ -63,7 +63,7 @@ From the Isaac Lab root directory:
 ./isaaclab.sh -p scripts/reinforcement_learning/rsl_rl/train.py \
     --task Isaac-SpiderLocomotion-v0 \
     --num_envs 4096 \
-    --headless
+    --headless --video --video_length 500 --video_interval 1000
 
 # Train with RL_GAMES (PPO)
 ./isaaclab.sh -p scripts/reinforcement_learning/rl_games/train.py \
