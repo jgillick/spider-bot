@@ -6,7 +6,7 @@ EXPORT_DIR="./export/SpiderBody"
 echo "Processing XML..."
 
 # Create two versions of the XML: one with the ground plane and one without
-python update_xml.py SpiderBotNoGround.xml
+python update_xml.py SpiderBotNoEnv.xml
 python update_xml.py --ground --light SpiderBot.xml
 
 ###
