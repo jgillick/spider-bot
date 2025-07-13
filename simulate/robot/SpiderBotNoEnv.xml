@@ -1,5 +1,11 @@
-<mujoco model="SpiderBot">
+<mujoco model="SpiderBody">
   <compiler angle="radian" />
+  <default>
+    <geom contype="1" conaffinity="1" />
+  </default>
+  <visual>
+    <global offwidth="1200" offheight="800" />
+  </visual>
   <asset>
     <mesh name="Body" file="meshes/Body.stl" scale="0.001 0.001 0.001" />
     <mesh name="Leg1_Femur-actuator-assembly_Motor" file="meshes/Leg1_Femur-actuator-assembly_Motor.stl" scale="0.001 0.001 0.001" />
@@ -13,6 +19,7 @@
     <mesh name="Leg1_Hip-actuator-assembly_Body-Bracket" file="meshes/Leg1_Hip-actuator-assembly_Body-Bracket.stl" scale="0.001 0.001 0.001" />
     <mesh name="Leg1_Tibia_Leg" file="meshes/Leg1_Tibia_Leg.stl" scale="0.001 0.001 0.001" />
     <mesh name="Leg1_Tibia_Foot" file="meshes/Leg1_Tibia_Foot.stl" scale="0.001 0.001 0.001" />
+    <mesh name="Leg1_Tibia_BadTouch" file="meshes/Leg1_Tibia_BadTouch.stl" scale="0.001 0.001 0.001" />
     <mesh name="Leg2_Femur-actuator-assembly_Motor" file="meshes/Leg2_Femur-actuator-assembly_Motor.stl" scale="0.001 0.001 0.001" />
     <mesh name="Leg2_Femur-actuator-assembly_Femur" file="meshes/Leg2_Femur-actuator-assembly_Femur.stl" scale="0.001 0.001 0.001" />
     <mesh name="Leg2_Knee-actuator-assembly_Motor" file="meshes/Leg2_Knee-actuator-assembly_Motor.stl" scale="0.001 0.001 0.001" />
@@ -24,6 +31,7 @@
     <mesh name="Leg2_Hip-actuator-assembly_Body-Bracket" file="meshes/Leg2_Hip-actuator-assembly_Body-Bracket.stl" scale="0.001 0.001 0.001" />
     <mesh name="Leg2_Tibia_Leg" file="meshes/Leg2_Tibia_Leg.stl" scale="0.001 0.001 0.001" />
     <mesh name="Leg2_Tibia_Foot" file="meshes/Leg2_Tibia_Foot.stl" scale="0.001 0.001 0.001" />
+    <mesh name="Leg2_Tibia_BadTouch" file="meshes/Leg2_Tibia_BadTouch.stl" scale="0.001 0.001 0.001" />
     <mesh name="Leg3_Femur-actuator-assembly_Motor" file="meshes/Leg3_Femur-actuator-assembly_Motor.stl" scale="0.001 0.001 0.001" />
     <mesh name="Leg3_Femur-actuator-assembly_Femur" file="meshes/Leg3_Femur-actuator-assembly_Femur.stl" scale="0.001 0.001 0.001" />
     <mesh name="Leg3_Knee-actuator-assembly_Motor" file="meshes/Leg3_Knee-actuator-assembly_Motor.stl" scale="0.001 0.001 0.001" />
@@ -35,6 +43,7 @@
     <mesh name="Leg3_Hip-actuator-assembly_Body-Bracket" file="meshes/Leg3_Hip-actuator-assembly_Body-Bracket.stl" scale="0.001 0.001 0.001" />
     <mesh name="Leg3_Tibia_Leg" file="meshes/Leg3_Tibia_Leg.stl" scale="0.001 0.001 0.001" />
     <mesh name="Leg3_Tibia_Foot" file="meshes/Leg3_Tibia_Foot.stl" scale="0.001 0.001 0.001" />
+    <mesh name="Leg3_Tibia_BadTouch" file="meshes/Leg3_Tibia_BadTouch.stl" scale="0.001 0.001 0.001" />
     <mesh name="Leg4_Femur-actuator-assembly_Motor" file="meshes/Leg4_Femur-actuator-assembly_Motor.stl" scale="0.001 0.001 0.001" />
     <mesh name="Leg4_Femur-actuator-assembly_Femur" file="meshes/Leg4_Femur-actuator-assembly_Femur.stl" scale="0.001 0.001 0.001" />
     <mesh name="Leg4_Knee-actuator-assembly_Motor" file="meshes/Leg4_Knee-actuator-assembly_Motor.stl" scale="0.001 0.001 0.001" />
@@ -46,6 +55,7 @@
     <mesh name="Leg4_Hip-actuator-assembly_Body-Bracket" file="meshes/Leg4_Hip-actuator-assembly_Body-Bracket.stl" scale="0.001 0.001 0.001" />
     <mesh name="Leg4_Tibia_Leg" file="meshes/Leg4_Tibia_Leg.stl" scale="0.001 0.001 0.001" />
     <mesh name="Leg4_Tibia_Foot" file="meshes/Leg4_Tibia_Foot.stl" scale="0.001 0.001 0.001" />
+    <mesh name="Leg4_Tibia_BadTouch" file="meshes/Leg4_Tibia_BadTouch.stl" scale="0.001 0.001 0.001" />
     <mesh name="Leg5_Femur-actuator-assembly_Motor" file="meshes/Leg5_Femur-actuator-assembly_Motor.stl" scale="0.001 0.001 0.001" />
     <mesh name="Leg5_Femur-actuator-assembly_Femur" file="meshes/Leg5_Femur-actuator-assembly_Femur.stl" scale="0.001 0.001 0.001" />
     <mesh name="Leg5_Knee-actuator-assembly_Motor" file="meshes/Leg5_Knee-actuator-assembly_Motor.stl" scale="0.001 0.001 0.001" />
@@ -57,6 +67,7 @@
     <mesh name="Leg5_Hip-actuator-assembly_Body-Bracket" file="meshes/Leg5_Hip-actuator-assembly_Body-Bracket.stl" scale="0.001 0.001 0.001" />
     <mesh name="Leg5_Tibia_Leg" file="meshes/Leg5_Tibia_Leg.stl" scale="0.001 0.001 0.001" />
     <mesh name="Leg5_Tibia_Foot" file="meshes/Leg5_Tibia_Foot.stl" scale="0.001 0.001 0.001" />
+    <mesh name="Leg5_Tibia_BadTouch" file="meshes/Leg5_Tibia_BadTouch.stl" scale="0.001 0.001 0.001" />
     <mesh name="Leg6_Femur-actuator-assembly_Motor" file="meshes/Leg6_Femur-actuator-assembly_Motor.stl" scale="0.001 0.001 0.001" />
     <mesh name="Leg6_Femur-actuator-assembly_Femur" file="meshes/Leg6_Femur-actuator-assembly_Femur.stl" scale="0.001 0.001 0.001" />
     <mesh name="Leg6_Knee-actuator-assembly_Motor" file="meshes/Leg6_Knee-actuator-assembly_Motor.stl" scale="0.001 0.001 0.001" />
@@ -68,6 +79,7 @@
     <mesh name="Leg6_Hip-actuator-assembly_Body-Bracket" file="meshes/Leg6_Hip-actuator-assembly_Body-Bracket.stl" scale="0.001 0.001 0.001" />
     <mesh name="Leg6_Tibia_Leg" file="meshes/Leg6_Tibia_Leg.stl" scale="0.001 0.001 0.001" />
     <mesh name="Leg6_Tibia_Foot" file="meshes/Leg6_Tibia_Foot.stl" scale="0.001 0.001 0.001" />
+    <mesh name="Leg6_Tibia_BadTouch" file="meshes/Leg6_Tibia_BadTouch.stl" scale="0.001 0.001 0.001" />
     <mesh name="Leg7_Femur-actuator-assembly_Motor" file="meshes/Leg7_Femur-actuator-assembly_Motor.stl" scale="0.001 0.001 0.001" />
     <mesh name="Leg7_Femur-actuator-assembly_Femur" file="meshes/Leg7_Femur-actuator-assembly_Femur.stl" scale="0.001 0.001 0.001" />
     <mesh name="Leg7_Knee-actuator-assembly_Motor" file="meshes/Leg7_Knee-actuator-assembly_Motor.stl" scale="0.001 0.001 0.001" />
@@ -79,6 +91,7 @@
     <mesh name="Leg7_Hip-actuator-assembly_Body-Bracket" file="meshes/Leg7_Hip-actuator-assembly_Body-Bracket.stl" scale="0.001 0.001 0.001" />
     <mesh name="Leg7_Tibia_Leg" file="meshes/Leg7_Tibia_Leg.stl" scale="0.001 0.001 0.001" />
     <mesh name="Leg7_Tibia_Foot" file="meshes/Leg7_Tibia_Foot.stl" scale="0.001 0.001 0.001" />
+    <mesh name="Leg7_Tibia_BadTouch" file="meshes/Leg7_Tibia_BadTouch.stl" scale="0.001 0.001 0.001" />
     <mesh name="Leg8_Femur-actuator-assembly_Motor" file="meshes/Leg8_Femur-actuator-assembly_Motor.stl" scale="0.001 0.001 0.001" />
     <mesh name="Leg8_Femur-actuator-assembly_Femur" file="meshes/Leg8_Femur-actuator-assembly_Femur.stl" scale="0.001 0.001 0.001" />
     <mesh name="Leg8_Knee-actuator-assembly_Motor" file="meshes/Leg8_Knee-actuator-assembly_Motor.stl" scale="0.001 0.001 0.001" />
@@ -90,10 +103,15 @@
     <mesh name="Leg8_Hip-actuator-assembly_Body-Bracket" file="meshes/Leg8_Hip-actuator-assembly_Body-Bracket.stl" scale="0.001 0.001 0.001" />
     <mesh name="Leg8_Tibia_Leg" file="meshes/Leg8_Tibia_Leg.stl" scale="0.001 0.001 0.001" />
     <mesh name="Leg8_Tibia_Foot" file="meshes/Leg8_Tibia_Foot.stl" scale="0.001 0.001 0.001" />
+    <mesh name="Leg8_Tibia_BadTouch" file="meshes/Leg8_Tibia_BadTouch.stl" scale="0.001 0.001 0.001" />
   </asset>
   <worldbody>
     <body name="Body" pos="0.0 0.0 0.134" quat="1 0 0 0">
       <joint name="root" type="free" pos="0 0 0" armature="0" damping="0" limited="false" margin="0.01" />
+      <camera name="track" mode="targetbodycom" target="Body" pos="-0.817 -1.628 0.6" />
+      <camera name="groundcam" mode="targetbodycom" target="Body" pos="-1.0 0 0.1" />
+      <site name="imu_site" pos="0.24115 0 0" size="0.01" />
+      <geom name="head" pos="0.49 0 0.015" size="0.025" type="sphere" rgba="0 1 0 1" />
       <geom name="Body_geom" type="mesh" mesh="Body" pos="0 0 0" quat="1 0 0 0" />
       <inertial mass="2.567558330651746" pos="0.2412000000000002 1.7296168291426336e-18 0.004854024896265552" fullinertia="0.01262901309898984 0.05067644480183947 0.06301756012942178 1.0711431741583518e-18 2.168404344971009e-18 -1.1167056214726778e-19" />
       <body name="Leg1_Hip-actuator-assembly_Body-Bracket" pos="0.5300789975772281 0.10561612341601537 -0.02862177809359275" quat="0.5 -0.5 0.5 -0.5">
@@ -120,6 +138,10 @@
                   <body name="Leg1_Tibia_Foot" pos="-2.4424906541753446e-16 3.375077994860476e-16 -3.552713678800501e-16" quat="1 9.43689570931381e-16 3.03296564102136e-18 1.13191818699025e-17">
                     <geom name="Leg1_Tibia_Foot_geom" type="mesh" mesh="Leg1_Tibia_Foot" pos="0 0 0" friction="2.0 0.1 0.01" quat="1 0 0 0" />
                     <inertial mass="0.0012152855294447645" pos="0.039999999976092826 -0.12412720243026892 0.19935044367137136" fullinertia="2.5730108277398295e-08 3.3648072825831125e-08 2.1248888158524216e-08 2.4341524208471027e-17 -1.2762748935009605e-16 8.882480970032703e-09" />
+                  </body>
+                  <body name="Leg1_Tibia_BadTouch" pos="-3.406004253778905e-05 -0.008928296405293032 0.15038254739440368" quat="0.991444861373811 -0.130526192220051 8.61968382424067e-17 4.33792815898972e-17">
+                    <geom name="Leg1_Tibia_BadTouch_geom" type="mesh" mesh="Leg1_Tibia_BadTouch" pos="0 0 0" quat="1 0 0 0" />
+                    <inertial mass="0.0028499001119515355" pos="0.04003406004254034 -0.012492203855881184 0.020840629317530238" fullinertia="1.4563954103201548e-05 6.698251338865933e-07 1.38960289027233e-05 2.084373965268118e-20 1.436087499100018e-21 1.8604646440309128e-06" />
                   </body>
                 </body>
                 <body name="Leg1_Knee-actuator-assembly_Motor" pos="0.0765000000000043 -1.4210854715202004e-16 -7.105427357601002e-17" quat="7.29823492430828e-16 4.49605604609595e-17 -0.0410037387439453 0.999158993058171">
@@ -168,6 +190,10 @@
                     <geom name="Leg2_Tibia_Foot_geom" type="mesh" mesh="Leg2_Tibia_Foot" pos="0 0 0" friction="2.0 0.1 0.01" quat="1 0 0 0" />
                     <inertial mass="0.0012152855294447645" pos="0.039999999976092805 -0.12412720243026888 0.19935044367137128" fullinertia="2.5730108277461012e-08 3.36480728259222e-08 2.124888815854998e-08 2.4335305701079896e-17 -1.2764107851875974e-16 8.882480969989329e-09" />
                   </body>
+                  <body name="Leg2_Tibia_BadTouch" pos="-3.4060042538479604e-05 -0.008928296405292998 0.15038254739440318" quat="0.99144486137381 -0.130526192220051 -6.22819048331426e-17 -7.24565919596746e-18">
+                    <geom name="Leg2_Tibia_BadTouch_geom" type="mesh" mesh="Leg2_Tibia_BadTouch" pos="0 0 0" quat="1 0 0 0" />
+                    <inertial mass="0.0028499001119515355" pos="0.04003406004254034 -0.012492203855881187 0.02084062931753034" fullinertia="1.4563954103201289e-05 6.698251338859403e-07 1.3896028902723331e-05 2.031700877825158e-20 3.218725199566338e-20 1.8604646440309176e-06" />
+                  </body>
                 </body>
                 <body name="Leg2_Knee-actuator-assembly_Motor" pos="0.07650000000000351 -3.552713678800501e-16 2.486899575160351e-16" quat="7.31961801167677e-16 9.7065818903347e-17 -0.0410037387439449 0.999158993058171">
                   <geom name="Leg2_Knee-actuator-assembly_Motor_geom" type="mesh" mesh="Leg2_Knee-actuator-assembly_Motor" pos="0 0 0" quat="1 0 0 0" />
@@ -214,6 +240,10 @@
                   <body name="Leg3_Tibia_Foot" pos="1.4921397450962103e-15 2.248201624865942e-17 -1.4210854715202005e-15" quat="1 1.47104550762833e-15 2.61844704926278e-17 9.07828803438673e-17">
                     <geom name="Leg3_Tibia_Foot_geom" type="mesh" mesh="Leg3_Tibia_Foot" pos="0 0 0" friction="2.0 0.1 0.01" quat="1 0 0 0" />
                     <inertial mass="0.0012152855294447645" pos="0.03999999997609283 -0.12412720243026878 0.1993504436713712" fullinertia="2.5730108277487703e-08 3.3648072825858124e-08 2.1248888158553465e-08 2.4327694172044937e-17 -1.2761891488138519e-16 8.882480969992178e-09" />
+                  </body>
+                  <body name="Leg3_Tibia_BadTouch" pos="-3.406004253612594e-05 -0.008928296405293348 0.1503825473944029" quat="0.991444861373811 -0.13052619222005 -7.34972944608031e-17 8.54449410711051e-17">
+                    <geom name="Leg3_Tibia_BadTouch_geom" type="mesh" mesh="Leg3_Tibia_BadTouch" pos="0 0 0" quat="1 0 0 0" />
+                    <inertial mass="0.0028499001119515355" pos="0.040034060042540356 -0.012492203855881193 0.020840629317530328" fullinertia="1.4563954103201316e-05 6.698251338861897e-07 1.3896028902723289e-05 2.0326663662615026e-20 3.388131789017135e-21 1.860464644030924e-06" />
                   </body>
                 </body>
                 <body name="Leg3_Knee-actuator-assembly_Motor" pos="0.07650000000000359 -1.6209256159527285e-16 8.881784197001253e-18" quat="7.28073066735878e-16 2.30704572390425e-18 -0.041003738743945 0.999158993058171">
@@ -262,6 +292,10 @@
                     <geom name="Leg4_Tibia_Foot_geom" type="mesh" mesh="Leg4_Tibia_Foot" pos="0 0 0" friction="2.0 0.1 0.01" quat="1 0 0 0" />
                     <inertial mass="0.0012152855294447645" pos="0.03999999997609282 -0.12412720243026891 0.19935044367137122" fullinertia="2.5730108277438952e-08 3.3648072825883614e-08 2.124888815853438e-08 2.4340110389600834e-17 -1.2762622909736063e-16 8.882480969993093e-09" />
                   </body>
+                  <body name="Leg4_Tibia_BadTouch" pos="-3.4060042535983825e-05 -0.008928296405293258 0.15038254739440343" quat="0.991444861373811 -0.13052619222005 -1.86162404150118e-16 -3.85047562220835e-17">
+                    <geom name="Leg4_Tibia_BadTouch_geom" type="mesh" mesh="Leg4_Tibia_BadTouch" pos="0 0 0" quat="1 0 0 0" />
+                    <inertial mass="0.0028499001119515355" pos="0.04003406004254034 -0.012492203855881196 0.020840629317530338" fullinertia="1.4563954103201328e-05 6.698251338861836e-07 1.389602890272333e-05 2.0239286969303822e-20 1.2517470186156026e-21 1.8604646440309255e-06" />
+                  </body>
                 </body>
                 <body name="Leg4_Knee-actuator-assembly_Motor" pos="0.07650000000000363 -2.6645352591003756e-16 1.4654943925052067e-16" quat="7.28071862333619e-16 2.2776974404079e-18 -0.0410037387439449 0.999158993058171">
                   <geom name="Leg4_Knee-actuator-assembly_Motor_geom" type="mesh" mesh="Leg4_Knee-actuator-assembly_Motor" pos="0 0 0" quat="1 0 0 0" />
@@ -308,6 +342,10 @@
                   <body name="Leg5_Tibia_Foot" pos="-1.8829382497642656e-15 3.1974423109204507e-16 -6.394884621840901e-16" quat="1 1.41553435639707e-15 3.08095575921208e-20 1.14982834292646e-19">
                     <geom name="Leg5_Tibia_Foot_geom" type="mesh" mesh="Leg5_Tibia_Foot" pos="0 0 0" friction="2.0 0.1 0.01" quat="1 0 0 0" />
                     <inertial mass="0.0012152855294447645" pos="0.03999999997609278 -0.12412720243026887 0.19935044367137122" fullinertia="2.5730108277615162e-08 3.364807282592641e-08 2.1248888158550877e-08 2.433451046892993e-17 -1.2765367869841416e-16 8.882480969997239e-09" />
+                  </body>
+                  <body name="Leg5_Tibia_BadTouch" pos="-3.406004253927009e-05 -0.008928296405293246 0.15038254739440376" quat="0.991444861373811 -0.13052619222005 -1.5513219403143e-16 -2.16040150534418e-18">
+                    <geom name="Leg5_Tibia_BadTouch_geom" type="mesh" mesh="Leg5_Tibia_BadTouch" pos="0 0 0" quat="1 0 0 0" />
+                    <inertial mass="0.0028499001119515355" pos="0.040034060042540405 -0.012492203855881196 0.020840629317530286" fullinertia="1.4563954103201358e-05 6.698251338861635e-07 1.389602890272335e-05 1.7896582864733477e-20 -1.9896656118225047e-20 1.8604646440309198e-06" />
                   </body>
                 </body>
                 <body name="Leg5_Knee-actuator-assembly_Motor" pos="0.07650000000000419 -7.105427357601002e-17 -7.105427357601002e-17" quat="7.3093927096849e-16 7.21493045686181e-17 -0.0410037387439452 0.999158993058171">
@@ -356,6 +394,10 @@
                     <geom name="Leg6_Tibia_Foot_geom" type="mesh" mesh="Leg6_Tibia_Foot" pos="0 0 0" friction="2.0 0.1 0.01" quat="1 0 0 0" />
                     <inertial mass="0.0012152855294447645" pos="0.0399999999760928 -0.12412720243026884 0.19935044367137128" fullinertia="2.5730108277486155e-08 3.3648072825831303e-08 2.124888815854801e-08 2.434619656727104e-17 -1.276349387345804e-16 8.882480970036138e-09" />
                   </body>
+                  <body name="Leg6_Tibia_BadTouch" pos="-3.406004253981187e-05 -0.008928296405293334 0.15038254739440313" quat="0.991444861373811 -0.130526192220049 -6.44402204658437e-17 1.81758370936162e-16">
+                    <geom name="Leg6_Tibia_BadTouch_geom" type="mesh" mesh="Leg6_Tibia_BadTouch" pos="0 0 0" quat="1 0 0 0" />
+                    <inertial mass="0.0028499001119515355" pos="0.04003406004254039 -0.012492203855881186 0.020840629317530272" fullinertia="1.4563954103201521e-05 6.698251338862797e-07 1.389602890272329e-05 2.1870284153928834e-20 3.896351557369769e-20 1.8604646440309411e-06" />
+                  </body>
                 </body>
                 <body name="Leg6_Knee-actuator-assembly_Motor" pos="0.07650000000000291 0.0 -1.4210854715202004e-16" quat="7.30109599700188e-16 5.19322820628652e-17 -0.0410037387439454 0.999158993058171">
                   <geom name="Leg6_Knee-actuator-assembly_Motor_geom" type="mesh" mesh="Leg6_Knee-actuator-assembly_Motor" pos="0 0 0" quat="1 0 0 0" />
@@ -403,6 +445,10 @@
                     <geom name="Leg7_Tibia_Foot_geom" type="mesh" mesh="Leg7_Tibia_Foot" pos="0 0 0" friction="2.0 0.1 0.01" quat="1 0 0 0" />
                     <inertial mass="0.0012152855294447645" pos="0.0399999999760928 -0.12412720243026899 0.19935044367137134" fullinertia="2.5730108277513792e-08 3.364807282588829e-08 2.124888815855487e-08 2.4336901437868687e-17 -1.2764522926892716e-16 8.882480969980807e-09" />
                   </body>
+                  <body name="Leg7_Tibia_BadTouch" pos="-3.406004253692529e-05 -0.008928296405293317 0.15038254739440382" quat="0.991444861373811 -0.13052619222005 1.0554395427687e-16 -6.11835193591808e-17">
+                    <geom name="Leg7_Tibia_BadTouch_geom" type="mesh" mesh="Leg7_Tibia_BadTouch" pos="0 0 0" quat="1 0 0 0" />
+                    <inertial mass="0.0028499001119515355" pos="0.0400340600425404 -0.0124922038558812 0.020840629317530345" fullinertia="1.4563954103201367e-05 6.69825133886165e-07 1.3896028902723302e-05 1.5391567703207333e-20 -1.694065894508656e-21 1.8604646440309206e-06" />
+                  </body>
                 </body>
                 <body name="Leg7_Knee-actuator-assembly_Motor" pos="0.07650000000000373 -6.196432256189155e-17 4.884981308350689e-17" quat="7.31578238306224e-16 8.77193472360277e-17 -0.041003738743945 0.999158993058171">
                   <geom name="Leg7_Knee-actuator-assembly_Motor_geom" type="mesh" mesh="Leg7_Knee-actuator-assembly_Motor" pos="0 0 0" quat="1 0 0 0" />
@@ -449,6 +495,10 @@
                   <body name="Leg8_Tibia_Foot" pos="1.1635137298071641e-15 3.419486915845482e-16 -8.260059303211165e-16" quat="1 1.19348975147204e-15 -4.46802762171096e-18 -1.66749060938465e-17">
                     <geom name="Leg8_Tibia_Foot_geom" type="mesh" mesh="Leg8_Tibia_Foot" pos="0 0 0" friction="2.0 0.1 0.01" quat="1 0 0 0" />
                     <inertial mass="0.0012152855294447645" pos="0.03999999997609278 -0.12412720243026884 0.19935044367137114" fullinertia="2.5730108277567728e-08 3.364807282589037e-08 2.1248888158563176e-08 2.4333411122345938e-17 -1.2765777346064498e-16 8.88248096999945e-09" />
+                  </body>
+                  <body name="Leg8_Tibia_BadTouch" pos="-3.406004253645234e-05 -0.008928296405293117 0.15038254739440396" quat="0.991444861373811 -0.13052619222005 -3.47777411771044e-17 8.28660101776672e-18">
+                    <geom name="Leg8_Tibia_BadTouch_geom" type="mesh" mesh="Leg8_Tibia_BadTouch" pos="0 0 0" quat="1 0 0 0" />
+                    <inertial mass="0.0028499001119515355" pos="0.04003406004254038 -0.012492203855881182 0.020840629317530356" fullinertia="1.4563954103201365e-05 6.698251338861607e-07 1.389602890272334e-05 2.430432228060999e-20 -1.5066050800442816e-20 1.8604646440309179e-06" />
                   </body>
                 </body>
                 <body name="Leg8_Knee-actuator-assembly_Motor" pos="0.0765000000000037 -1.0658141036401502e-16 0.0" quat="7.28730331460258e-16 1.83229501340949e-17 -0.041003738743945 0.999158993058171">
@@ -500,4 +550,8 @@
     <motor name="Leg8_Femur_Actuator" joint="Leg8_Femur" ctrlrange="-10 10" gear="1" />
     <motor name="Leg8_Tibia_Actuator" joint="Leg8_Tibia" ctrlrange="-10 10" gear="1" />
   </actuator>
+  <sensor>
+    <gyro name="gyro_sensor" site="imu_site" />
+    <accelerometer name="accelerometer_sensor" site="imu_site" />
+  </sensor>
 </mujoco>
