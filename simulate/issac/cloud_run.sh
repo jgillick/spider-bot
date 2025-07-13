@@ -18,8 +18,11 @@ ROBOT_DIR="../robot"
 MUJOCO_FILE="SpiderBotNoEnv.xml"
 USD_FILE="SpiderBot.usd"
 LOCAL_USD_DIR="./spider_locomotion/assets"
+LOCAL_VIDEOS_DIR="./videos"
 
+##
 # Wrapper for rsync that only outputs the files that were synced, if any
+#
 sync_with_cloud() {
     local source="$1"
     local destination="$2"
@@ -33,6 +36,41 @@ sync_with_cloud() {
       echo "$files_synced"
     fi
 }
+
+##
+# Start the training script
+#
+start_training() {
+  $SSH "${ISAACLAB_SH} \
+      -p ${CLOUD_ISAACLAB_ROOT}/scripts/reinforcement_learning/rsl_rl/train.py \
+      --task ${SPIDER_TASK} \
+      --num_envs 4096 \
+      --headless \
+      --enable_cameras \
+      --video --video_length 500 --video_interval 1000"
+}
+
+##
+# Start tensorboard
+#
+start_tensorboard() {
+  sleep 60
+  $SSH ${ISAACLAB_SH} -p -m tensorboard.main --logdir=logs
+}
+
+##
+# Regularly download new training videos
+#
+download_new_videos() {
+  mkdir -p ./videos
+
+  while true; do
+    sleep 60
+    sync_with_cloud ${CONNECT}:${CLOUD_ISAACLAB_ROOT}/logs/**/videos ${LOCAL_VIDEOS_DIR}
+  done
+}
+
+mkdir -p ${LOCAL_VIDEOS_DIR}
 
 # Patch the headless kit
 sync_with_cloud "./patch_headless_kit.sh" ${CONNECT}:~/patch_headless_kit.sh
@@ -101,12 +139,11 @@ sync_with_cloud "./spider_locomotion/" "${CONNECT}:${TASK_DIR}"
 echo ""
 echo "########################################################"
 echo "# Running the training script"
+echo "#   - Videos will be saved to ${LOCAL_VIDEOS_DIR}"
 echo "########################################################"
 
+# Start the video downloader
+download_new_videos &
+
 # Run the training script
-$SSH "${ISAACLAB_SH} \
-    -p ${CLOUD_ISAACLAB_ROOT}/scripts/reinforcement_learning/rsl_rl/train.py \
-    --task ${SPIDER_TASK} \
-    --num_envs 4096 \
-    --headless \
-    --video --video_length 500 --video_interval 1000"
+start_training
