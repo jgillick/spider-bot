@@ -20,6 +20,9 @@ USD_FILE="SpiderBot.usd"
 LOCAL_USD_DIR="./spider_locomotion/assets"
 LOCAL_VIDEOS_DIR="./videos"
 
+CLOUD_LOGS_DIR="${CLOUD_ISAACLAB_ROOT}/logs"
+CLOUD_VIDEOS_DIR="${CLOUD_LOGS_DIR}/**/videos"
+
 ##
 # Wrapper for rsync that only outputs the files that were synced, if any
 #
@@ -55,7 +58,12 @@ start_training() {
 #
 start_tensorboard() {
   sleep 60
-  $SSH ${ISAACLAB_SH} -p -m tensorboard.main --logdir=logs
+
+  # Create logs directory, if necessary
+  $SSH "mkdir -p ${CLOUD_LOGS_DIR}"
+
+  # Start tensorboard
+  $SSH ${ISAACLAB_SH} -p -m tensorboard.main --logdir=logs --bind_all
 }
 
 ##
@@ -66,7 +74,10 @@ download_new_videos() {
 
   while true; do
     sleep 60
-    sync_with_cloud ${CONNECT}:${CLOUD_ISAACLAB_ROOT}/logs/**/videos ${LOCAL_VIDEOS_DIR}
+    $SSH "ls ${CLOUD_VIDEOS_DIR}" > /dev/null 2>&1
+    if [ $? -eq 0 ]; then
+      sync_with_cloud ${CONNECT}:${CLOUD_VIDEOS_DIR} ${LOCAL_VIDEOS_DIR}
+    fi
   done
 }
 
@@ -84,11 +95,9 @@ mkdir -p ${LOCAL_USD_DIR}
 if [ ! -f "${local_usd_filepath}" ]; then
   generate_usd=1
 else
-  set +e
-  mujoco_newer=$(find "${ROBOT_DIR}/${MUJOCO_FILE}" -type f -newer "${local_usd_filepath}" -print -quit | grep -q .)
-  meshes_newer=$(find "${ROBOT_DIR}/meshes/" -type f -newer "${local_usd_filepath}" -print -quit | grep -q .)
-  set -e
-  if [[ $mujoco_newer -eq 1 || $meshes_newer -eq 1 ]]; then
+  mujoco_newer=$(find "${ROBOT_DIR}/${MUJOCO_FILE}" -type f -newer "${local_usd_filepath}" -print -quit)
+  meshes_newer=$(find "${ROBOT_DIR}/meshes/" -type f -newer "${local_usd_filepath}" -print -quit)
+  if [[ -n "$mujoco_newer" || -n "$meshes_newer" ]]; then
     generate_usd=1
   fi
 fi
@@ -140,7 +149,10 @@ echo ""
 echo "########################################################"
 echo "# Running the training script"
 echo "#   - Videos will be saved to ${LOCAL_VIDEOS_DIR}"
+echo "#   - Tensorboard: http://${CLOUD_IP}:6006"
 echo "########################################################"
+
+start_tensorboard &
 
 # Start the video downloader
 download_new_videos &

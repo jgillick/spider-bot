@@ -63,7 +63,7 @@ class SpiderSceneCfg(InteractiveSceneCfg):
 
     # Sensors
     # Add contact sensors to all body parts
-    contact_sensor = ContactSensorCfg(
+    contact_forces = ContactSensorCfg(
         prim_path="{ENV_REGEX_NS}/Robot/.*",
         history_length=3,
         debug_vis=False,
@@ -204,7 +204,7 @@ class RewardsCfg:
         func=mdp.undesired_contacts,
         weight=-1.0,
         params={
-            "sensor_cfg": SceneEntityCfg("contact_sensor"),
+            "sensor_cfg": SceneEntityCfg("contact_forces"),
             "body_names": [".*_BadTouch"],
         },
     )
@@ -239,7 +239,7 @@ class TerminationsCfg:
     base_contact = DoneTerm(
         func=mdp.illegal_contact,
         params={
-            "sensor_cfg": SceneEntityCfg("contact_sensor"),
+            "sensor_cfg": SceneEntityCfg("contact_forces"),
             "illegal_bodies": bottom_bodies,
         },
     )
