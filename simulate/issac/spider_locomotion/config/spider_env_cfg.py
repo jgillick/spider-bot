@@ -58,9 +58,8 @@ class SpiderSceneCfg(InteractiveSceneCfg):
     # Robots
     robot = SpiderBotCfg(
         prim_path="{ENV_REGEX_NS}/Robot",
-        init_state=SpiderBotCfg.InitialStateCfg(pos=(0.0, 0.0, 0.15)),
+        init_state=SpiderBotCfg.InitialStateCfg(pos=(0.0, 0.0, 0.14)),
     )
-    # robot = SpiderBotCfg.replace(prim_path="{ENV_REGEX_NS}/Robot")
 
     # Sensors
     # Add contact sensors to all body parts
@@ -231,19 +230,14 @@ class TerminationsCfg:
     # Episode timeout
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
 
-    # Terminate if the robot bottoms out
-    bottom_bodies = ["Body"]
-    for leg_num in range(1, 9):
-        bottom_bodies.append(f"Leg{leg_num}_Hip-actuator-assembly_Body-Bracket")
-        bottom_bodies.append(f"Leg{leg_num}_Hip-actuator-assembly_Motor")
-        bottom_bodies.append(f"Leg{leg_num}_Hip-actuator-assembly_Hip-Bracket")
-    base_contact = DoneTerm(
-        func=mdp.illegal_contact,
-        params={
-            "sensor_cfg": SceneEntityCfg("contact_forces"),
-            "illegal_bodies": bottom_bodies,
-        },
-    )
+    # Terminate if the robot bottoms out (temporarily disabled)
+    # base_contact = DoneTerm(
+    #     func=mdp.illegal_contact,
+    #     params={
+    #         "sensor_cfg": SceneEntityCfg("contact_forces"),
+    #         "illegal_bodies": ["Body"],  # Just check main body for now
+    #     },
+    # )
 
 
 @configclass
@@ -329,7 +323,7 @@ class SpiderLocomotionEnvCfg(ManagerBasedRLEnvCfg):
     """Configuration for the spider locomotion environment."""
 
     # Scene settings
-    scene: SpiderSceneCfg = SpiderSceneCfg(num_envs=4096, env_spacing=2.5)
+    scene: SpiderSceneCfg = SpiderSceneCfg(num_envs=1024, env_spacing=2.5)
     # Basic settings
     observations: ObservationsCfg = ObservationsCfg()
     actions: ActionsCfg = ActionsCfg()
@@ -350,14 +344,16 @@ class SpiderLocomotionEnvCfg(ManagerBasedRLEnvCfg):
         self.sim.dt = 0.005  # 200Hz physics
         self.sim.render_interval = self.decimation
         self.sim.physics_material = self.scene.terrain.physics_material
-        self.sim.physx.gpu_max_rigid_patch_count = 10 * 2**15
+        self.sim.physx.gpu_max_rigid_patch_count = (
+            20 * 2**15
+        )  # Increased from 10 * 2**15
 
         # Update controller parameters
         self.actions.joint_pos.scale = 1.0  # Full range mapping
 
         # Viewer settings
-        # self.viewer.eye = (7.5, 7.5, 5.0)
-        # self.viewer.lookat = (0.0, 0.0, 0.0)
+        self.viewer.eye = (7.5, 7.5, 5.0)
+        self.viewer.lookat = (0.0, 0.0, 0.0)
 
         # update sensor update periods
         # we tick all the sensors based on the smallest update period (physics update period)
