@@ -3,6 +3,6 @@ CLOUD_SSH_KEY_PATH=""
 CLOUD_SSH_USER="ubuntu"
 
 CLOUD_ISAACLAB_ROOT="/home/ubuntu/IsaacLab"
-CLOUD_PYENV_DIR=/home/ubuntu/env_isaaclab/
+CLOUD_PYENV="env_isaaclab"
 
 SPIDER_TASK="Isaac-SpiderLocomotion-v0"
