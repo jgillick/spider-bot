@@ -18,6 +18,7 @@ source cloud.cfg
 TASK_DIR="${CLOUD_ISAACLAB_ROOT}/source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/spider_locomotion"
 ASSETS_PATH="${TASK_DIR}/assets/"
 USD_PATH="${ASSETS_PATH}/SpiderBot.usd"
+CLOUD_HOME="/home/${CLOUD_SSH_USER}"
 
 CONNECT="${CLOUD_SSH_USER}@${CLOUD_IP}"
 SSH_PREFIX="ssh -i ${CLOUD_SSH_KEY_PATH} -o StrictHostKeyChecking=no"
@@ -59,14 +60,6 @@ sync_with_cloud() {
 # Start the training script
 #
 start_training() {
-  echo "${ISAACLAB_SH} \
-      -p ${CLOUD_ISAACLAB_ROOT}/scripts/reinforcement_learning/rsl_rl/train.py \
-      --task ${SPIDER_TASK} \
-      --num_envs 1024 \
-      --headless \
-      --enable_cameras \
-      --video --video_length 500 --video_interval 1000"
-
   $SSH "${ISAACLAB_SH} \
       -p ${CLOUD_ISAACLAB_ROOT}/scripts/reinforcement_learning/rsl_rl/train.py \
       --task ${SPIDER_TASK} \
@@ -136,12 +129,13 @@ if [[ $generate_usd -eq 1 ]]; then
   sync_with_cloud "./mjcf_2_usd.py" "${CONNECT}:${CLOUD_ISAACLAB_ROOT}/scripts/tools/mjcf_2_usd.py"
 
   # Send mujoco files to the cloud
-  $SSH "mkdir -p ~/mujoco"
-  sync_with_cloud "${ROBOT_DIR}/${MUJOCO_FILE}" "${CONNECT}:~/mujoco/${MUJOCO_FILE}"
-  sync_with_cloud "${ROBOT_DIR}/meshes/" ${CONNECT}:~/mujoco/meshes/
+  mujoco_dir="${CLOUD_HOME}/mujoco"
+  $SSH "mkdir -p ${mujoco_dir}"
+  sync_with_cloud "${ROBOT_DIR}/${MUJOCO_FILE}" "${CONNECT}:${mujoco_dir}/${MUJOCO_FILE}"
+  sync_with_cloud "${ROBOT_DIR}/meshes/" ${CONNECT}:${mujoco_dir}/meshes/
 
   # Run conversion script with IsaacLab
-  $SSH "${ISAACLAB_SH} -p ${CLOUD_ISAACLAB_ROOT}/scripts/tools/mjcf_2_usd.py \"~/mujoco/${MUJOCO_FILE}\" \"${ASSETS_PATH}/${USD_FILE}\""
+  $SSH "${ISAACLAB_SH} -p ${CLOUD_ISAACLAB_ROOT}/scripts/tools/mjcf_2_usd.py \"${mujoco_dir}/${MUJOCO_FILE}\" \"${ASSETS_PATH}/${USD_FILE}\""
 
   # Fetch USD file
   sync_with_cloud "${CONNECT}:${ASSETS_PATH}/${USD_FILE}" "${LOCAL_ASSETS_DIR}/${USD_FILE}"
