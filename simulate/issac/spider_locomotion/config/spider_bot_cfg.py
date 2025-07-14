@@ -16,7 +16,7 @@ ASSETS_DIR = os.path.abspath(os.path.join(THIS_DIR, "../assets"))
 SPIDER_BOT_USD_PATH = os.path.join(ASSETS_DIR, SPIDER_BOT_FILE)
 
 
-# SPIDER_BOT_CFG = ArticulationCfg(
+# SpiderBotCfg = ArticulationCfg(
 #     spawn=sim_utils.UsdFileCfg(
 #         usd_path=SPIDER_BOT_USD_PATH,
 #         activate_contact_sensors=True,
@@ -65,14 +65,14 @@ SPIDER_BOT_USD_PATH = os.path.join(ASSETS_DIR, SPIDER_BOT_FILE)
 #     },
 #     soft_joint_pos_limit_factor=0.95,
 #     # Define collision properties for better simulation
-#     collision_props=sim_utils.CollisionPropertiesCfg(
-#         contact_offset=0.01,
-#         rest_offset=0.0,
-#     ),
+#     # collision_props=sim_utils.CollisionPropertiesCfg(
+#     #     contact_offset=0.01,
+#     #     rest_offset=0.0,
+#     # ),
 # )
 
 
-@configclass
+# @configclass
 class SpiderBotCfg(ArticulationCfg):
     """Configuration for the 8-legged spider robot"""
 

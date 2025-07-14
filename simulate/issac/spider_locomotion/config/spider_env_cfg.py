@@ -60,6 +60,7 @@ class SpiderSceneCfg(InteractiveSceneCfg):
         prim_path="{ENV_REGEX_NS}/Robot",
         init_state=SpiderBotCfg.InitialStateCfg(pos=(0.0, 0.0, 0.15)),
     )
+    # robot = SpiderBotCfg.replace(prim_path="{ENV_REGEX_NS}/Robot")
 
     # Sensors
     # Add contact sensors to all body parts

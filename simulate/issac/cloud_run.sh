@@ -148,7 +148,7 @@ sync_with_cloud "./spider_locomotion/" "${CONNECT}:${TASK_DIR}"
 echo ""
 echo "########################################################"
 echo "# Running the training script"
-echo "#   - Videos will be saved to ${LOCAL_VIDEOS_DIR}"
+echo "#   - Videos will be synced to ${LOCAL_VIDEOS_DIR}"
 echo "#   - Tensorboard: http://${CLOUD_IP}:6006"
 echo "########################################################"
 
