@@ -31,10 +31,9 @@ MUJOCO_FILE="SpiderBotNoEnv.xml"
 URDF_FILE="SpiderBot.urdf"
 USD_FILE="SpiderBot.usd"
 LOCAL_ASSETS_DIR="./spider_locomotion/assets"
-LOCAL_VIDEOS_DIR="./videos"
+LOCAL_LOGS_DIR="./logs"
 
-CLOUD_LOGS_DIR="${CLOUD_ISAACLAB_ROOT}/logs"
-CLOUD_VIDEOS_DIR="${CLOUD_LOGS_DIR}/**/videos"
+CLOUD_LOGS_DIR="${CLOUD_HOME}/logs"
 
 #######################################################
 # Helper functions
@@ -69,33 +68,26 @@ start_tensorboard() {
 }
 
 ##
-# Sync the latest training videos
+# Sync the latest training logs
 #
-sync_videos() {
-  $SSH "ls ${CLOUD_VIDEOS_DIR}" > /dev/null 2>&1
-  if [ $? -eq 0 ]; then
-    sync_with_cloud ${CONNECT}:${CLOUD_VIDEOS_DIR} ${LOCAL_VIDEOS_DIR}
-  fi
+sync_logs() {
+  mkdir -p ${LOCAL_LOGS_DIR}
+  sync_with_cloud ${CONNECT}:${CLOUD_LOGS_DIR} ${LOCAL_LOGS_DIR}
 }
 
 ##
-# Regularly download new training videos
+# Regularly download new training logs
 #
-watch_for_videos() {
-  mkdir -p ./videos
-  sleep 60
-
+watch_for_logs() {
   while true; do
-    sync_videos
-    sleep 10
+    sync_logs
+    sleep 30
   done
 }
 
 #######################################################
 # Main program
 #######################################################
-
-mkdir -p ${LOCAL_VIDEOS_DIR}
 
 # Does the USD file need to be (re)generated
 generate_usd=0
@@ -161,17 +153,20 @@ echo "########################################################"
 
 start_tensorboard &
 
-# Start the video downloader
-watch_for_videos &
+# Start the logs downloader
+watch_for_logs &
 
 # Run the training script
-$SSH "${ISAACLAB_SH} \
+$SSH "${PYENV_ACTIVATE} && \
+      HYDRA_FULL_ERROR=1 \
+      ${CLOUD_ISAACLAB_ROOT}/isaaclab.sh \
       -p ${CLOUD_ISAACLAB_ROOT}/scripts/reinforcement_learning/rsl_rl/train.py \
       --task ${SPIDER_TASK} \
-      --num_envs 4096 \
+      --num_envs 1024 \
       --headless \
+      --verbose \
       --enable_cameras \
-      --video --video_length 500 --video_interval 10"
+      --video --video_length 2000 --video_interval 500"
 
-# Download any final videos
-sync_videos
+# Download any final logs & videos
+sync_logs

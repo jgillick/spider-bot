@@ -32,10 +32,11 @@ class SpiderLocomotionFlatEnvCfg(SpiderLocomotionEnvCfg):
     """Configuration for spider locomotion on flat terrain"""
 
     # Override scene with flat terrain
-    scene: SpiderFlatSceneCfg = SpiderFlatSceneCfg(num_envs=4096, env_spacing=2.5)
+    scene: SpiderFlatSceneCfg = SpiderFlatSceneCfg(num_envs=1024, env_spacing=2.5)
 
     # Disable curriculum for flat terrain
     curriculum = CurriculumCfg()
+    curriculum.terrain_levels = None
 
     def __post_init__(self):
         """Post initialization."""

@@ -59,9 +59,9 @@ class SpiderBotCfg(ArticulationCfg):
     actuators = {
         "legs": ImplicitActuatorCfg(
             joint_names_expr=[".*"],
-            effort_limit_sim=8.0,
-            velocity_limit_sim=10.0,
-            stiffness={".*": 15.0},
+            effort_limit_sim=8.0,  # 80% of max torque (10 Nm)
+            velocity_limit_sim=12.0,  # Slightly below nominal speed (12.57 rad/s)
+            stiffness={".*": 35.0},
             damping={".*": 0.2},
         ),
     }
