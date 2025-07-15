@@ -5,21 +5,14 @@ import numpy as np
 import argparse
 import xml.etree.ElementTree as ET
 
-SOURCE_PATH = "./export/SpiderBody/SpiderBody.xml"
-ACTUATOR_TORQUE_RANGE = "-10 10"
-
-HIP_RANGES = (
-    "-1.8 0",  # Leg1
-    "-1.8 0",  # Leg2
-    "0 1.8",  # Leg3
-    "0 1.8",  # Leg4
-    "0 1.8",  # Leg5
-    "0 1.8",  # Leg6
-    "-1.8 0",  # Leg7
-    "-1.8 0",  # Leg8
+from constants import (
+    ACTUATOR_TORQUE_RANGE,
+    HIP_RANGES,
+    FEMUR_RANGE,
+    TIBIA_RANGE,
 )
-FEMUR_RANGE = "0 1.0"
-TIBIA_RANGE = "0.4 2.7"
+
+SOURCE_PATH = "./export/mujoco/SpiderBody/SpiderBody.xml"
 
 
 def main(tree, output_path, ground=False, light=False):
@@ -46,28 +39,40 @@ def main(tree, output_path, ground=False, light=False):
 
 def simplify_names(tree):
     """
-    Remove unnecessary parts of element names in the XML tree.
+    Clean up element names and references
     """
-
-    # Remove "Spider-Leg-Assembly-vXYZ" from name attributes
     for elem in tree.iter():
-
-        # Remove "Spider-Leg-Assembly-vXYZ_" and "GIM6010-8-vXYZ"
-        # from name, mesh, and file attributes
-        for attr in ("name", "mesh", "file"):
+        for attr in ("name", "mesh", "file", "joint"):
             if attr in elem.attrib:
                 value = elem.attrib[attr]
+
+                # Remove "Spider-Leg-Assembly-vXYZ_" and "GIM6010-8-vXYZ"
                 value = re.sub(r"Spider-Leg-Assembly-v\d+_", "", value)
                 value = re.sub(r"GIM6010-8-v\d+_", "", value)
-                elem.attrib[attr] = value
 
-        # Simplify join names
-        if elem.tag == "joint" and "name" in elem.attrib:
-            name = elem.attrib["name"]
-            name = re.sub(r"Hip-actuator-assembly_Hip-Bracket_Hip", "Hip", name)
-            name = re.sub(r"Femur-actuator-assembly_Femur_Revolute-2", "Femur", name)
-            name = re.sub(r"Tibia_Leg_Tibia", "Tibia", name)
-            elem.attrib["name"] = name
+                # Remove "geom" suffix from names
+                if attr == "name":
+                    value = re.sub(r"_geom$", "", value)
+
+                # Update meshes directory from meshes/ to meshes/mujoco/
+                if attr == "file":
+                    value = re.sub(r"meshes/", "meshes/mujoco/", value)
+
+                # Remove dashes from names (these are not good when converting to USD)
+                if attr == "name" or attr == "joint" or attr == "mesh":
+                    value = re.sub(r"-", "_", value)
+
+                # Simplify join names
+                if elem.tag == "joint" and attr == "name":
+                    value = re.sub(
+                        r"Hip_actuator_assembly_Hip_Bracket_Hip", "Hip", value
+                    )
+                    value = re.sub(
+                        r"Femur_actuator_assembly_Femur_Revolute_2", "Femur", value
+                    )
+                    value = re.sub(r"Tibia_Leg_Tibia", "Tibia", value)
+
+                elem.attrib[attr] = value
 
     return tree
 
@@ -83,19 +88,19 @@ def update_join_ranges(tree):
         joint_name = f"{leg_name}_Hip"
         joint = tree.find(f".//joint[@name='{joint_name}']")
         if joint is not None:
-            joint.set("range", HIP_RANGES[i])
+            joint.set("range", " ".join(HIP_RANGES[i]))
 
         # Femur
         joint_name = f"{leg_name}_Femur"
         joint = tree.find(f".//joint[@name='{joint_name}']")
         if joint is not None:
-            joint.set("range", FEMUR_RANGE)
+            joint.set("range", " ".join(FEMUR_RANGE))
 
         # Tibia
         joint_name = f"{leg_name}_Tibia"
         joint = tree.find(f".//joint[@name='{joint_name}']")
         if joint is not None:
-            joint.set("range", TIBIA_RANGE)
+            joint.set("range", " ".join(TIBIA_RANGE))
 
     return tree
 
@@ -239,7 +244,7 @@ def actuator_definitions(tree):
                 {
                     "name": f"Leg{i}_{joint_name}_Actuator",
                     "joint": f"Leg{i}_{joint_name}",
-                    "ctrlrange": ACTUATOR_TORQUE_RANGE,
+                    "ctrlrange": " ".join(ACTUATOR_TORQUE_RANGE),
                     "gear": "1",
                 },
             )
