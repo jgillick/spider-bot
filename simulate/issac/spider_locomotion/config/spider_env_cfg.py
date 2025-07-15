@@ -323,7 +323,7 @@ class SpiderLocomotionEnvCfg(ManagerBasedRLEnvCfg):
     """Configuration for the spider locomotion environment."""
 
     # Scene settings
-    scene: SpiderSceneCfg = SpiderSceneCfg(num_envs=1024, env_spacing=2.5)
+    scene: SpiderSceneCfg = SpiderSceneCfg(num_envs=2048, env_spacing=2.5)
     # Basic settings
     observations: ObservationsCfg = ObservationsCfg()
     actions: ActionsCfg = ActionsCfg()
@@ -352,7 +352,7 @@ class SpiderLocomotionEnvCfg(ManagerBasedRLEnvCfg):
         self.actions.joint_pos.scale = 1.0  # Full range mapping
 
         # Viewer settings
-        self.viewer.eye = (7.5, 7.5, 5.0)
+        self.viewer.eye = (8.0, 0.0, 5.0)
         self.viewer.lookat = (0.0, 0.0, 0.0)
 
         # update sensor update periods

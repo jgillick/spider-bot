@@ -13,7 +13,7 @@ class SpiderBotRoughPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     max_iterations = 1500
     save_interval = 50
     experiment_name = "spider_bot_cfg"
-    empirical_normalization = False
+    empirical_normalization = True
     policy = RslRlPpoActorCriticCfg(
         init_noise_std=1.0,
         actor_hidden_dims=[512, 256, 128],
@@ -27,7 +27,7 @@ class SpiderBotRoughPPORunnerCfg(RslRlOnPolicyRunnerCfg):
         entropy_coef=0.005,
         num_learning_epochs=5,
         num_mini_batches=4,
-        learning_rate=1.0e-3,
+        learning_rate=3.0e-4,
         schedule="adaptive",
         gamma=0.99,
         lam=0.95,
