@@ -25,7 +25,7 @@ from .environment import SpiderRobotEnv
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 
 XML_FILE = os.path.abspath(os.path.join(THIS_DIR, "../robot/SpiderBot.xml"))
-OUT_ROOT = os.path.abspath(os.path.join(THIS_DIR, "../out/"))
+OUT_ROOT = os.path.abspath(os.path.join(THIS_DIR, "./out/"))
 
 DEFAULT_NUM_ENVS = 8
 
