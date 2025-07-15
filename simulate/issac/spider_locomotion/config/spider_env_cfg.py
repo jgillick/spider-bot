@@ -62,9 +62,9 @@ class SpiderSceneCfg(InteractiveSceneCfg):
     )
 
     # Sensors
-    # Add contact sensors to all body parts
+    # Add contact sensors to all parts connected to the root body
     contact_forces = ContactSensorCfg(
-        prim_path="{ENV_REGEX_NS}/Robot/.*",
+        prim_path="{ENV_REGEX_NS}/Robot/Body/.*",
         history_length=3,
         debug_vis=False,
         track_air_time=True,
@@ -204,8 +204,8 @@ class RewardsCfg:
         func=mdp.undesired_contacts,
         weight=-1.0,
         params={
-            "sensor_cfg": SceneEntityCfg("contact_forces"),
-            "body_names": [".*_BadTouch"],
+            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_BadTouch"),
+            "threshold": 1.0,
         },
     )
 
