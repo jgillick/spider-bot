@@ -67,6 +67,7 @@ start_training() {
       --num_envs 1024 \
       --headless \
       --enable_cameras \
+      --verbose \
       --video --video_length 500 --video_interval 1000"
 }
 
