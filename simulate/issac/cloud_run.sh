@@ -28,6 +28,7 @@ ISAACLAB_SH="${PYENV_ACTIVATE} && ${CLOUD_ISAACLAB_ROOT}/isaaclab.sh"
 
 ROBOT_DIR="../robot"
 MUJOCO_FILE="SpiderBotNoEnv.xml"
+URDF_FILE="SpiderBot.urdf"
 USD_FILE="SpiderBot.usd"
 LOCAL_ASSETS_DIR="./spider_locomotion/assets"
 LOCAL_VIDEOS_DIR="./videos"
@@ -101,7 +102,7 @@ download_new_videos() {
 
 mkdir -p ${LOCAL_VIDEOS_DIR}
 
-# Does the USD file need to be (re)generated from the mujoco files
+# Does the USD file need to be (re)generated
 generate_usd=0
 local_usd_filepath="${LOCAL_ASSETS_DIR}/${USD_FILE}"
 mkdir -p ${LOCAL_ASSETS_DIR}
