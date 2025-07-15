@@ -18,14 +18,14 @@ from stable_baselines3.common.callbacks import (
 from gymnasium.wrappers import TimeLimit
 from stable_baselines3.common.monitor import Monitor
 
-from .QuietVideoRecorder import QuietVideoRecorder
-from .environment import SpiderRobotEnv
+from QuietVideoRecorder import QuietVideoRecorder
+from environment import SpiderRobotEnv
 
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 
 XML_FILE = os.path.abspath(os.path.join(THIS_DIR, "../robot/SpiderBot.xml"))
-OUT_ROOT = os.path.abspath(os.path.join(THIS_DIR, "./out/"))
+OUT_ROOT = os.path.abspath(os.path.join(THIS_DIR, "./logs/"))
 
 DEFAULT_NUM_ENVS = 8
 

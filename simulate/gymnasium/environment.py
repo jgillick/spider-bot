@@ -521,7 +521,7 @@ class SpiderRobotEnv(MujocoEnv):
 
         # Foot geoms
         for leg_num in range(1, 9):  # Legs 1-8
-            foot_name = f"Leg{leg_num}_Tibia_Foot_geom"
+            foot_name = f"Leg{leg_num}_Tibia_Foot"
             foot_geom = self.model.geom(foot_name)
 
             if foot_geom is not None:
@@ -529,7 +529,7 @@ class SpiderRobotEnv(MujocoEnv):
             else:
                 raise Exception(f"Could not find geom '{foot_name}'")
 
-            tibia_name = f"Leg{leg_num}_Tibia_Leg_geom"
+            tibia_name = f"Leg{leg_num}_Tibia_Leg"
             tibia_geom = self.model.geom(tibia_name)
             if tibia_geom is not None:
                 self.tibia_geom_ids.append(tibia_geom.id)
