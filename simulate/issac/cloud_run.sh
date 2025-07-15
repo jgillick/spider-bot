@@ -58,20 +58,6 @@ sync_with_cloud() {
 }
 
 ##
-# Start the training script
-#
-start_training() {
-  $SSH "${ISAACLAB_SH} \
-      -p ${CLOUD_ISAACLAB_ROOT}/scripts/reinforcement_learning/rsl_rl/train.py \
-      --task ${SPIDER_TASK} \
-      --num_envs 1024 \
-      --headless \
-      --enable_cameras \
-      --verbose \
-      --video --video_length 500 --video_interval 1000"
-}
-
-##
 # Start tensorboard
 #
 start_tensorboard() {
@@ -83,17 +69,25 @@ start_tensorboard() {
 }
 
 ##
+# Sync the latest training videos
+#
+sync_videos() {
+  $SSH "ls ${CLOUD_VIDEOS_DIR}" > /dev/null 2>&1
+  if [ $? -eq 0 ]; then
+    sync_with_cloud ${CONNECT}:${CLOUD_VIDEOS_DIR} ${LOCAL_VIDEOS_DIR}
+  fi
+}
+
+##
 # Regularly download new training videos
 #
-download_new_videos() {
+watch_for_videos() {
   mkdir -p ./videos
+  sleep 60
 
   while true; do
-    sleep 60
-    $SSH "ls ${CLOUD_VIDEOS_DIR}" > /dev/null 2>&1
-    if [ $? -eq 0 ]; then
-      sync_with_cloud ${CONNECT}:${CLOUD_VIDEOS_DIR} ${LOCAL_VIDEOS_DIR}
-    fi
+    sync_videos
+    sleep 10
   done
 }
 
@@ -168,7 +162,16 @@ echo "########################################################"
 start_tensorboard &
 
 # Start the video downloader
-download_new_videos &
+watch_for_videos &
 
 # Run the training script
-start_training
+$SSH "${ISAACLAB_SH} \
+      -p ${CLOUD_ISAACLAB_ROOT}/scripts/reinforcement_learning/rsl_rl/train.py \
+      --task ${SPIDER_TASK} \
+      --num_envs 4096 \
+      --headless \
+      --enable_cameras \
+      --video --video_length 500 --video_interval 10"
+
+# Download any final videos
+sync_videos
