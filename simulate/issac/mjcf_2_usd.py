@@ -41,15 +41,14 @@ import sys
 import tempfile
 import argparse
 
-import carb
-import isaacsim.core.utils.stage as stage_utils
 import omni.kit.app
 import omni.usd
 import omni.kit.usd.layers
 
+import omni.usd.commands
+
 from isaaclab.sim.converters import MjcfConverter, MjcfConverterCfg
 from isaaclab.utils.assets import check_file_path
-from isaaclab.utils.dict import print_dict
 
 
 # add argparse arguments
@@ -63,13 +62,19 @@ parser.add_argument("output", type=str, help="The path to store the USD file.")
 args_cli = parser.parse_args()
 
 
+def printout(info_str):
+    """Simple print wrapper, since the Python print() statements are suppressed sometimes."""
+    sys.stdout.write(f"{info_str}\n")
+    sys.stdout.flush()
+
+
 async def main():
     # check valid file path
     mjcf_path = args_cli.input
     if not os.path.isabs(mjcf_path):
         mjcf_path = os.path.abspath(mjcf_path)
     if not check_file_path(mjcf_path):
-        print(f"Invalid file path: {mjcf_path}")
+        printout(f"ERROR: Invalid file path: {mjcf_path}")
         return False
 
     # create destination path
@@ -80,6 +85,7 @@ async def main():
 
     # Create temp directory for initial conversion
     with tempfile.TemporaryDirectory() as temp_dir_path:
+        printout(f"Mujoco input: {mjcf_path}")
 
         # Convert USD files
         mjcf_converter_cfg = MjcfConverterCfg(
@@ -93,45 +99,44 @@ async def main():
         )
         mjcf_converter = MjcfConverter(mjcf_converter_cfg)
 
-        # Flatten USD into a single file
+        # Load the USD file into a stage
         context = omni.usd.get_context()
         opened, error_msg = await context.open_stage_async(mjcf_converter.usd_path)
         if not opened:
-            print(
+            printout(
                 f"Error: Could not open USD file {mjcf_converter.usd_path}: {error_msg}"
             )
             return False
         stage = context.get_stage()
         if not stage:
-            print(f"Error: No stage available after opening {mjcf_converter.usd_path}")
+            printout(
+                f"Error: No stage available after opening {mjcf_converter.usd_path}"
+            )
             return False
+
+        # Delete the worldbody prim
+        worldbody = stage.GetPrimAtPath("/SpiderBotNoEnv/worldBody")
+        if worldbody:
+            # stage.RemovePrim(worldbody.GetPath())
+            worldbody.SetActive(False)
+
+        # Flatten USD
         flattened_stage = stage.Flatten()
         if not flattened_stage:
-            print("Error: Failed to flatten the stage.")
+            printout("Error: Failed to flatten the stage.")
             return False
+
+        # Export the flattened USD file
         flattened_stage.Export(dest_path)
-
-        # Print info
-        print("-" * 80)
-        print("-" * 80)
-        print(f"Input MJCF file: {mjcf_path}")
-        print("MJCF importer config:")
-        print_dict(mjcf_converter_cfg.to_dict(), nesting=0)
-        print("-" * 80)
-        print("-" * 80)
-
-        # Create mjcf converter and import the file
-        # print output
-        print("MJCF importer output:")
-        print(f"Generated USD file: {dest_path}")
-        print("-" * 80)
-        print("-" * 80)
+        printout(f"Generated USD file: {dest_path}")
 
 
 if __name__ == "__main__":
     import asyncio
 
+    printout("--------------- START mjcf_2_usd tool ---------------")
     success = asyncio.run(main())
+    printout("--------------- END mjcf_2_usd tool ---------------")
     simulation_app.close()
     if not success:
         sys.exit(1)
