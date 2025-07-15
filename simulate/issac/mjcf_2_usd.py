@@ -117,16 +117,13 @@ async def main():
         # Delete the worldbody prim
         worldbody = stage.GetPrimAtPath("/SpiderBotNoEnv/worldBody")
         if worldbody:
-            # stage.RemovePrim(worldbody.GetPath())
             worldbody.SetActive(False)
 
-        # Flatten USD
+        # Flatten and exportUSD
         flattened_stage = stage.Flatten()
         if not flattened_stage:
             printout("Error: Failed to flatten the stage.")
             return False
-
-        # Export the flattened USD file
         flattened_stage.Export(dest_path)
         printout(f"Generated USD file: {dest_path}")
 
