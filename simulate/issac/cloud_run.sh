@@ -165,10 +165,10 @@ echo "#   - Videos will be synced to ${LOCAL_VIDEOS_DIR}"
 echo "#   - Tensorboard: http://${CLOUD_IP}:6006"
 echo "########################################################"
 
-# start_tensorboard &
+start_tensorboard &
 
 # Start the video downloader
-# download_new_videos &
+download_new_videos &
 
 # Run the training script
 start_training
