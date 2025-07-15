@@ -210,6 +210,6 @@ __marimo__/
 .DS_Store
 .vscode/
 simulate/robot/export/
-simulate/gymnasium/out
+simulate/gymnasium/logs
 simulate/issac/cloud.cfg
 simulate/issac/logs
