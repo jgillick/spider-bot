@@ -230,12 +230,19 @@ class TerminationsCfg:
     # Episode timeout
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
 
-    # Terminate if the robot bottoms out (temporarily disabled)
+    # Terminate if the robot bottoms out
     # base_contact = DoneTerm(
     #     func=mdp.illegal_contact,
     #     params={
-    #         "sensor_cfg": SceneEntityCfg("contact_forces"),
-    #         "illegal_bodies": ["Body"],  # Just check main body for now
+    #         "sensor_cfg": SceneEntityCfg(
+    #             "contact_forces",
+    #             body_names=[
+    #                 ".*_Hip_actuator_assembly_Hip_Bracket",
+    #                 ".*_Femur_actuator_assembly_Motor",
+    #                 ".*_Knee_actuator_assembly_Motor",
+    #             ],
+    #         ),
+    #         "threshold": 1.0,
     #     },
     # )
 
@@ -323,7 +330,7 @@ class SpiderLocomotionEnvCfg(ManagerBasedRLEnvCfg):
     """Configuration for the spider locomotion environment."""
 
     # Scene settings
-    scene: SpiderSceneCfg = SpiderSceneCfg(num_envs=2048, env_spacing=2.5)
+    scene: SpiderSceneCfg = SpiderSceneCfg(num_envs=1024, env_spacing=2.5)
     # Basic settings
     observations: ObservationsCfg = ObservationsCfg()
     actions: ActionsCfg = ActionsCfg()
@@ -338,7 +345,7 @@ class SpiderLocomotionEnvCfg(ManagerBasedRLEnvCfg):
         """Post initialization."""
         # General settings
         self.decimation = 4  # Run at 50Hz
-        self.episode_length_s = 20.0
+        self.episode_length_s = 20.0  # max episode length in seconds
 
         # Simulation settings
         self.sim.dt = 0.005  # 200Hz physics
