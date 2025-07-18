@@ -58,7 +58,7 @@ class SpiderSceneCfg(InteractiveSceneCfg):
     # Robots
     robot = SpiderBotCfg(
         prim_path="{ENV_REGEX_NS}/Robot",
-        init_state=SpiderBotCfg.InitialStateCfg(pos=(0.0, 0.0, 0.14)),
+        init_state=SpiderBotCfg.InitialStateCfg(pos=(0.0, 0.0, 0.135)),
     )
 
     # Sensors
@@ -356,11 +356,11 @@ class SpiderLocomotionEnvCfg(ManagerBasedRLEnvCfg):
         )  # Increased from 10 * 2**15
 
         # Update controller parameters
-        self.actions.joint_pos.scale = 1.0  # Full range mapping
+        # self.actions.joint_pos.scale = 1.0  # Full range mapping
 
         # Viewer settings
-        self.viewer.eye = (8.0, 0.0, 5.0)
-        self.viewer.lookat = (0.0, 0.0, 0.0)
+        # self.viewer.eye = (8.0, 0.0, 5.0)
+        # self.viewer.lookat = (0.0, 0.0, 0.0)
 
         # update sensor update periods
         # we tick all the sensors based on the smallest update period (physics update period)
