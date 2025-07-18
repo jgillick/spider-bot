@@ -16,7 +16,7 @@ set -e
 source cloud.cfg
 
 TASK_DIR="${CLOUD_ISAACLAB_ROOT}/source/isaaclab_tasks/isaaclab_tasks/manager_based/locomotion/spider_locomotion"
-ASSETS_PATH="${TASK_DIR}/assets/"
+ASSETS_PATH="${TASK_DIR}/assets"
 USD_PATH="${ASSETS_PATH}/SpiderBot.usd"
 CLOUD_HOME="/home/${CLOUD_SSH_USER}"
 
@@ -71,8 +71,8 @@ start_tensorboard() {
 # Sync the latest training logs
 #
 sync_logs() {
-  mkdir -p ${LOCAL_LOGS_DIR}
-  sync_with_cloud ${CONNECT}:${CLOUD_LOGS_DIR} ${LOCAL_LOGS_DIR}
+  sync_with_cloud "${CONNECT}:${CLOUD_LOGS_DIR}/" "${LOCAL_LOGS_DIR}/"
+  # rsync -av -e "${SSH_PREFIX}" "${CONNECT}:${CLOUD_LOGS_DIR}/" "${LOCAL_LOGS_DIR}/"
 }
 
 ##
@@ -151,6 +151,10 @@ echo "#   - Videos will be synced to ${LOCAL_VIDEOS_DIR}"
 echo "#   - Tensorboard: http://${CLOUD_IP}:6006"
 echo "########################################################"
 
+# Clean up on exit
+trap "exit" INT TERM
+trap "kill 0" EXIT
+
 start_tensorboard &
 
 # Start the logs downloader
@@ -162,11 +166,11 @@ $SSH "${PYENV_ACTIVATE} && \
       ${CLOUD_ISAACLAB_ROOT}/isaaclab.sh \
       -p ${CLOUD_ISAACLAB_ROOT}/scripts/reinforcement_learning/rsl_rl/train.py \
       --task ${SPIDER_TASK} \
-      --num_envs 1024 \
+      --num_envs 512 \
       --headless \
       --verbose \
       --enable_cameras \
-      --video --video_length 2000 --video_interval 500"
+      --video --video_length 1000 --video_interval 100"
 
 # Download any final logs & videos
 sync_logs

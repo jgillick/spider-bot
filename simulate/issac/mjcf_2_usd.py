@@ -49,7 +49,7 @@ import omni.usd.commands
 
 from isaaclab.sim.converters import MjcfConverter, MjcfConverterCfg
 from isaaclab.utils.assets import check_file_path
-
+from pxr import PhysxSchema, Gf, Sdf, UsdShade
 
 # add argparse arguments
 parser = argparse.ArgumentParser(
@@ -118,6 +118,30 @@ async def main():
         worldbody = stage.GetPrimAtPath("/SpiderBotNoEnv/worldBody")
         if worldbody:
             worldbody.SetActive(False)
+
+        # Add JointStateAPI to all leg revolute joints
+        for leg in range(1, 9):
+            for joint_name in ["Hip", "Femur", "Tibia"]:
+                joint = stage.GetPrimAtPath(
+                    f"/SpiderBotNoEnv/joints/Leg{leg}_{joint_name}"
+                )
+                if joint:
+                    PhysxSchema.JointStateAPI.Apply(joint, "angular")
+
+        # Set material color to black
+        def_shader = UsdShade.Material.Get(
+            stage, "/SpiderBotNoEnv/Looks/DefaultMaterial/DefaultMaterial"
+        )
+        def_shader.CreateInput("diffuse_tint", Sdf.ValueTypeNames.Color3f).Set(
+            Gf.Vec3f(0.05, 0.05, 0.05)
+        )
+
+        # Attach material to body
+        # root_body = stage.GetPrimAtPath("/SpiderBotNoEnv/Body")
+        # root_body.GetPrim().ApplyAPI(UsdShade.MaterialBindingAPI)
+        # UsdShade.MaterialBindingAPI(root_body).Bind(
+        #     def_material, UsdShade.Tokens.strongerThanDescendants
+        # )
 
         # Flatten and exportUSD
         flattened_stage = stage.Flatten()
