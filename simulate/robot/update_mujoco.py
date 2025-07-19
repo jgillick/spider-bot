@@ -14,10 +14,20 @@ from constants import (
 
 SOURCE_PATH = "./export/mujoco/SpiderBody/SpiderBody.xml"
 
+MOTOR_MAX_TORQUE = 11.0
+MOTOR_STIFFNESS = 20.0
+MOTOR_DAMPING = 1.0
+
+JOINT_AXIS = {
+    "Hip": "0 1 0",
+    "Femur": "1 0 0",
+    "Tibia": "1 0 0",
+}
+
 
 def main(tree, output_path, ground=False, light=False):
     tree = simplify_names(tree)
-    tree = update_join_ranges(tree)
+    tree = update_joint_values(tree)
 
     tree = remove_default_ground_plane(tree)
     if ground:
@@ -77,30 +87,34 @@ def simplify_names(tree):
     return tree
 
 
-def update_join_ranges(tree):
+def update_joint_values(tree):
     """
-    Update the position range the leg joints
+    Update the joint max range, damping, and stiffness
     """
-    for i in range(0, 8):
-        leg_name = f"Leg{i+1}"
 
-        # Hip
-        joint_name = f"{leg_name}_Hip"
-        joint = tree.find(f".//joint[@name='{joint_name}']")
-        if joint is not None:
-            joint.set("range", " ".join(HIP_RANGES[i]))
+    # Damping and stiffness
+    for leg in range(1, 9):
+        for joint_type in ["Hip", "Femur", "Tibia"]:
+            joint_name = f"Leg{leg}_{joint_type}"
+            joint = tree.find(f".//joint[@name='{joint_name}']")
+            if joint is None:
+                continue
 
-        # Femur
-        joint_name = f"{leg_name}_Femur"
-        joint = tree.find(f".//joint[@name='{joint_name}']")
-        if joint is not None:
-            joint.set("range", " ".join(FEMUR_RANGE))
+            joint.attrib["damping"] = str(MOTOR_DAMPING)
+            joint.attrib["stiffness"] = str(MOTOR_STIFFNESS)
+            joint.set("axis", JOINT_AXIS[joint_type])
 
-        # Tibia
-        joint_name = f"{leg_name}_Tibia"
-        joint = tree.find(f".//joint[@name='{joint_name}']")
-        if joint is not None:
-            joint.set("range", " ".join(TIBIA_RANGE))
+            # Hip range and axis
+            if joint_type == "Hip":
+                joint.set("range", " ".join(HIP_RANGES[leg - 1]))
+
+            # Femur range
+            if joint_type == "Femur":
+                joint.set("range", " ".join(FEMUR_RANGE))
+
+            # Tibia range
+            if joint_type == "Tibia":
+                joint.set("range", " ".join(TIBIA_RANGE))
 
     return tree
 
@@ -185,6 +199,7 @@ def ground_plain(tree):
             "material": "groundplane",
             "contype": "1",
             "conaffinity": "1",
+            "rgba": "1 1 1 1",
         },
     )
     worldbody.insert(0, ground_plane)
@@ -207,7 +222,11 @@ def add_defaults(tree):
         tree.getroot().insert(insert_at, default)
 
     # Add geom defaults
-    ET.SubElement(default, "geom", {"contype": "1", "conaffinity": "1"})
+    ET.SubElement(
+        default,
+        "geom",
+        {"contype": "1", "conaffinity": "1", "rgba": "0.1 0.1 0.1 1"},
+    )
 
     return tree
 
@@ -245,6 +264,8 @@ def actuator_definitions(tree):
                     "name": f"Leg{i}_{joint_name}_Actuator",
                     "joint": f"Leg{i}_{joint_name}",
                     "ctrlrange": " ".join(ACTUATOR_TORQUE_RANGE),
+                    "forcerange": f"{-MOTOR_MAX_TORQUE} {MOTOR_MAX_TORQUE}",
+                    "forcelimited": "true",
                     "gear": "1",
                 },
             )
@@ -310,7 +331,7 @@ def main_body(tree):
             "pos": "0.49 0 0.015",
             "size": "0.025",
             "type": "sphere",
-            "rgba": "0 1 0 1",
+            "rgba": "0 .5 0 1",
         },
     )
 
