@@ -72,7 +72,6 @@ start_tensorboard() {
 #
 sync_logs() {
   sync_with_cloud "${CONNECT}:${CLOUD_LOGS_DIR}/" "${LOCAL_LOGS_DIR}/"
-  # rsync -av -e "${SSH_PREFIX}" "${CONNECT}:${CLOUD_LOGS_DIR}/" "${LOCAL_LOGS_DIR}/"
 }
 
 ##
@@ -113,8 +112,7 @@ if [[ $generate_usd -eq 1 ]]; then
   echo "########################################################"
 
   # Sync conversion scripts
-  sync_with_cloud "./isaaclab.python.mjcf.kit" "${CONNECT}:${CLOUD_ISAACLAB_ROOT}/apps/isaaclab.python.mjcf.kit"
-  sync_with_cloud "./mjcf_2_usd.py" "${CONNECT}:${CLOUD_ISAACLAB_ROOT}/scripts/tools/mjcf_2_usd.py"
+  sync_with_cloud "./tools/" "${CONNECT}:${CLOUD_ISAACLAB_ROOT}/tools/"
 
   # Send mujoco files to the cloud
   mujoco_dir="${CLOUD_HOME}/mujoco"
@@ -123,7 +121,7 @@ if [[ $generate_usd -eq 1 ]]; then
   sync_with_cloud "${ROBOT_DIR}/meshes/" ${CONNECT}:${mujoco_dir}/meshes/
 
   # Run conversion script with IsaacLab
-  $SSH "${ISAACLAB_SH} -p ${CLOUD_ISAACLAB_ROOT}/scripts/tools/mjcf_2_usd.py \"${mujoco_dir}/${MUJOCO_FILE}\" \"${ASSETS_PATH}/${USD_FILE}\""
+  $SSH "${ISAACLAB_SH} -p ${CLOUD_ISAACLAB_ROOT}/tools/mjcf_2_usd.py \"${mujoco_dir}/${MUJOCO_FILE}\" \"${ASSETS_PATH}/${USD_FILE}\""
 
   # Fetch USD file
   sync_with_cloud "${CONNECT}:${ASSETS_PATH}/${USD_FILE}" "${LOCAL_ASSETS_DIR}/${USD_FILE}"
