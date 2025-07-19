@@ -49,7 +49,7 @@ import omni.usd.commands
 
 from isaaclab.sim.converters import MjcfConverter, MjcfConverterCfg
 from isaaclab.utils.assets import check_file_path
-from pxr import PhysxSchema, Gf, Sdf, UsdShade
+from pxr import PhysxSchema, Gf, Sdf, UsdShade, UsdPhysics
 
 # add argparse arguments
 parser = argparse.ArgumentParser(
@@ -66,6 +66,63 @@ def printout(info_str):
     """Simple print wrapper, since the Python print() statements are suppressed sometimes."""
     sys.stdout.write(f"{info_str}\n")
     sys.stdout.flush()
+
+
+def fix_joint_api(stage: Usd.Stage):
+    """
+    The built=in MJCF exporter uses the wrong APIs for revolute joints.
+    They should be "angular" APIs (PhysicsDriveAPI:angular), but instead they are "X" APIs (PhysicsDriveAPI:X)
+    """
+    for leg in range(1, 9):
+        for joint_name in ["Hip", "Femur", "Tibia"]:
+            joint = stage.GetPrimAtPath(f"/SpiderBotNoEnv/joints/Leg{leg}_{joint_name}")
+
+            ##
+            # Drive/Limit API needs to change from "X" to "angular"
+
+            # Enable angular APIs
+            drive_api = UsdPhysics.DriveAPI.Apply(joint, "angular")
+            limit_api = None
+            has_limit_api = joint.HasAPI(PhysxSchema.PhysxLimitAPI, "X")
+            if has_limit_api:
+                limit_api = UsdPhysics.LimitAPI.Apply(joint, "angular")
+
+            # Copy attributes from drive:X:physics.*
+            attrs = joint.GetAttributes()
+            for attr in attrs:
+                namespace = attr.GetNamespace()
+                base_name = attr.GetBaseName()
+
+                if not namespace.startswith(
+                    "drive:X:physics"
+                ) and not namespace.startswith("physics"):
+                    continue
+
+                value = attr.Get()
+                joint.RemoveProperty(attr.GetName())
+                match base_name:
+                    case "damping":
+                        drive_api.CreateDampingAttr(value)
+                    case "maxForce":
+                        drive_api.CreateMaxForceAttr(value)
+                    case "stiffness":
+                        drive_api.CreateStiffnessAttr(value)
+                    case "targetPosition":
+                        drive_api.CreateTargetPositionAttr(value)
+                    case "targetVelocity":
+                        drive_api.CreateTargetVelocityAttr(value)
+                    case "type":
+                        drive_api.CreateTypeAttr(value)
+                    case "lowerLimit":
+                        if limit_api:
+                            limit_api.CreateLowAttr(value)
+                    case "upperLimit":
+                        if limit_api:
+                            limit_api.CreateHighAttr(value)
+
+            # Remove "X" APIs
+            joint.RemoveAPI(UsdPhysics.DriveAPI, "X")
+            joint.RemoveAPI(PhysxSchema.PhysxLimitAPI, "X")
 
 
 async def main():
@@ -119,14 +176,8 @@ async def main():
         if worldbody:
             worldbody.SetActive(False)
 
-        # Add JointStateAPI to all leg revolute joints
-        for leg in range(1, 9):
-            for joint_name in ["Hip", "Femur", "Tibia"]:
-                joint = stage.GetPrimAtPath(
-                    f"/SpiderBotNoEnv/joints/Leg{leg}_{joint_name}"
-                )
-                if joint:
-                    PhysxSchema.JointStateAPI.Apply(joint, "angular")
+        # Fix the revolute joint APIs
+        fix_joint_api(stage)
 
         # Set material color to black
         def_shader = UsdShade.Material.Get(
@@ -136,14 +187,7 @@ async def main():
             Gf.Vec3f(0.05, 0.05, 0.05)
         )
 
-        # Attach material to body
-        # root_body = stage.GetPrimAtPath("/SpiderBotNoEnv/Body")
-        # root_body.GetPrim().ApplyAPI(UsdShade.MaterialBindingAPI)
-        # UsdShade.MaterialBindingAPI(root_body).Bind(
-        #     def_material, UsdShade.Tokens.strongerThanDescendants
-        # )
-
-        # Flatten and exportUSD
+        # Flatten and export USD
         flattened_stage = stage.Flatten()
         if not flattened_stage:
             printout("Error: Failed to flatten the stage.")
