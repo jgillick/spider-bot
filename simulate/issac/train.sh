@@ -18,7 +18,7 @@ VIDEO_INTERVAL=100
 TRAINING_TASK="Isaac-SpiderLocomotion-Flat-v0"
 TRAINING_SCRIPT="./scripts/reinforcement_learning/rsl_rl/train.py"
 
-ISAACLAB_ROOT="~/Documents/Projects/isaac/IsaacLab"
+ISAACLAB_ROOT="$HOME/Documents/Projects/isaac/IsaacLab"
 
 #######################################################
 # MAIN
