@@ -282,9 +282,9 @@ def main_body(tree):
         print('No body named "Body" found.')
         exit(1)
 
-    sensor = tree.find("./sensor")
-    if sensor is None:
-        sensor = ET.SubElement(tree.getroot(), "sensor")
+    # sensor = tree.find("./sensor")
+    # if sensor is None:
+    #     sensor = ET.SubElement(tree.getroot(), "sensor")
 
     free_joint = ET.Element(
         "joint",
@@ -298,14 +298,14 @@ def main_body(tree):
             "margin": "0.01",
         },
     )
-    imu_site = ET.Element(
-        "site",
-        {
-            "name": "imu_site",
-            "pos": "0.24115 0 0",
-            "size": "0.01",
-        },
-    )
+    # imu_site = ET.Element(
+    #     "site",
+    #     {
+    #         "name": "imu_site",
+    #         "pos": "0.24115 0 0",
+    #         "size": "0.01",
+    #     },
+    # )
     body_cam = ET.Element(
         "camera",
         {
@@ -324,16 +324,16 @@ def main_body(tree):
             "pos": "-1.0 0 0.1",
         },
     )
-    head = ET.Element(
-        "geom",
-        {
-            "name": "head",
-            "pos": "0.49 0 0.015",
-            "size": "0.025",
-            "type": "sphere",
-            "rgba": "0 .5 0 1",
-        },
-    )
+    # head = ET.Element(
+    #     "geom",
+    #     {
+    #         "name": "head",
+    #         "pos": "0.49 0 0.015",
+    #         "size": "0.025",
+    #         "type": "sphere",
+    #         "rgba": "0 .5 0 1",
+    #     },
+    # )
 
     # Bottom planes that should cover the entire bottom of the robot
     # (this makes it easier to detect when the robot is on the ground)
@@ -360,17 +360,17 @@ def main_body(tree):
     # root_body.insert(0, bottom1)
     # root_body.insert(0, bottom2)
 
-    root_body.insert(0, head)
-    root_body.insert(0, imu_site)
+    # root_body.insert(0, head)
+    # root_body.insert(0, imu_site)
     root_body.insert(0, ground_cam)
     root_body.insert(0, body_cam)
     root_body.insert(0, free_joint)
 
     # Add IMU sensor
-    ET.SubElement(sensor, "gyro", {"name": "gyro_sensor", "site": "imu_site"})
-    ET.SubElement(
-        sensor, "accelerometer", {"name": "accelerometer_sensor", "site": "imu_site"}
-    )
+    # ET.SubElement(sensor, "gyro", {"name": "gyro_sensor", "site": "imu_site"})
+    # ET.SubElement(
+    #     sensor, "accelerometer", {"name": "accelerometer_sensor", "site": "imu_site"}
+    # )
 
     # Adjust position of body
     root_body.set("pos", "0.0 0.0 0.134")
