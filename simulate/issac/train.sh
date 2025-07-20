@@ -11,9 +11,12 @@
 #######################################################
 # CONFIGURATION
 #######################################################
-NUM_ENVS=512
+NUM_ENVS=100
+HEADLESS=0
+
+# Video settings (only when HEADLESS=1)
 VIDEO_LENGTH=1000
-VIDEO_INTERVAL=100
+VIDEO_INTERVAL=1000
 
 TRAINING_TASK="Isaac-SpiderLocomotion-Flat-v0"
 TRAINING_SCRIPT="./scripts/reinforcement_learning/rsl_rl/train.py"
@@ -37,12 +40,18 @@ start_tensorboard() {
 }
 start_tensorboard &
 
-./isaaclab.sh -p $TRAINING_SCRIPT \
-  --task $TRAINING_TASK \
-  --num_envs $NUM_ENVS \
-  --headless \
-  --verbose \
-  --enable_cameras \
-  --video \
-  --video_length $VIDEO_LENGTH \
-  --video_interval $VIDEO_INTERVAL
+export HYDRA_FULL_ERROR=1
+
+if [ $HEADLESS -eq 1 ]; then
+  ./isaaclab.sh -p $TRAINING_SCRIPT \
+    --task $TRAINING_TASK \
+    --num_envs $NUM_ENVS \
+    --headless \
+    --verbose \
+    --enable_cameras \
+    --video \
+    --video_length $VIDEO_LENGTH \
+    --video_interval $VIDEO_INTERVAL
+else
+  ./isaaclab.sh -p $TRAINING_SCRIPT --task $TRAINING_TASK --num_envs $NUM_ENVS --verbose
+fi

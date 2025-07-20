@@ -12,8 +12,8 @@ class SpiderBotRoughPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     num_steps_per_env = 24
     max_iterations = 1500
     save_interval = 50
-    experiment_name = "spider_bot_cfg"
-    empirical_normalization = False
+    experiment_name = "spider_bot"
+    empirical_normalization = True
     policy = RslRlPpoActorCriticCfg(
         init_noise_std=1.0,
         actor_hidden_dims=[512, 256, 128],
@@ -42,6 +42,6 @@ class SpiderBotFlatPPORunnerCfg(SpiderBotRoughPPORunnerCfg):
         super().__post_init__()
 
         self.max_iterations = 300
-        self.experiment_name = "anymal_d_flat"
+        self.experiment_name = "spider_bot_flat"
         self.policy.actor_hidden_dims = [128, 128, 128]
         self.policy.critic_hidden_dims = [128, 128, 128]

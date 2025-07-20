@@ -177,7 +177,7 @@ class RewardsCfg:
 
     # -- Regularization rewards
     # Penalize vertical (Z) linear velocity to encourage flat movement
-    lin_vel_z_l2 = RewTerm(func=mdp.lin_vel_z_l2, weight=-2.0)
+    # lin_vel_z_l2 = RewTerm(func=mdp.lin_vel_z_l2, weight=-2.0)
     # Penalize angular velocity in X and Y to discourage tipping/rolling
     ang_vel_xy_l2 = RewTerm(func=mdp.ang_vel_xy_l2, weight=-0.05)
     # Penalize large joint torques to encourage energy efficiency
