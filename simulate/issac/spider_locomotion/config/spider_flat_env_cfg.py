@@ -47,8 +47,5 @@ class SpiderLocomotionFlatEnvCfg(SpiderLocomotionEnvCfg):
         self.rewards.track_lin_vel_xy_exp.weight = 2.0
         self.rewards.track_ang_vel_z_exp.weight = 1.0
 
-        # Reduce terrain-specific penalties
-        self.rewards.undesired_contacts.weight = -0.5
-
         # Adjust episode length for flat terrain
         self.episode_length_s = 30.0
