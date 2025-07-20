@@ -7,7 +7,7 @@ echo "Processing XML..."
 
 # Create two versions of the XML: one with the ground plane and one without
 python update_mujoco.py SpiderBotNoEnv.xml
-python update_mujoco.py --ground --light SpiderBot.xml
+python update_mujoco.py --ground --light --head --imu SpiderBot.xml
 
 # URDF
 python update_urdf.py SpiderBot.urdf
