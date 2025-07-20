@@ -9,11 +9,11 @@ from isaaclab_rl.rsl_rl import (
 
 @configclass
 class SpiderBotRoughPPORunnerCfg(RslRlOnPolicyRunnerCfg):
-    num_steps_per_env = 32  # Increased from 24 for more DOF
-    max_iterations = 3000  # Increased from 1500 for more complex learning
-    save_interval = 50
+    num_steps_per_env = 24
+    max_iterations = 30_000
+    save_interval = 200
     experiment_name = "spider_bot"
-    empirical_normalization = True
+    empirical_normalization = False
     policy = RslRlPpoActorCriticCfg(
         init_noise_std=1.5,  # Increased from 1.0 for better exploration with more DOF
         actor_hidden_dims=[512, 256, 128],
@@ -27,7 +27,7 @@ class SpiderBotRoughPPORunnerCfg(RslRlOnPolicyRunnerCfg):
         entropy_coef=0.01,  # Increased from 0.005 for better exploration
         num_learning_epochs=6,  # Increased from 5 for more complex policy
         num_mini_batches=6,  # Increased from 4 for better gradient estimates
-        learning_rate=8.0e-4,  # Slightly reduced from 1.0e-3 for stability
+        learning_rate=1.0e-3,
         schedule="adaptive",
         gamma=0.99,
         lam=0.95,
@@ -53,5 +53,3 @@ class SpiderBotFlatPPORunnerCfg(SpiderBotRoughPPORunnerCfg):
             256,
             128,
         ]  # Increased from [128, 128, 128]
-        # Reduced initial noise for flat terrain but still higher than original
-        self.policy.init_noise_std = 1.2  # Increased from 1.0 for better exploration

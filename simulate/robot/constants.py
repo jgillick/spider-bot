@@ -1,4 +1,4 @@
-ACTUATOR_TORQUE_RANGE = ("-10", "10")
+ACTUATOR_TORQUE_RANGE = ("-11.0", "11.0")
 
 HIP_RANGES = (
     ("0", "1.8"),  # Leg1
