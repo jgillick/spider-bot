@@ -25,7 +25,7 @@ JOINT_AXIS = {
 }
 
 
-def main(tree, output_path, ground=False, light=False):
+def main(tree, output_path, ground=False, light=False, head=False, imu=False):
     tree = simplify_names(tree)
     tree = update_joint_values(tree)
 
@@ -38,7 +38,7 @@ def main(tree, output_path, ground=False, light=False):
     tree = visual_settings(tree)
     tree = add_defaults(tree)
     tree = actuator_definitions(tree)
-    tree = main_body(tree)
+    tree = main_body(tree, head=head, imu=imu)
     tree = add_foot_friction(tree)
     tree = convert_euler_to_quat(tree)
 
@@ -273,7 +273,7 @@ def actuator_definitions(tree):
     return tree
 
 
-def main_body(tree):
+def main_body(tree, head=False, imu=False):
     """
     Add free joint, bottom plane, IMU, and a camera to the main body
     """
@@ -282,9 +282,9 @@ def main_body(tree):
         print('No body named "Body" found.')
         exit(1)
 
-    # sensor = tree.find("./sensor")
-    # if sensor is None:
-    #     sensor = ET.SubElement(tree.getroot(), "sensor")
+    sensor = tree.find("./sensor")
+    if sensor is None and imu:
+        sensor = ET.SubElement(tree.getroot(), "sensor")
 
     free_joint = ET.Element(
         "joint",
@@ -298,14 +298,6 @@ def main_body(tree):
             "margin": "0.01",
         },
     )
-    # imu_site = ET.Element(
-    #     "site",
-    #     {
-    #         "name": "imu_site",
-    #         "pos": "0.24115 0 0",
-    #         "size": "0.01",
-    #     },
-    # )
     body_cam = ET.Element(
         "camera",
         {
@@ -324,16 +316,35 @@ def main_body(tree):
             "pos": "-1.0 0 0.1",
         },
     )
-    # head = ET.Element(
-    #     "geom",
-    #     {
-    #         "name": "head",
-    #         "pos": "0.49 0 0.015",
-    #         "size": "0.025",
-    #         "type": "sphere",
-    #         "rgba": "0 .5 0 1",
-    #     },
-    # )
+
+    if head:
+        head = ET.Element(
+            "geom",
+            {
+                "name": "head",
+                "pos": "0.49 0 0.015",
+                "size": "0.025",
+                "type": "sphere",
+                "rgba": "0 .5 0 1",
+            },
+        )
+        root_body.insert(0, head)
+    if imu:
+        imu_site = ET.Element(
+            "site",
+            {
+                "name": "imu_site",
+                "pos": "0.24115 0 0",
+                "size": "0.01",
+            },
+        )
+        root_body.insert(0, imu_site)
+        ET.SubElement(sensor, "gyro", {"name": "gyro_sensor", "site": "imu_site"})
+        ET.SubElement(
+            sensor,
+            "accelerometer",
+            {"name": "accelerometer_sensor", "site": "imu_site"},
+        )
 
     # Bottom planes that should cover the entire bottom of the robot
     # (this makes it easier to detect when the robot is on the ground)
@@ -360,17 +371,9 @@ def main_body(tree):
     # root_body.insert(0, bottom1)
     # root_body.insert(0, bottom2)
 
-    # root_body.insert(0, head)
-    # root_body.insert(0, imu_site)
     root_body.insert(0, ground_cam)
     root_body.insert(0, body_cam)
     root_body.insert(0, free_joint)
-
-    # Add IMU sensor
-    # ET.SubElement(sensor, "gyro", {"name": "gyro_sensor", "site": "imu_site"})
-    # ET.SubElement(
-    #     sensor, "accelerometer", {"name": "accelerometer_sensor", "site": "imu_site"}
-    # )
 
     # Adjust position of body
     root_body.set("pos", "0.0 0.0 0.134")
@@ -500,6 +503,12 @@ if __name__ == "__main__":
         "--ground", action="store_true", help="Add ground plane", default=False
     )
     parser.add_argument(
+        "--head", action="store_true", help="Add a head to the robot", default=False
+    )
+    parser.add_argument(
+        "--imu", action="store_true", help="Add an IMU spot & sensors", default=False
+    )
+    parser.add_argument(
         "--light",
         action="store_true",
         help="Add light",
@@ -517,4 +526,6 @@ if __name__ == "__main__":
         output_path=args.output_path,
         ground=args.ground,
         light=args.light,
+        head=args.head,
+        imu=args.imu,
     )
