@@ -1,54 +1,28 @@
 """Flat terrain configuration for spider locomotion environment."""
 
-from isaaclab.terrains import TerrainImporterCfg
 from isaaclab.utils import configclass
-import isaaclab.sim as sim_utils
 
 # Import the base configuration
-from .spider_env_cfg import SpiderLocomotionEnvCfg, SpiderSceneCfg, CurriculumCfg
-
-
-@configclass
-class SpiderFlatSceneCfg(SpiderSceneCfg):
-    """Configuration for flat terrain scene with spider robot."""
-
-    # Override terrain to be flat
-    terrain = TerrainImporterCfg(
-        prim_path="/World/ground",
-        terrain_type="plane",
-        collision_group=-1,
-        physics_material=sim_utils.RigidBodyMaterialCfg(
-            friction_combine_mode="multiply",
-            restitution_combine_mode="multiply",
-            static_friction=1.0,
-            dynamic_friction=1.0,
-        ),
-        debug_vis=False,
-    )
+from .spider_env_cfg import SpiderLocomotionEnvCfg
 
 
 @configclass
 class SpiderLocomotionFlatEnvCfg(SpiderLocomotionEnvCfg):
     """Configuration for spider locomotion on flat terrain"""
 
-    # Override scene with flat terrain
-    scene: SpiderFlatSceneCfg = SpiderFlatSceneCfg(num_envs=1024, env_spacing=2.5)
-
-    # Disable curriculum for flat terrain
-    curriculum = CurriculumCfg()
-    curriculum.terrain_levels = None
-
     def __post_init__(self):
         """Post initialization."""
         super().__post_init__()
 
-        # Adjust rewards for flat terrain (no terrain adaptation needed)
-        # Increase velocity tracking importance
-        self.rewards.track_lin_vel_xy_exp.weight = 2.0
-        self.rewards.track_ang_vel_z_exp.weight = 1.0
+        # override rewards
+        self.rewards.flat_orientation_l2.weight = -5.0
+        self.rewards.dof_torques_l2.weight = -2.5e-5
+        self.rewards.feet_air_time.weight = 0.5
+        # self.rewards.undesired_contacts.weight = -0.5
 
-        # Reduce terrain-specific penalties
-        self.rewards.undesired_contacts.weight = -0.5
+        # change terrain to flat
+        self.scene.terrain.terrain_type = "plane"
+        self.scene.terrain.terrain_generator = None
 
-        # Adjust episode length for flat terrain
-        self.episode_length_s = 30.0
+        # no terrain curriculum
+        self.curriculum.terrain_levels = None
