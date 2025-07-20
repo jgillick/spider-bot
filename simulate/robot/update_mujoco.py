@@ -377,6 +377,14 @@ def main_body(tree, head=False, imu=False):
     # Adjust position of body
     root_body.set("pos", "0.0 0.0 0.134")
 
+    # Adjust mass of body
+    root_body_inertial = tree.find("./worldbody//body[@name='Body']/inertial")
+    if root_body is None:
+        print('No root body inertial" found.')
+        exit(1)
+    else:
+        root_body_inertial.set("mass", "0.75")
+
     return tree
 
 
