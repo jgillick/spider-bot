@@ -46,7 +46,7 @@ sync_with_cloud() {
     local source="$1"
     local destination="$2"
 
-    rsync -av --itemize-changes -e "${SSH_PREFIX}" "$source" "$destination" \
+    rsync -aviz -e "${SSH_PREFIX}" "$source" "$destination" \
       | grep -E '^<f'\
       | cut -d' ' -f2
 

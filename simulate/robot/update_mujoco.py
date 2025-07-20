@@ -14,9 +14,8 @@ from constants import (
 
 SOURCE_PATH = "./export/mujoco/SpiderBody/SpiderBody.xml"
 
-MOTOR_MAX_TORQUE = 11.0
-MOTOR_STIFFNESS = 20.0
-MOTOR_DAMPING = 1.0
+MOTOR_STIFFNESS = 15.0
+MOTOR_DAMPING = 0.2
 
 JOINT_AXIS = {
     "Hip": "0 1 0",
@@ -264,7 +263,7 @@ def actuator_definitions(tree):
                     "name": f"Leg{i}_{joint_name}_Actuator",
                     "joint": f"Leg{i}_{joint_name}",
                     "ctrlrange": " ".join(ACTUATOR_TORQUE_RANGE),
-                    "forcerange": f"{-MOTOR_MAX_TORQUE} {MOTOR_MAX_TORQUE}",
+                    "forcerange": " ".join(ACTUATOR_TORQUE_RANGE),
                     "forcelimited": "true",
                     "gear": "1",
                 },

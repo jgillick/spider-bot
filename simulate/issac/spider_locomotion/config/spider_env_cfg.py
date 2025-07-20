@@ -17,10 +17,13 @@ from isaaclab.terrains import TerrainImporterCfg
 from isaaclab.utils import configclass
 from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 from isaaclab.assets import AssetBaseCfg
+from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR, ISAACLAB_NUCLEUS_DIR
 
 import isaaclab_tasks.manager_based.locomotion.velocity.mdp as mdp
 import isaaclab.sim as sim_utils
 from isaaclab.terrains.config.rough import ROUGH_TERRAINS_CFG
+
+import isaaclab_tasks.manager_based.locomotion.spider_locomotion.mdp as spider_mdp
 
 # Import spider robot configuration
 from .spider_bot_cfg import SpiderBotCfg
@@ -58,12 +61,12 @@ class SpiderSceneCfg(InteractiveSceneCfg):
     # Robots
     robot = SpiderBotCfg(
         prim_path="{ENV_REGEX_NS}/Robot",
-        # init_state=SpiderBotCfg.InitialStateCfg(pos=(0.0, 0.0, 0.135)),
+        init_state=SpiderBotCfg.InitialStateCfg(pos=(0.0, 0.0, 0.135)),
     )
 
     # Add contact sensors to all parts connected to the root body
     contact_forces = ContactSensorCfg(
-        prim_path="{ENV_REGEX_NS}/Robot/.*", history_length=3, track_air_time=True
+        prim_path="{ENV_REGEX_NS}/Robot/Body/.*", history_length=3, track_air_time=True
     )
 
     # Lights
@@ -108,7 +111,8 @@ class ActionsCfg:
 
     joint_pos = mdp.JointPositionActionCfg(
         asset_name="robot",
-        joint_names=[".*Leg[1-8]_Hip", ".*Leg[1-8]_Femur", ".*Leg[1-8]_Tibia"],
+        # joint_names=[".*Leg[1-8]_Hip", ".*Leg[1-8]_Femur", ".*Leg[1-8]_Tibia"],
+        joint_names=[".*"],
         scale=1.0,
         use_default_offset=True,
     )
@@ -169,8 +173,8 @@ class EventCfg:
         mode="startup",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names=".*"),
-            "static_friction_range": (0.8, 0.8),
-            "dynamic_friction_range": (0.6, 0.6),
+            "static_friction_range": (0.1, 0.8),
+            "dynamic_friction_range": (0.1, 0.8),
             "restitution_range": (0.0, 0.0),
             "num_buckets": 64,
         },
@@ -180,18 +184,18 @@ class EventCfg:
         mode="startup",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names="Body"),
-            "mass_distribution_params": (-5.0, 5.0),
+            "mass_distribution_params": (0.0, 0.5),
             "operation": "add",
         },
     )
-    base_com = EventTerm(
-        func=mdp.randomize_rigid_body_com,
-        mode="startup",
-        params={
-            "asset_cfg": SceneEntityCfg("robot", body_names="Body"),
-            "com_range": {"x": (-0.05, 0.05), "y": (-0.05, 0.05), "z": (-0.01, 0.01)},
-        },
-    )
+    # base_com = EventTerm(
+    #     func=mdp.randomize_rigid_body_com,
+    #     mode="startup",
+    #     params={
+    #         "asset_cfg": SceneEntityCfg("robot", body_names="Body"),
+    #         "com_range": {"x": (-0.05, 0.05), "y": (-0.05, 0.05), "z": (-0.01, 0.01)},
+    #     },
+    # )
 
     # -- Reset
     base_external_force_torque = EventTerm(
@@ -264,29 +268,41 @@ class RewardsCfg:
     # Penalize large joint torques to encourage energy efficiency
     dof_torques_l2 = RewTerm(func=mdp.joint_torques_l2, weight=-1.0e-5)
     # Penalize large joint accelerations for smoother motion
-    dof_acc_l2 = RewTerm(func=mdp.joint_acc_l2, weight=-2.5e-7)
+    # dof_acc_l2 = RewTerm(func=mdp.joint_acc_l2, weight=-2.5e-7)
     # Penalize rapid changes in action for smoother control
     action_rate_l2 = RewTerm(func=mdp.action_rate_l2, weight=-0.01)
+
+    # Penalize offsets from the default joint positions when the command is very small.
+    # joint_pos_offset_l2 = RewTerm(func=mdp.stand_still_joint_deviation_l1, weight=-0.4)
 
     # -- Gait rewards (for 8-legged locomotion)
     # Reward for keeping feet in the air for appropriate durations (encourages stepping)
     feet_air_time = RewTerm(
-        func=mdp.feet_air_time,
-        weight=0.125,
+        func=spider_mdp.feet_air_time,
+        weight=2.0,
         params={
             "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_Tibia_Foot"),
             "command_name": "base_velocity",
-            "threshold": 0.5,
+            "threshold_min": 0.5,
+            "threshold_max": 2.0,
         },
     )
 
     # Penalize undesired contacts (e.g., body touching the ground)
     undesired_contacts = RewTerm(
         func=mdp.undesired_contacts,
-        weight=-1.0,
+        weight=-0.5,
         params={
             "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_BadTouch"),
             "threshold": 1.0,
+        },
+    )
+    # Penalize if none of the desired contacts are present
+    no_contact = RewTerm(
+        func=spider_mdp.desired_contacts,
+        weight=-0.5,
+        params={
+            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=[".*_Tibia_Foot"])
         },
     )
 
@@ -312,20 +328,20 @@ class TerminationsCfg:
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
 
     # Terminate if the robot bottoms out
-    base_contact = DoneTerm(
-        func=mdp.illegal_contact,
-        params={
-            "sensor_cfg": SceneEntityCfg(
-                "contact_forces",
-                body_names=[
-                    ".*_Hip_actuator_assembly_Hip_Bracket",
-                    ".*_Femur_actuator_assembly_Motor",
-                    ".*_Knee_actuator_assembly_Motor",
-                ],
-            ),
-            "threshold": 1.0,
-        },
-    )
+    # base_contact = DoneTerm(
+    #     func=mdp.illegal_contact,
+    #     params={
+    #         "sensor_cfg": SceneEntityCfg(
+    #             "contact_forces",
+    #             body_names=[
+    #                 ".*_Hip_actuator_assembly_Hip_Bracket",
+    #                 ".*_Femur_actuator_assembly_Motor",
+    #                 ".*_Knee_actuator_assembly_Motor",
+    #             ],
+    #         ),
+    #         "threshold": 1.0,
+    #     },
+    # )
 
 
 @configclass
@@ -369,8 +385,8 @@ class SpiderLocomotionEnvCfg(ManagerBasedRLEnvCfg):
         self.sim.physx.gpu_max_rigid_patch_count = 20 * 2**15
 
         # Viewer settings
-        # self.viewer.eye = (8.0, 0.0, 5.0)
-        # self.viewer.lookat = (0.0, 0.0, 0.0)
+        self.viewer.eye = (8.0, 0.0, 5.0)
+        self.viewer.lookat = (0.0, 0.0, 0.0)
 
         # update sensor update periods
         # we tick all the sensors based on the smallest update period (physics update period)
