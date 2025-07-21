@@ -4,7 +4,7 @@ import math
 from dataclasses import MISSING
 from isaaclab.envs import ManagerBasedRLEnvCfg
 from isaaclab.managers import ActionTermCfg as ActionTerm
-from isaaclab.managers import CurriculumTermCfg as CurrTerm
+from isaaclab.managers import CurriculumTermCfg
 from isaaclab.managers import EventTermCfg as EventTerm
 from isaaclab.managers import ObservationGroupCfg as ObsGroup
 from isaaclab.managers import ObservationTermCfg as ObsTerm
@@ -306,6 +306,16 @@ class RewardsCfg:
         },
     )
 
+    # Penalize feet sliding
+    feet_slide = RewTerm(
+        func=mdp.feet_slide,
+        weight=-0.1,
+        params={
+            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_Tibia_Foot"),
+            "asset_cfg": SceneEntityCfg("robot", body_names=".*_Tibia_Foot"),
+        },
+    )
+
     # -- Optional rewards
 
     # Reward for keeping the robot's body flat (upright orientation)
@@ -348,7 +358,7 @@ class TerminationsCfg:
 class CurriculumCfg:
     """Curriculum terms for the spider robot."""
 
-    terrain_levels = CurrTerm(func=mdp.terrain_levels_vel)
+    terrain_levels = CurriculumTermCfg(func=mdp.terrain_levels_vel)
 
 
 ##

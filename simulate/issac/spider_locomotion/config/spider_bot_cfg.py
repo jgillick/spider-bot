@@ -56,8 +56,8 @@ class SpiderBotCfg(ArticulationCfg):
         ),
     }
 
-    # Limit joints to 95% of their range
-    # soft_joint_pos_limit_factor = 0.95
+    # Limit joints to 90% of their range
+    soft_joint_pos_limit_factor = 0.9
 
     # Define collision properties for better simulation
     # collision_props = sim_utils.CollisionPropertiesCfg(
