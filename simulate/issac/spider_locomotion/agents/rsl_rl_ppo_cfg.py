@@ -11,7 +11,7 @@ from isaaclab_rl.rsl_rl import (
 class SpiderBotRoughPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     num_steps_per_env = 24
     max_iterations = 30_000
-    save_interval = 200
+    save_interval = 50
     experiment_name = "spider_bot"
     empirical_normalization = False
     policy = RslRlPpoActorCriticCfg(
@@ -24,9 +24,9 @@ class SpiderBotRoughPPORunnerCfg(RslRlOnPolicyRunnerCfg):
         value_loss_coef=1.0,
         use_clipped_value_loss=True,
         clip_param=0.2,
-        entropy_coef=0.01,  # Increased from 0.005 for better exploration
-        num_learning_epochs=6,  # Increased from 5 for more complex policy
-        num_mini_batches=6,  # Increased from 4 for better gradient estimates
+        entropy_coef=0.008,
+        num_learning_epochs=5,
+        num_mini_batches=4,
         learning_rate=1.0e-3,
         schedule="adaptive",
         gamma=0.99,
@@ -40,16 +40,15 @@ class SpiderBotRoughPPORunnerCfg(RslRlOnPolicyRunnerCfg):
 class SpiderBotFlatPPORunnerCfg(SpiderBotRoughPPORunnerCfg):
     def __post_init__(self):
         super().__post_init__()
-        self.max_iterations = 3000  # Increased from 300 for more DOF
+        self.max_iterations = 3000
         self.experiment_name = "spider_bot_flat"
-        # Increased network capacity for 24 DOF robot
         self.policy.actor_hidden_dims = [
             256,
             256,
             128,
-        ]  # Increased from [128, 128, 128]
+        ]
         self.policy.critic_hidden_dims = [
             256,
             256,
             128,
-        ]  # Increased from [128, 128, 128]
+        ]
