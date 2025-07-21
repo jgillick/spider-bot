@@ -44,11 +44,13 @@ async def main(model_path):
             MassAPI = UsdPhysics.MassAPI.Get(stage, prim.GetPath())
             mass = MassAPI.GetMassAttr().Get()
             if mass:
+                printout(f"{round(mass, 2):>6} kg - {prim.GetPath()}")
                 total_mass += mass
         except Exception as e:
             printout(f"Error: {e}")
-        
-    printout(f"Total mass: {round(total_mass, 2)}kg")
+    
+    printout("-"*9)
+    printout(f"{round(total_mass, 2):>6} kg total")
     return True
 
 if __name__ == "__main__":
