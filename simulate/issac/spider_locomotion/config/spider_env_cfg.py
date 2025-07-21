@@ -108,11 +108,11 @@ class CommandsCfg:
 @configclass
 class ActionsCfg:
     """Action specifications for the spider robot."""
-
+    
     joint_pos = mdp.JointPositionActionCfg(
         asset_name="robot",
-        # joint_names=[".*Leg[1-8]_Hip", ".*Leg[1-8]_Femur", ".*Leg[1-8]_Tibia"],
-        joint_names=[".*"],
+        joint_names=[".*Leg[1-8]_Tibia", ".*Leg[1-8]_Hip", ".*Leg[1-8]_Femur"],
+        # joint_names=[".*"],
         scale=1.0,
         use_default_offset=True,
     )
@@ -260,6 +260,24 @@ class RewardsCfg:
         params={"command_name": "base_velocity", "std": math.sqrt(0.25)},
     )
 
+    # Reward for keeping feet in the air for appropriate durations (encourages stepping)
+    feet_air_time = RewTerm(
+        func=spider_mdp.feet_air_time,
+        weight=2.0,
+        params={
+            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_Tibia_Foot"),
+            "command_name": "base_velocity",
+            "threshold_min": 0.5,
+            "threshold_max": 2.0,
+        },
+    )
+
+    # Still alive
+    is_alive = RewTerm(
+        func=mdp.is_alive,
+        weight=1.0,
+    )
+
     # -- Regularization rewards
     # Penalize vertical (Z) linear velocity to encourage flat movement
     lin_vel_z_l2 = RewTerm(func=mdp.lin_vel_z_l2, weight=-2.0)
@@ -275,28 +293,15 @@ class RewardsCfg:
     # Penalize offsets from the default joint positions when the command is very small.
     # joint_pos_offset_l2 = RewTerm(func=mdp.stand_still_joint_deviation_l1, weight=-0.4)
 
-    # -- Gait rewards (for 8-legged locomotion)
-    # Reward for keeping feet in the air for appropriate durations (encourages stepping)
-    feet_air_time = RewTerm(
-        func=spider_mdp.feet_air_time,
-        weight=2.0,
-        params={
-            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_Tibia_Foot"),
-            "command_name": "base_velocity",
-            "threshold_min": 0.5,
-            "threshold_max": 2.0,
-        },
-    )
-
-    # Penalize undesired contacts (e.g., body touching the ground)
-    undesired_contacts = RewTerm(
-        func=mdp.undesired_contacts,
-        weight=-0.5,
-        params={
-            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_BadTouch"),
-            "threshold": 1.0,
-        },
-    )
+    # Penalize undesired contacts
+    # undesired_contacts = RewTerm(
+    #     func=mdp.undesired_contacts,
+    #     weight=-0.5,
+    #     params={
+    #         "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_BadTouch"),
+    #         "threshold": 1.0,
+    #     },
+    # )
     # Penalize if none of the desired contacts are present
     no_contact = RewTerm(
         func=spider_mdp.desired_contacts,
@@ -305,6 +310,9 @@ class RewardsCfg:
             "sensor_cfg": SceneEntityCfg("contact_forces", body_names=[".*_Tibia_Foot"])
         },
     )
+    
+    # Terminated
+    termination_penalty = RewTerm(func=mdp.is_terminated, weight=-100.0)
 
     # -- Optional rewards
 
@@ -327,6 +335,21 @@ class TerminationsCfg:
     # Episode timeout
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
 
+    # Terminate if the robot is upside down (orientation deviation too large)
+    upside_down = DoneTerm(
+        func=mdp.bad_orientation,
+        params={"limit_angle": 0.7},
+    )
+
+    # Terminate if the robot if the "BadTouch" bodies are in contact
+    bad_touch = DoneTerm(
+        func=mdp.illegal_contact,
+        params={
+            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=[".*_BadTouch"]),
+            "threshold": 1.0,
+        },
+    )
+
     # Terminate if the robot bottoms out
     # base_contact = DoneTerm(
     #     func=mdp.illegal_contact,
@@ -339,9 +362,15 @@ class TerminationsCfg:
     #                 ".*_Knee_actuator_assembly_Motor",
     #             ],
     #         ),
-    #         "threshold": 1.0,
+    #         "threshold": 10.0,
     #     },
     # )
+    ground_contact = DoneTerm(
+        func=mdp.root_height_below_minimum,
+        params={
+            "minimum_height": 0.09,
+        },
+    )
 
 
 @configclass
@@ -390,7 +419,7 @@ class SpiderLocomotionEnvCfg(ManagerBasedRLEnvCfg):
 
         # update sensor update periods
         # we tick all the sensors based on the smallest update period (physics update period)
-        if self.scene.contact_forces is not None:
+        if getattr(self.curriculum, "contact_forces", None) is not None:
             self.scene.contact_forces.update_period = self.sim.dt
 
         # check if terrain levels curriculum is enabled - if so, enable curriculum for terrain generator
