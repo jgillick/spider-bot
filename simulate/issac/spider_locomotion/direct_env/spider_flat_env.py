@@ -51,12 +51,16 @@ class SpiderLocomotionFlatDirectEnv(DirectRLEnv):
                 "feet_air_time",
                 "undesired_contacts",
                 "flat_orientation_l2",
+                "bad_touch",
+                "tipped_over",
+                "bottom_contact",
             ]
         }
         # Get specific body indices
         self._base_id, _ = self._contact_sensor.find_bodies("Body")
         self._feet_ids, _ = self._contact_sensor.find_bodies(".*_Tibia_Foot")
-        self._undesired_contact_body_ids, _ = self._contact_sensor.find_bodies(
+        self._bottom_body_ids, _ = self._contact_sensor.find_bodies(".*_Hip_Bracket")
+        self._bad_touch_bodies, _ = self._contact_sensor.find_bodies(
             ".*_BadTouch"
         )
 
@@ -66,10 +70,6 @@ class SpiderLocomotionFlatDirectEnv(DirectRLEnv):
 
         self._contact_sensor = ContactSensor(self.cfg.contact_sensor)
         self.scene.sensors["contact_sensor"] = self._contact_sensor
-
-        # we add a height scanner for perceptive locomotion
-        self._height_scanner = RayCaster(self.cfg.height_scanner)
-        self.scene.sensors["height_scanner"] = self._height_scanner
 
         self.cfg.terrain.num_envs = self.scene.cfg.num_envs
         self.cfg.terrain.env_spacing = self.scene.cfg.env_spacing
@@ -89,7 +89,7 @@ class SpiderLocomotionFlatDirectEnv(DirectRLEnv):
     def _pre_physics_step(self, actions: torch.Tensor):
         self._actions = actions.clone()
         self._processed_actions = (
-            self.cfg.action_scale * self._actions + self._robot.data.default_joint_pos
+            self._actions + self._robot.data.default_joint_pos
         )
 
     def _apply_action(self):
@@ -97,11 +97,6 @@ class SpiderLocomotionFlatDirectEnv(DirectRLEnv):
 
     def _get_observations(self) -> dict:
         self._previous_actions = self._actions.clone()
-        height_data = (
-            self._height_scanner.data.pos_w[:, 2].unsqueeze(1)
-            - self._height_scanner.data.ray_hits_w[..., 2]
-            - 0.5
-        ).clip(-1.0, 1.0)
 
         obs = torch.cat(
             [
@@ -113,7 +108,6 @@ class SpiderLocomotionFlatDirectEnv(DirectRLEnv):
                     self._commands,
                     self._robot.data.joint_pos - self._robot.data.default_joint_pos,
                     self._robot.data.joint_vel,
-                    height_data,
                     self._actions,
                 )
                 if tensor is not None
@@ -160,17 +154,17 @@ class SpiderLocomotionFlatDirectEnv(DirectRLEnv):
             torch.norm(self._commands[:, :2], dim=1) > 0.1
         )
         # undesired contacts
-        # net_contact_forces = self._contact_sensor.data.net_forces_w_history
-        # is_contact = (
-        #     torch.max(
-        #         torch.norm(
-        #             net_contact_forces[:, :, self._undesired_contact_body_ids], dim=-1
-        #         ),
-        #         dim=1,
-        #     )[0]
-        #     > 1.0
-        # )
-        # contacts = torch.sum(is_contact, dim=1)
+        net_contact_forces = self._contact_sensor.data.net_forces_w_history
+        is_contact = (
+            torch.max(
+                torch.norm(
+                    net_contact_forces[:, :, self._bottom_body_ids], dim=-1
+                ),
+                dim=1,
+            )[0]
+            > 1.0
+        )
+        contacts = torch.sum(is_contact, dim=1)
         # flat orientation
         flat_orientation = torch.sum(
             torch.square(self._robot.data.projected_gravity_b[:, :2]), dim=1
@@ -199,9 +193,9 @@ class SpiderLocomotionFlatDirectEnv(DirectRLEnv):
             "feet_air_time": air_time
             * self.cfg.feet_air_time_reward_scale
             * self.step_dt,
-            # "undesired_contacts": contacts
-            # * self.cfg.undesired_contact_reward_scale
-            # * self.step_dt,
+            "undesired_contacts": contacts
+            * self.cfg.undesired_contact_reward_scale
+            * self.step_dt,
             "flat_orientation_l2": flat_orientation
             * self.cfg.flat_orientation_reward_scale
             * self.step_dt,
@@ -213,14 +207,16 @@ class SpiderLocomotionFlatDirectEnv(DirectRLEnv):
         return reward
 
     def _get_dones(self) -> tuple[torch.Tensor, torch.Tensor]:
+        net_contact_forces = self._contact_sensor.data.net_forces_w_history
+
+        # Episode timeout
         time_out = self.episode_length_buf >= self.max_episode_length - 1
 
         # Is the robot putting force on "BadTouch" bodies
-        net_contact_forces = self._contact_sensor.data.net_forces_w_history
         bad_touch = torch.any(
             torch.max(
                 torch.norm(
-                    net_contact_forces[:, :, self._undesired_contact_body_ids], dim=-1
+                    net_contact_forces[:, :, self._bad_touch_bodies], dim=-1
                 ),
                 dim=1,
             )[0]
@@ -228,20 +224,22 @@ class SpiderLocomotionFlatDirectEnv(DirectRLEnv):
             dim=1,
         )
 
+        # Is the robot putting force on the bottom body
+        # bottom_contact = torch.any(
+        #     torch.max(
+        #         torch.norm(net_contact_forces[:, :, self._bottom_body_ids], dim=-1),
+        #         dim=1,
+        #     )[0]
+        #     > 1.0,
+        #     dim=1,
+        # )
+
         # The robot has tipped over
         tipped_over = (
             torch.acos(-self._robot.data.projected_gravity_b[:, 2]).abs() > 0.7
         )
 
-        # Logging
-        termination = {
-            "tipped_over": tipped_over.int(),
-            "bad_touch": bad_touch.int(),
-        }
-        for key, value in termination.items():
-            self._episode_sums[key] += value
-
-        died = torch.logical_or(bad_touch, tipped_over)
+        died = torch.any(torch.stack([bad_touch, tipped_over]), dim=0)
         return died, time_out
 
     def _reset_idx(self, env_ids: torch.Tensor | None):
@@ -284,7 +282,7 @@ class SpiderLocomotionFlatDirectEnv(DirectRLEnv):
         self.extras["log"] = dict()
         self.extras["log"].update(extras)
         extras = dict()
-        extras["Episode_Termination/base_contact"] = torch.count_nonzero(
+        extras["Episode_Termination/terminated"] = torch.count_nonzero(
             self.reset_terminated[env_ids]
         ).item()
         extras["Episode_Termination/time_out"] = torch.count_nonzero(
