@@ -109,13 +109,16 @@ class SpiderFlatEnvCfg(DirectRLEnvCfg):
         track_air_time=True,
     )
 
+    # command limits
+    max_command_velocity = 0.3 # m/s
+
     # reward scales
     lin_vel_reward_scale = 2.0
     yaw_rate_reward_scale = 0.5
-    feet_air_time_reward_scale = 0.2
+    feet_air_time_reward_scale = 0.5
 
     # penalty scales
-    z_vel_reward_scale = -2.0
+    z_vel_reward_scale = -0.0
     ang_vel_reward_scale = -0.05
     joint_torque_reward_scale = -2.5e-5
     joint_accel_reward_scale = -2.5e-7
