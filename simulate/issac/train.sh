@@ -11,8 +11,8 @@
 #######################################################
 # CONFIGURATION
 #######################################################
-NUM_ENVS=10
-HEADLESS=0
+NUM_ENVS=600
+HEADLESS=1
 
 # Video settings (only when HEADLESS=1)
 VIDEO_LENGTH=1000
