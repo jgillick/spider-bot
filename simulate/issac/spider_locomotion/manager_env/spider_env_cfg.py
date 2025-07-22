@@ -1,7 +1,6 @@
 """Configuration for the spider locomotion environment."""
 
 import math
-from dataclasses import MISSING
 from isaaclab.envs import ManagerBasedRLEnvCfg
 from isaaclab.managers import ActionTermCfg as ActionTerm
 from isaaclab.managers import CurriculumTermCfg
@@ -26,7 +25,7 @@ from isaaclab.terrains.config.rough import ROUGH_TERRAINS_CFG
 import isaaclab_tasks.manager_based.locomotion.spider_locomotion.mdp as spider_mdp
 
 # Import spider robot configuration
-from .spider_bot_cfg import SpiderBotCfg
+from ..spider_bot_cfg import SpiderBotCfg
 
 ##
 # Scene definition
@@ -108,7 +107,7 @@ class CommandsCfg:
 @configclass
 class ActionsCfg:
     """Action specifications for the spider robot."""
-    
+
     joint_pos = mdp.JointPositionActionCfg(
         asset_name="robot",
         joint_names=[".*Leg[1-8]_Tibia", ".*Leg[1-8]_Hip", ".*Leg[1-8]_Femur"],
@@ -310,7 +309,7 @@ class RewardsCfg:
             "sensor_cfg": SceneEntityCfg("contact_forces", body_names=[".*_Tibia_Foot"])
         },
     )
-    
+
     # Terminated
     termination_penalty = RewTerm(func=mdp.is_terminated, weight=-100.0)
 
