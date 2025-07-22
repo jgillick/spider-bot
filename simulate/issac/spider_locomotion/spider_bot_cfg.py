@@ -9,7 +9,7 @@ import isaaclab.sim as sim_utils
 # Get the path to the SpiderBot USD file
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 SPIDER_BOT_FILE = "SpiderBot.usd"
-ASSETS_DIR = os.path.abspath(os.path.join(THIS_DIR, "../assets"))
+ASSETS_DIR = os.path.abspath(os.path.join(THIS_DIR, "assets"))
 SPIDER_BOT_USD_PATH = os.path.join(ASSETS_DIR, SPIDER_BOT_FILE)
 
 
