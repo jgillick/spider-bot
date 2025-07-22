@@ -35,11 +35,11 @@ trap "exit" INT TERM
 trap "kill 0" EXIT
 
 # Start the tensorboard server
-start_tensorboard() {
-  mkdir -p logs
-  ./isaaclab.sh -p -m tensorboard.main --logdir=logs --bind_all
-}
-start_tensorboard &
+# start_tensorboard() {
+#   mkdir -p logs
+#   ./isaaclab.sh -p -m tensorboard.main --logdir=logs --bind_all
+# }
+# start_tensorboard &
 
 export HYDRA_FULL_ERROR=1
 
