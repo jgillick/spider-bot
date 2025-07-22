@@ -4,12 +4,14 @@ import gymnasium as gym
 import torch
 
 import isaaclab.sim as sim_utils
+import isaaclab.utils.math as math_utils
 from isaaclab.assets import Articulation
 from isaaclab.envs import DirectRLEnv
 from isaaclab.sensors import ContactSensor, RayCaster
+from isaaclab.markers import VisualizationMarkers
+from isaaclab.markers.config import BLUE_ARROW_X_MARKER_CFG, GREEN_ARROW_X_MARKER_CFG
 
 from .spider_flat_cfg import SpiderFlatEnvCfg
-
 
 class SpiderLocomotionFlatDirectEnv(DirectRLEnv):
     cfg: SpiderFlatEnvCfg
@@ -21,6 +23,7 @@ class SpiderLocomotionFlatDirectEnv(DirectRLEnv):
         **kwargs,
     ):
         super().__init__(cfg, render_mode, **kwargs)
+        self.set_debug_vis(self.cfg.debug_vis)
 
         # Joint position command (deviation from default joint positions)
         self._actions = torch.zeros(
@@ -87,10 +90,14 @@ class SpiderLocomotionFlatDirectEnv(DirectRLEnv):
         light_cfg.func("/World/Light", light_cfg)
 
     def _pre_physics_step(self, actions: torch.Tensor):
-        self._actions = actions.clone()
-        self._processed_actions = (
-            self._actions + self._robot.data.default_joint_pos
+        # Scale the actions from from -1 to 1, to the full joint ranges
+        self._actions = actions.clone().clamp(-1.0, 1.0)
+        target_positions = math_utils.unscale_transform(
+            actions,
+            self._robot.data.soft_joint_pos_limits[:, :, 0],
+            self._robot.data.soft_joint_pos_limits[:, :, 1],
         )
+        self._processed_actions = (target_positions)
 
     def _apply_action(self):
         self._robot.set_joint_position_target(self._processed_actions)
@@ -106,7 +113,7 @@ class SpiderLocomotionFlatDirectEnv(DirectRLEnv):
                     self._robot.data.root_ang_vel_b,
                     self._robot.data.projected_gravity_b,
                     self._commands,
-                    self._robot.data.joint_pos - self._robot.data.default_joint_pos,
+                    self._robot.data.joint_pos,
                     self._robot.data.joint_vel,
                     self._actions,
                 )
@@ -289,3 +296,57 @@ class SpiderLocomotionFlatDirectEnv(DirectRLEnv):
             self.reset_time_outs[env_ids]
         ).item()
         self.extras["log"].update(extras)
+    
+    def _set_debug_vis_impl(self, debug_vis: bool):
+        # set visibility of markers
+        if debug_vis:
+            # create markers if necessary for the first time
+            if not hasattr(self, "goal_vel_visualizer"):
+                # -- goal
+                self.goal_vel_visualizer = VisualizationMarkers(GREEN_ARROW_X_MARKER_CFG.replace( 
+                    prim_path="/Visuals/Command/velocity_current"
+                ))
+                # -- current
+                self.current_vel_visualizer = VisualizationMarkers(BLUE_ARROW_X_MARKER_CFG.replace( 
+                    prim_path="/Visuals/Command/velocity_current"
+                ))
+            # set their visibility to true
+            self.goal_vel_visualizer.set_visibility(True)
+            self.current_vel_visualizer.set_visibility(True)
+        else:
+            if hasattr(self, "goal_vel_visualizer"):
+                self.goal_vel_visualizer.set_visibility(False)
+                self.current_vel_visualizer.set_visibility(False)
+
+    def _debug_vis_callback(self, event):
+        # check if robot is initialized
+        # note: this is needed in-case the robot is de-initialized. we can't access the data
+        if not self._robot.is_initialized:
+            return
+        # get marker location
+        # -- base state
+        base_pos_w = self._robot.data.root_pos_w.clone()
+        base_pos_w[:, 2] += 0.5
+        # -- resolve the scales and quaternions
+        vel_des_arrow_scale, vel_des_arrow_quat = self._resolve_xy_velocity_to_arrow(self._commands[:, :2])
+        vel_arrow_scale, vel_arrow_quat = self._resolve_xy_velocity_to_arrow(self._robot.data.root_lin_vel_b[:, :2])
+        # display markers
+        self.goal_vel_visualizer.visualize(base_pos_w, vel_des_arrow_quat, vel_des_arrow_scale)
+        self.current_vel_visualizer.visualize(base_pos_w, vel_arrow_quat, vel_arrow_scale)
+
+    def _resolve_xy_velocity_to_arrow(self, xy_velocity: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        """Converts the XY base velocity command to arrow direction rotation."""
+        # obtain default scale of the marker
+        default_scale = self.goal_vel_visualizer.cfg.markers["arrow"].scale
+        # arrow-scale
+        arrow_scale = torch.tensor(default_scale, device=self.device).repeat(xy_velocity.shape[0], 1)
+        arrow_scale[:, 0] *= torch.linalg.norm(xy_velocity, dim=1) * 3.0
+        # arrow-direction
+        heading_angle = torch.atan2(xy_velocity[:, 1], xy_velocity[:, 0])
+        zeros = torch.zeros_like(heading_angle)
+        arrow_quat = math_utils.quat_from_euler_xyz(zeros, zeros, heading_angle)
+        # convert everything back from base to world frame
+        base_quat_w = self._robot.data.root_quat_w
+        arrow_quat = math_utils.quat_mul(base_quat_w, arrow_quat)
+
+        return arrow_scale, arrow_quat

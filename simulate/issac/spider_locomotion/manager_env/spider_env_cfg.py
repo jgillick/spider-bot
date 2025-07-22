@@ -22,7 +22,7 @@ import isaaclab_tasks.manager_based.locomotion.velocity.mdp as mdp
 import isaaclab.sim as sim_utils
 from isaaclab.terrains.config.rough import ROUGH_TERRAINS_CFG
 
-import isaaclab_tasks.manager_based.locomotion.spider_locomotion.mdp as spider_mdp
+import isaaclab_tasks.manager_based.locomotion.spider_locomotion.manager_env.mdp as spider_mdp
 
 # Import spider robot configuration
 from ..spider_bot_cfg import SpiderBotCfg
@@ -333,7 +333,7 @@ class RewardsCfg:
 
     # Penalize deviation from target base height
     base_height_l2 = RewTerm(
-        func=mdp.base_height_l2, weight=-0.5, params={"target_height": 0.13}
+        func=mdp.base_height_l2, weight=-0.5, params={"target_height": 0.134}
     )
 
 
