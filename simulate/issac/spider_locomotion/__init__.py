@@ -9,7 +9,7 @@ gym.register(
     entry_point="isaaclab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
-        "env_cfg_entry_point": f"{__name__}.config.spider_env_cfg:SpiderLocomotionEnvCfg",
+        "env_cfg_entry_point": f"{__name__}.manager_env.spider_env_cfg:SpiderLocomotionEnvCfg",
         "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:SpiderBotRoughPPORunnerCfg",
     },
 )
@@ -20,7 +20,18 @@ gym.register(
     entry_point="isaaclab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
-        "env_cfg_entry_point": f"{__name__}.config.spider_flat_env_cfg:SpiderLocomotionFlatEnvCfg",
+        "env_cfg_entry_point": f"{__name__}.manager_env.spider_flat_env_cfg:SpiderLocomotionFlatEnvCfg",
+        "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:SpiderBotFlatPPORunnerCfg",
+    },
+)
+
+# Register for direct workflow (manual, non-manager-based)
+gym.register(
+    id="Isaac-SpiderLocomotion-Direct-v0",
+    entry_point=f"{__name__}.direct_env:SpiderLocomotionFlatDirectEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.direct_env:SpiderFlatEnvCfg",
         "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:SpiderBotFlatPPORunnerCfg",
     },
 )
