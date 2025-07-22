@@ -173,7 +173,7 @@ class SpiderLocomotionFlatDirectEnv(DirectRLEnv):
         )
 
         rewards = {
-            "track_lin_vel_xy_exp": self._mdp_commanded_direction_reward,
+            "track_lin_vel_xy_exp": self._mdp_commanded_direction_reward(),
             "track_ang_vel_z_exp": yaw_rate_error_mapped
             * self.cfg.yaw_rate_reward_scale
             * self.step_dt,
