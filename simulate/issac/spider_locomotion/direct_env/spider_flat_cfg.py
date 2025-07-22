@@ -6,7 +6,7 @@
 import isaaclab.envs.mdp as mdp
 import isaaclab.sim as sim_utils
 from isaaclab.assets import ArticulationCfg
-from isaaclab.envs import DirectRLEnvCfg
+from isaaclab.envs import DirectRLEnvCfg, ViewerCfg
 from isaaclab.managers import EventTermCfg as EventTerm
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.scene import InteractiveSceneCfg
@@ -107,6 +107,13 @@ class SpiderFlatEnvCfg(DirectRLEnvCfg):
         history_length=3,
         update_period=0.005,
         track_air_time=True,
+    )
+    # Viwer settings
+    viewer: ViewerCfg = ViewerCfg(
+        origin_type="asset_root",
+        asset_name="robot",
+        eye=(2.0, 1.0, 1.0),
+        lookat=(0.0, 0.0, 0.0),
     )
 
     # command limits
