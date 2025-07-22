@@ -211,10 +211,12 @@ class SpiderLocomotionFlatDirectEnv(DirectRLEnv):
             * self.step_dt,
         }
         reward = torch.sum(torch.stack(list(rewards.values())), dim=0)
+        
         # Logging
         for key, value in rewards.items():
             self._episode_sums[key] += value
         self._episode_metrics["robot_height"] += self._robot.data.root_pos_w[:, 2]
+
         return reward
 
     def _get_dones(self) -> tuple[torch.Tensor, torch.Tensor]:
