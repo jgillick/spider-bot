@@ -214,3 +214,4 @@ simulate/robot/export/
 simulate/gymnasium/logs
 simulate/issac/cloud.cfg
 simulate/issac/logs
+secrets.cfg
