@@ -59,6 +59,9 @@ class SpiderLocomotionFlatDirectEnv(DirectRLEnv):
                 "bottom_contact",
             ]
         }
+        self._episode_metrics = {
+            "robot_height": torch.zeros(self.num_envs, dtype=torch.float, device=self.device),
+        }
         # Get specific body indices
         self._base_id, _ = self._contact_sensor.find_bodies("Body")
         self._feet_ids, _ = self._contact_sensor.find_bodies(".*_Tibia_Foot")
@@ -211,6 +214,7 @@ class SpiderLocomotionFlatDirectEnv(DirectRLEnv):
         # Logging
         for key, value in rewards.items():
             self._episode_sums[key] += value
+        self._episode_metrics["robot_height"] += self._robot.data.root_pos_w[:, 2]
         return reward
 
     def _get_dones(self) -> tuple[torch.Tensor, torch.Tensor]:
@@ -286,15 +290,17 @@ class SpiderLocomotionFlatDirectEnv(DirectRLEnv):
                 episodic_sum_avg / self.max_episode_length_s
             )
             self._episode_sums[key][env_ids] = 0.0
-        self.extras["log"] = dict()
-        self.extras["log"].update(extras)
-        extras = dict()
+        for key in self._episode_metrics.keys():
+            episodic_sum_avg = torch.mean(self._episode_metrics[key][env_ids])
+            extras[f"Episode_Metrics/{key}"] = episodic_sum_avg / self.max_episode_length
+            self._episode_metrics[key][env_ids] = 0.0
         extras["Episode_Termination/terminated"] = torch.count_nonzero(
             self.reset_terminated[env_ids]
         ).item()
         extras["Episode_Termination/time_out"] = torch.count_nonzero(
             self.reset_time_outs[env_ids]
         ).item()
+        self.extras["log"] = dict()
         self.extras["log"].update(extras)
     
     def _set_debug_vis_impl(self, debug_vis: bool):
