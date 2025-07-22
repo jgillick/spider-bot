@@ -53,7 +53,7 @@ class SpiderFlatEnvCfg(DirectRLEnvCfg):
     # env
     episode_length_s = 20.0
     decimation = 4
-    observation_space = 48
+    observation_space = 60
     state_space = 0
     action_space = spaces.Box(
         low=-3.14159,
