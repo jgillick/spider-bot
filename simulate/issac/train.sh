@@ -11,14 +11,15 @@
 #######################################################
 # CONFIGURATION
 #######################################################
-NUM_ENVS=512
-HEADLESS=1
+NUM_ENVS=10
+HEADLESS=0
 
 # Video settings (only when HEADLESS=1)
 VIDEO_LENGTH=1000
 VIDEO_INTERVAL=500
 
-TRAINING_TASK="Isaac-SpiderLocomotion-Flat-v0"
+# TRAINING_TASK="Isaac-SpiderLocomotion-Flat-v0"
+TRAINING_TASK="Isaac-SpiderLocomotion-Direct-v0"
 TRAINING_SCRIPT="./scripts/reinforcement_learning/rsl_rl/train.py"
 
 ISAACLAB_ROOT="$HOME/Documents/Projects/isaac/IsaacLab"

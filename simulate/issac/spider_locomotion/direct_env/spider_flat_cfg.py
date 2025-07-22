@@ -42,7 +42,7 @@ class EventCfg:
         mode="startup",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names="base"),
-            "mass_distribution_params": (-0.5, 1.0),
+            "mass_distribution_params": (0.0, 1.0),
             "operation": "add",
         },
     )
@@ -51,13 +51,14 @@ class EventCfg:
 @configclass
 class SpiderFlatEnvCfg(DirectRLEnvCfg):
     # env
+    debug_vis = True
     episode_length_s = 20.0
     decimation = 4
     observation_space = 60
     state_space = 0
     action_space = spaces.Box(
-        low=-3.14159,
-        high=3.14159,
+        low=-1,
+        high=1,
         shape=(24,),
         dtype=np.float32,
     )
@@ -97,7 +98,10 @@ class SpiderFlatEnvCfg(DirectRLEnvCfg):
     events: EventCfg = EventCfg()
 
     # robot
-    robot: ArticulationCfg = SpiderBotCfg(prim_path="/World/envs/env_.*/Robot")
+    robot: ArticulationCfg = SpiderBotCfg(
+        prim_path="/World/envs/env_.*/Robot",
+        init_state=SpiderBotCfg.InitialStateCfg(pos=(0.0, 0.0, 0.135))
+    )
     contact_sensor: ContactSensorCfg = ContactSensorCfg(
         prim_path="/World/envs/env_.*/Robot/Body/.*",
         history_length=3,
@@ -106,13 +110,15 @@ class SpiderFlatEnvCfg(DirectRLEnvCfg):
     )
 
     # reward scales
-    lin_vel_reward_scale = 1.0
+    lin_vel_reward_scale = 2.0
     yaw_rate_reward_scale = 0.5
+    feet_air_time_reward_scale = 0.2
+
+    # penalty scales
     z_vel_reward_scale = -2.0
     ang_vel_reward_scale = -0.05
     joint_torque_reward_scale = -2.5e-5
     joint_accel_reward_scale = -2.5e-7
-    action_rate_reward_scale = -0.01
-    feet_air_time_reward_scale = 0.5
-    undesired_contact_reward_scale = -1.0
-    flat_orientation_reward_scale = -5.0
+    action_rate_reward_scale = 0.0
+    undesired_contact_reward_scale = -0.2
+    flat_orientation_reward_scale = -0.0 
