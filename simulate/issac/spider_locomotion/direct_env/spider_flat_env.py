@@ -128,14 +128,6 @@ class SpiderLocomotionFlatDirectEnv(DirectRLEnv):
         return observations
 
     def _get_rewards(self) -> torch.Tensor:
-        # linear velocity tracking
-        lin_vel_error = torch.sum(
-            torch.square(
-                self._commands[:, :2] - self._robot.data.root_lin_vel_b[:, :2]
-            ),
-            dim=1,
-        )
-        lin_vel_error_mapped = torch.exp(-lin_vel_error / 0.25)
         # yaw rate tracking
         yaw_rate_error = torch.square(
             self._commands[:, 2] - self._robot.data.root_ang_vel_b[:, 2]
@@ -181,9 +173,7 @@ class SpiderLocomotionFlatDirectEnv(DirectRLEnv):
         )
 
         rewards = {
-            "track_lin_vel_xy_exp": lin_vel_error_mapped
-            * self.cfg.lin_vel_reward_scale
-            * self.step_dt,
+            "track_lin_vel_xy_exp": self._mdp_commanded_direction_reward,
             "track_ang_vel_z_exp": yaw_rate_error_mapped
             * self.cfg.yaw_rate_reward_scale
             * self.step_dt,
@@ -272,7 +262,7 @@ class SpiderLocomotionFlatDirectEnv(DirectRLEnv):
 
         # Sample new commands
         self._commands[env_ids] = torch.zeros_like(self._commands[env_ids]).uniform_(
-            -1.0, 1.0
+            -self.cfg.max_command_velocity, self.cfg.max_command_velocity
         )
 
         # Reset robot state
@@ -358,3 +348,28 @@ class SpiderLocomotionFlatDirectEnv(DirectRLEnv):
         arrow_quat = math_utils.quat_mul(base_quat_w, arrow_quat)
 
         return arrow_scale, arrow_quat
+    
+    def _mdp_commanded_velocity_reward(self) -> torch.Tensor:
+        """
+        Reward for moving in the commanded direction and at the commanded velocity.
+        """
+        lin_vel_error = torch.sum(
+            torch.square(
+                self._commands[:, :2] - self._robot.data.root_lin_vel_b[:, :2]
+            ),
+            dim=1,
+        )
+        lin_vel_error_mapped = torch.exp(-lin_vel_error / 0.25)
+        return lin_vel_error_mapped * self.cfg.lin_vel_reward_scale * self.step_dt
+
+    def _mdp_commanded_direction_reward(self) -> torch.Tensor:
+        """
+        Reward for moving in the commanded direction.
+        The reward is proportional to how fast the robot is moving in that direction.
+        This is not based on the magnitude of the commanded velocity (unlike _mdp_commanded_velocity_reward)
+        """
+        cmd_norm = torch.norm(self._commands[:, :2], dim=1, keepdim=True) + 1e-6
+        cmd_dir = self._commands[:, :2] / cmd_norm
+        speed_in_cmd_dir = torch.sum(self._robot.data.root_lin_vel_b[:, :2] * cmd_dir, dim=1)
+
+        return speed_in_cmd_dir * self.cfg.lin_vel_reward_scale * self.step_dt
