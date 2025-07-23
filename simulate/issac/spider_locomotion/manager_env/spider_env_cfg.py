@@ -414,7 +414,7 @@ class SpiderLocomotionEnvCfg(ManagerBasedRLEnvCfg):
         """Post initialization."""
         # General settings
         self.decimation = 4  # Run at 50Hz
-        self.episode_length_s = 20.0  # max episode length in seconds
+        self.episode_length_s = 16.0  # Optimal episode length: 16s = 800 steps at 50Hz
 
         # Simulation settings
         self.sim.dt = 0.005  # 200Hz physics
