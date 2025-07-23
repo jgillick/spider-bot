@@ -146,6 +146,8 @@ def ignore_leg_self_collisions(stage: Usd.Stage):
         "Hip_actuator_assembly_Hip_Bracket",
         "Femur_actuator_assembly_Motor",
         "Femur_actuator_assembly_Femur",
+        "Knee_actuator_assembly_Motor",
+        "Tibia_Leg",
     ]
     for leg in range(1, 9):
         group_path = f"{ROOT_PATH}/CollisionGroups/Leg{leg}"
