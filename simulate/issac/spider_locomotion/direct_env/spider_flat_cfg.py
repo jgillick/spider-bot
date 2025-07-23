@@ -6,7 +6,7 @@
 import isaaclab.envs.mdp as mdp
 import isaaclab.sim as sim_utils
 from isaaclab.assets import ArticulationCfg
-from isaaclab.envs import DirectRLEnvCfg
+from isaaclab.envs import DirectRLEnvCfg, ViewerCfg
 from isaaclab.managers import EventTermCfg as EventTerm
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.scene import InteractiveSceneCfg
@@ -52,13 +52,14 @@ class EventCfg:
 class SpiderFlatEnvCfg(DirectRLEnvCfg):
     # env
     debug_vis = True
-    episode_length_s = 16.0  # Optimal episode length for flat terrain training
+    episode_length_s = 16.0
     decimation = 4
     observation_space = 60
     state_space = 0
+    observation_space = 84
     action_space = spaces.Box(
-        low=-1,
-        high=1,
+        low=-1.0,
+        high=1.0,
         shape=(24,),
         dtype=np.float32,
     )
@@ -107,6 +108,13 @@ class SpiderFlatEnvCfg(DirectRLEnvCfg):
         history_length=3,
         update_period=0.005,
         track_air_time=True,
+    )
+    # Viwer settings
+    viewer: ViewerCfg = ViewerCfg(
+        origin_type="asset_root",
+        asset_name="robot",
+        eye=(2.0, 1.0, 1.0),
+        lookat=(0.0, 0.0, 0.0),
     )
 
     # command limits
