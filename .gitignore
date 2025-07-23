@@ -213,5 +213,6 @@ __marimo__/
 simulate/robot/export/
 simulate/gymnasium/logs
 simulate/issac/cloud.cfg
+simulate/issac/env.cfg
 simulate/issac/logs
 secrets.cfg
