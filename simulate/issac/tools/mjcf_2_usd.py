@@ -154,18 +154,18 @@ def ignore_leg_self_collisions(stage: Usd.Stage):
         "Tibia_BadTouch",
         "Tibia_Foot",
     ]
+    body_collision_path = f"{ROOT_PATH}/Body/Body/collisions"
     for leg in range(1, 9):
         group = UsdPhysics.CollisionGroup.Define(
             stage, f"{ROOT_PATH}/CollisionGroups/Leg{leg}"
         )
 
         # Find all collision bodies for this leg
-        leg_collision_prims = []
+        leg_collision_prims = [body_collision_path]
         for part_name in leg_parts:
-            body = stage.GetPrimAtPath(f"{ROOT_PATH}/Body/Leg{leg}_{part_name}")
-            for prim in body.GetAllChildren():
-                if prim.HasAPI(UsdPhysics.CollisionAPI):
-                    leg_collision_prims.append(prim.GetPath())
+            collision_body = stage.GetPrimAtPath(f"{ROOT_PATH}/Body/Leg{leg}_{part_name}/collision")
+            if collision_body.HasAPI(UsdPhysics.CollisionAPI):
+                leg_collision_prims.append(collision_body.GetPath())
 
         # Add leg parts to this collision group
         collection_api = group.GetCollidersCollectionAPI()
