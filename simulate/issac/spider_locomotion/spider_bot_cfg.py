@@ -28,22 +28,22 @@ class SpiderBotCfg(ArticulationCfg):
     )
 
     init_state = ArticulationCfg.InitialStateCfg(
-        pos=(0.0, 0.0, 0.135),
-        # joint_pos={
-        #     # Hip joints
-        #     ".*Leg1_Hip": -1.0,
-        #     ".*Leg2_Hip": -1.0,
-        #     ".*Leg3_Hip": 1.0,
-        #     ".*Leg4_Hip": 1.0,
-        #     ".*Leg5_Hip": 1.0,
-        #     ".*Leg6_Hip": 1.0,
-        #     ".*Leg7_Hip": -1.0,
-        #     ".*Leg8_Hip": -1.0,
-        #     # Femur joints
-        #     ".*_Femur": 1.0,
-        #     # Tibia joints
-        #     ".*_Tibia": 1.25,
-        # },
+        pos=(0.0, 0.0, 0.16),
+        joint_pos={
+            # Hip joints
+            ".*Leg1_Hip": 1.0,
+            ".*Leg2_Hip": 1.0,
+            ".*Leg3_Hip": -1.0,
+            ".*Leg4_Hip": -1.0,
+            ".*Leg5_Hip": -1.0,
+            ".*Leg6_Hip": -1.0,
+            ".*Leg7_Hip": 1.0,
+            ".*Leg8_Hip": 1.0,
+            # Femur joints
+            ".*_Femur": 0.9,
+            # Tibia joints
+            ".*_Tibia": -1.0,
+        },
     )
 
     actuators = {
@@ -51,8 +51,8 @@ class SpiderBotCfg(ArticulationCfg):
             joint_names_expr=[".*Leg[1-8]_Hip", ".*Leg[1-8]_Femur", ".*Leg[1-8]_Tibia"],
             effort_limit_sim=8.0,
             velocity_limit_sim=12.0,  # Slightly below nominal speed (12.57 rad/s)
-            stiffness={".*": 15.0},
-            damping={".*": 0.0},
+            stiffness={".*": 20.0},
+            damping={".*": 0.5},
         ),
     }
 
