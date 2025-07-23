@@ -22,7 +22,7 @@ import isaaclab_tasks.manager_based.locomotion.velocity.mdp as mdp
 import isaaclab.sim as sim_utils
 from isaaclab.terrains.config.rough import ROUGH_TERRAINS_CFG
 
-import isaaclab_tasks.manager_based.locomotion.spider_locomotion.mdp as spider_mdp
+import isaaclab_tasks.manager_based.locomotion.spider_locomotion.manager_env.mdp as spider_mdp
 
 # Import spider robot configuration
 from ..spider_bot_cfg import SpiderBotCfg
@@ -329,12 +329,12 @@ class RewardsCfg:
     flat_orientation_l2 = RewTerm(func=mdp.flat_orientation_l2, weight=0.0)
 
     # Penalize joint positions if they cross the soft limits.
-    # dof_pos_limits = RewTerm(func=mdp.joint_pos_limits, weight=0.0)
+    dof_pos_limits = RewTerm(func=mdp.joint_pos_limits, weight=0.0)
 
     # Penalize deviation from target base height
-    # base_height_l2 = RewTerm(
-    #     func=mdp.base_height_l2, weight=-0.5, params={"target_height": 0.134}
-    # )
+    base_height_l2 = RewTerm(
+        func=mdp.base_height_l2, weight=-0.5, params={"target_height": 0.134}
+    )
 
 
 @configclass
@@ -351,13 +351,13 @@ class TerminationsCfg:
     )
 
     # Terminate if the robot if the "BadTouch" bodies are in contact
-    bad_touch = DoneTerm(
-        func=mdp.illegal_contact,
-        params={
-            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=[".*_BadTouch"]),
-            "threshold": 1.0,
-        },
-    )
+    # bad_touch = DoneTerm(
+    #     func=mdp.illegal_contact,
+    #     params={
+    #         "sensor_cfg": SceneEntityCfg("contact_forces", body_names=[".*_BadTouch"]),
+    #         "threshold": 1.0,
+    #     },
+    # )
 
     # Terminate if the robot bottoms out
     # base_contact = DoneTerm(
