@@ -101,7 +101,7 @@ class SpiderFlatEnvCfg(DirectRLEnvCfg):
     # robot
     robot: ArticulationCfg = SpiderBotCfg(
         prim_path="/World/envs/env_.*/Robot",
-        init_state=SpiderBotCfg.InitialStateCfg(pos=(0.0, 0.0, 0.135))
+        init_state=SpiderBotCfg.InitialStateCfg(pos=(0.0, 0.0, 0.135)),
     )
     contact_sensor: ContactSensorCfg = ContactSensorCfg(
         prim_path="/World/envs/env_.*/Robot/Body/.*",
@@ -118,7 +118,7 @@ class SpiderFlatEnvCfg(DirectRLEnvCfg):
     )
 
     # command limits
-    max_command_velocity = 0.3 # m/s
+    max_command_velocity = 0.3  # m/s
 
     # reward scales
     lin_vel_reward_scale = 2.0
@@ -132,4 +132,4 @@ class SpiderFlatEnvCfg(DirectRLEnvCfg):
     joint_accel_reward_scale = -2.5e-7
     action_rate_reward_scale = 0.0
     undesired_contact_reward_scale = -0.2
-    flat_orientation_reward_scale = -0.0 
+    flat_orientation_reward_scale = -0.0
