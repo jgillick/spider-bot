@@ -9,24 +9,28 @@ from isaaclab_rl.rsl_rl import (
 
 @configclass
 class SpiderBotRoughPPORunnerCfg(RslRlOnPolicyRunnerCfg):
-    num_steps_per_env = 24
-    max_iterations = 30_000
+    # Target batch size is 98,304 (800 parallel envs * 123 num steps per env)
+    # Based on: https://ar5iv.labs.arxiv.org/html/2109.11978
+    num_steps_per_env = 123
+    max_iterations = 1500
     save_interval = 50
     experiment_name = "spider_bot"
     empirical_normalization = False
     policy = RslRlPpoActorCriticCfg(
         init_noise_std=1.5,  # Increased from 1.0 for better exploration with more DOF
-        actor_hidden_dims=[512, 256, 128],
-        critic_hidden_dims=[512, 256, 128],
+        # Larger network for 24 DOF spider robot (vs 12 DOF ANYmal)
+        # Increased capacity to handle more complex coordination patterns
+        actor_hidden_dims=[512, 512, 256, 256, 128],
+        critic_hidden_dims=[512, 512, 256, 256, 128],
         activation="elu",
     )
     algorithm = RslRlPpoAlgorithmCfg(
         value_loss_coef=1.0,
         use_clipped_value_loss=True,
         clip_param=0.2,
-        entropy_coef=0.008,
+        entropy_coef=0.01,  # Increased from 0.008 to match paper's recommendation
         num_learning_epochs=5,
-        num_mini_batches=4,
+        num_mini_batches=4,  # Keep at 4 to achieve optimal mini-batch size of ~24,576 (98,400/4)
         learning_rate=1.0e-3,
         schedule="adaptive",
         gamma=0.99,
@@ -43,11 +47,13 @@ class SpiderBotFlatPPORunnerCfg(SpiderBotRoughPPORunnerCfg):
         self.max_iterations = 3000
         self.experiment_name = "spider_bot_flat"
         self.policy.actor_hidden_dims = [
+            512,
             256,
             256,
             128,
         ]
         self.policy.critic_hidden_dims = [
+            512,
             256,
             256,
             128,
