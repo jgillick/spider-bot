@@ -147,11 +147,17 @@ def ignore_leg_self_collisions(stage: Usd.Stage):
         "Femur_actuator_assembly_Motor",
         "Femur_actuator_assembly_Femur",
         "Knee_actuator_assembly_Motor",
+        "Knee_actuator_assembly_KneeMotorPulley",
+        "Knee_actuator_assembly_Knee_motor_bearings",
+        "Knee_actuator_assembly_End_Bearing_Holder",
         "Tibia_Leg",
+        "Tibia_BadTouch",
+        "Tibia_Foot",
     ]
     for leg in range(1, 9):
-        group_path = f"{ROOT_PATH}/CollisionGroups/Leg{leg}"
-        collision_group = UsdPhysics.CollisionGroup.Define(stage, group_path)
+        group = UsdPhysics.CollisionGroup.Define(
+            stage, f"{ROOT_PATH}/CollisionGroups/Leg{leg}"
+        )
 
         # Find all collision bodies for this leg
         leg_collision_prims = []
@@ -162,11 +168,11 @@ def ignore_leg_self_collisions(stage: Usd.Stage):
                     leg_collision_prims.append(prim.GetPath())
 
         # Add leg parts to this collision group
-        collection_api = collision_group.GetCollidersCollectionAPI()
+        collection_api = group.GetCollidersCollectionAPI()
         collection_api.CreateIncludesRel().SetTargets(leg_collision_prims)
 
         # Make this group not collide with itself
-        collision_group.CreateFilteredGroupsRel().AddTarget(group_path)
+        group.CreateFilteredGroupsRel().AddTarget(group.GetPath())
 
 
 def set_material_color(stage: Usd.Stage):
