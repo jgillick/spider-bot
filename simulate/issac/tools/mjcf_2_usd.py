@@ -164,7 +164,7 @@ def ignore_leg_self_collisions(stage: Usd.Stage):
         leg_collision_prims = [body_collision_path]
         for part_name in leg_parts:
             collision_body = stage.GetPrimAtPath(
-                f"{ROOT_PATH}/Body/Leg{leg}_{part_name}/collisions"
+                f"{ROOT_PATH}/Body/Leg{leg}_{part_name}/collisions  "
             )
             if collision_body.HasAPI(UsdPhysics.CollisionAPI):
                 leg_collision_prims.append(collision_body.GetPath())
@@ -242,7 +242,7 @@ async def main():
 
         # Other fixes
         fix_joint_api(stage)
-        ignore_leg_self_collisions(stage)
+        # ignore_leg_self_collisions(stage)
         set_material_color(stage)
 
         # Flatten and export USD
