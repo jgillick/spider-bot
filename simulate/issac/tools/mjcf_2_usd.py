@@ -68,6 +68,8 @@ parser.add_argument("output", type=str, help="The path to store the USD file.")
 # parse the arguments
 args_cli = parser.parse_args()
 
+ROOT_PATH = "/SpiderBotNoEnv"
+
 
 def printout(info_str):
     """Simple print wrapper, since the Python print() statements are suppressed sometimes."""
@@ -82,7 +84,7 @@ def fix_joint_api(stage: Usd.Stage):
     """
     for leg in range(1, 9):
         for joint_name in ["Hip", "Femur", "Tibia"]:
-            joint = stage.GetPrimAtPath(f"/SpiderBotNoEnv/joints/Leg{leg}_{joint_name}")
+            joint = stage.GetPrimAtPath(f"{ROOT_PATH}/joints/Leg{leg}_{joint_name}")
 
             ##
             # Drive/Limit API needs to change from "X" to "angular"
@@ -132,6 +134,51 @@ def fix_joint_api(stage: Usd.Stage):
             joint.RemoveAPI(PhysxSchema.PhysxLimitAPI, "X")
 
 
+def ignore_leg_self_collisions(stage: Usd.Stage):
+    """
+    Disable collisions for bodies in the same leg.
+    Bodies part of the same leg might rub against each other but should not collide, otherwise
+    the leg will not move. We observed this problem mostly with the hip and femur movements.
+    """
+    leg_parts = [
+        "Hip_actuator_assembly_Body_Bracket",
+        "Hip_actuator_assembly_Motor",
+        "Hip_actuator_assembly_Hip_Bracket",
+        "Femur_actuator_assembly_Motor",
+        "Femur_actuator_assembly_Femur",
+    ]
+    for leg in range(1, 9):
+        group_path = f"{ROOT_PATH}/CollisionGroups/Leg{leg}"
+        collision_group = UsdPhysics.CollisionGroup.Define(stage, group_path)
+
+        # Find all collision bodies for this leg
+        leg_collision_prims = []
+        for part_name in leg_parts:
+            body = stage.GetPrimAtPath(f"{ROOT_PATH}/Body/Leg{leg}_{part_name}")
+            for prim in body.GetAllChildren():
+                if prim.HasAPI(UsdPhysics.CollisionAPI):
+                    leg_collision_prims.append(prim.GetPath())
+
+        # Add leg parts to this collision group
+        collection_api = collision_group.GetCollidersCollectionAPI()
+        collection_api.CreateIncludesRel().SetTargets(leg_collision_prims)
+
+        # Make this group not collide with itself
+        collision_group.CreateFilteredGroupsRel().AddTarget(group_path)
+
+
+def set_material_color(stage: Usd.Stage):
+    """
+    Set the default material color to black.
+    """
+    def_shader = UsdShade.Material.Get(
+        stage, f"{ROOT_PATH}/Looks/DefaultMaterial/DefaultMaterial"
+    )
+    def_shader.CreateInput("diffuse_tint", Sdf.ValueTypeNames.Color3f).Set(
+        Gf.Vec3f(0.05, 0.05, 0.05)
+    )
+
+
 async def main():
     # check valid file path
     mjcf_path = args_cli.input
@@ -179,20 +226,14 @@ async def main():
             return False
 
         # Delete the worldbody prim
-        worldbody = stage.GetPrimAtPath("/SpiderBotNoEnv/worldBody")
+        worldbody = stage.GetPrimAtPath(f"{ROOT_PATH}/worldBody")
         if worldbody:
             worldbody.SetActive(False)
 
-        # Fix the revolute joint APIs
+        # Other fixes
         fix_joint_api(stage)
-
-        # Set material color to black
-        def_shader = UsdShade.Material.Get(
-            stage, "/SpiderBotNoEnv/Looks/DefaultMaterial/DefaultMaterial"
-        )
-        def_shader.CreateInput("diffuse_tint", Sdf.ValueTypeNames.Color3f).Set(
-            Gf.Vec3f(0.05, 0.05, 0.05)
-        )
+        ignore_leg_self_collisions(stage)
+        set_material_color(stage)
 
         # Flatten and export USD
         flattened_stage = stage.Flatten()
