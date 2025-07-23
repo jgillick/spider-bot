@@ -52,13 +52,14 @@ class EventCfg:
 class SpiderFlatEnvCfg(DirectRLEnvCfg):
     # env
     debug_vis = True
-    episode_length_s = 20.0
+    episode_length_s = 16.0
     decimation = 4
     observation_space = 60
     state_space = 0
+    observation_space = 84
     action_space = spaces.Box(
-        low=-1,
-        high=1,
+        low=-1.0,
+        high=1.0,
         shape=(24,),
         dtype=np.float32,
     )
