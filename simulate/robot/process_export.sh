@@ -15,15 +15,14 @@ python update_urdf.py SpiderBot.urdf
 ###
 # Move mesh files, if they exist
 #
-echo "Updating meshes..."
-if [ -d "./meshes" ]; then
-  rm -r ./meshes/
+echo "Updating URDF meshes..."
+if [ -d "./meshes/urdf" ]; then
+  rm -r ./meshes/urdf
 fi
-mkdir -p "./meshes/mujoco"
 mkdir -p "./meshes/urdf"
 
 # Given the params: filename, destination_dir, rename the file and copy it there.
-function rename_meshe() {
+function copy_meshes() {
   local filename=$1
   local destination_dir=$2
   new_name=$(basename "$file")
@@ -37,11 +36,8 @@ function rename_meshe() {
   cp "$file" "$destination_dir/$new_name"
 }
 
-for file in $EXPORT_DIR/mujoco/SpiderBody/meshes/*.stl; do
-  rename_meshe $file "./meshes/mujoco"
-done
 for file in $EXPORT_DIR/urdf/SpiderBody/meshes/*.stl; do
-  rename_meshe $file "./meshes/urdf"
+  copy_meshes $file "./meshes/urdf"
 done
 
 echo "Done"
