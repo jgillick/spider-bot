@@ -26,75 +26,65 @@
     <material name="body_material" rgba="0.1 0.1 0.1 1.0" reflectance="0.3" shininess="1.0" roughness="1.0" />
     <mesh name="Body_collision00" file="meshes/mujoco/colliders/Body/00.stl" />
     <mesh name="Body_collision01" file="meshes/mujoco/colliders/Body/01.stl" />
-    <mesh name="Body_collision02" file="meshes/mujoco/colliders/Body/02.stl" />
-    <mesh name="Body_collision03" file="meshes/mujoco/colliders/Body/03.stl" />
-    <mesh name="Body_collision04" file="meshes/mujoco/colliders/Body/04.stl" />
-    <mesh name="Body_collision05" file="meshes/mujoco/colliders/Body/05.stl" />
-    <mesh name="Motor_collision00" file="meshes/mujoco/colliders/Motor/00.stl" />
-    <mesh name="Motor_collision01" file="meshes/mujoco/colliders/Motor/01.stl" />
-    <mesh name="Motor_collision02" file="meshes/mujoco/colliders/Motor/02.stl" />
-    <mesh name="Motor_collision03" file="meshes/mujoco/colliders/Motor/03.stl" />
-    <mesh name="Motor_collision04" file="meshes/mujoco/colliders/Motor/04.stl" />
-    <mesh name="Motor_collision05" file="meshes/mujoco/colliders/Motor/05.stl" />
-    <mesh name="Motor_collision06" file="meshes/mujoco/colliders/Motor/06.stl" />
-    <mesh name="Motor_collision07" file="meshes/mujoco/colliders/Motor/07.stl" />
-    <mesh name="Motor_collision08" file="meshes/mujoco/colliders/Motor/08.stl" />
-    <mesh name="Motor_collision09" file="meshes/mujoco/colliders/Motor/09.stl" />
-    <mesh name="Motor_collision10" file="meshes/mujoco/colliders/Motor/10.stl" />
-    <mesh name="Motor_collision11" file="meshes/mujoco/colliders/Motor/11.stl" />
-    <mesh name="Motor_collision12" file="meshes/mujoco/colliders/Motor/12.stl" />
-    <mesh name="Motor_collision13" file="meshes/mujoco/colliders/Motor/13.stl" />
-    <mesh name="Motor_collision14" file="meshes/mujoco/colliders/Motor/14.stl" />
-    <mesh name="Motor_collision15" file="meshes/mujoco/colliders/Motor/15.stl" />
-    <mesh name="Motor_collision16" file="meshes/mujoco/colliders/Motor/16.stl" />
-    <mesh name="Motor_collision17" file="meshes/mujoco/colliders/Motor/17.stl" />
-    <mesh name="Motor_collision18" file="meshes/mujoco/colliders/Motor/18.stl" />
-    <mesh name="Motor_collision19" file="meshes/mujoco/colliders/Motor/19.stl" />
-    <mesh name="Motor_collision20" file="meshes/mujoco/colliders/Motor/20.stl" />
-    <mesh name="Motor_collision21" file="meshes/mujoco/colliders/Motor/21.stl" />
-    <mesh name="Motor_collision22" file="meshes/mujoco/colliders/Motor/22.stl" />
-    <mesh name="Motor_collision23" file="meshes/mujoco/colliders/Motor/23.stl" />
+    <mesh name="Body_collision02" file="meshes/mujoco/colliders/Body/03.stl" />
+    <mesh name="Body_collision03" file="meshes/mujoco/colliders/Body/02.stl" />
+    <mesh name="Body_collision04" file="meshes/mujoco/colliders/Body/05.stl" />
+    <mesh name="Body_collision05" file="meshes/mujoco/colliders/Body/04.stl" />
+    <mesh name="Motor_collision00" file="meshes/mujoco/colliders/Motor/14.stl" />
+    <mesh name="Motor_collision01" file="meshes/mujoco/colliders/Motor/00.stl" />
+    <mesh name="Motor_collision02" file="meshes/mujoco/colliders/Motor/01.stl" />
+    <mesh name="Motor_collision03" file="meshes/mujoco/colliders/Motor/15.stl" />
+    <mesh name="Motor_collision04" file="meshes/mujoco/colliders/Motor/03.stl" />
+    <mesh name="Motor_collision05" file="meshes/mujoco/colliders/Motor/17.stl" />
+    <mesh name="Motor_collision06" file="meshes/mujoco/colliders/Motor/16.stl" />
+    <mesh name="Motor_collision07" file="meshes/mujoco/colliders/Motor/02.stl" />
+    <mesh name="Motor_collision08" file="meshes/mujoco/colliders/Motor/06.stl" />
+    <mesh name="Motor_collision09" file="meshes/mujoco/colliders/Motor/12.stl" />
+    <mesh name="Motor_collision10" file="meshes/mujoco/colliders/Motor/13.stl" />
+    <mesh name="Motor_collision11" file="meshes/mujoco/colliders/Motor/07.stl" />
+    <mesh name="Motor_collision12" file="meshes/mujoco/colliders/Motor/11.stl" />
+    <mesh name="Motor_collision13" file="meshes/mujoco/colliders/Motor/05.stl" />
+    <mesh name="Motor_collision14" file="meshes/mujoco/colliders/Motor/04.stl" />
+    <mesh name="Motor_collision15" file="meshes/mujoco/colliders/Motor/10.stl" />
+    <mesh name="Motor_collision16" file="meshes/mujoco/colliders/Motor/09.stl" />
+    <mesh name="Motor_collision17" file="meshes/mujoco/colliders/Motor/21.stl" />
+    <mesh name="Motor_collision18" file="meshes/mujoco/colliders/Motor/20.stl" />
+    <mesh name="Motor_collision19" file="meshes/mujoco/colliders/Motor/08.stl" />
+    <mesh name="Motor_collision20" file="meshes/mujoco/colliders/Motor/22.stl" />
+    <mesh name="Motor_collision21" file="meshes/mujoco/colliders/Motor/23.stl" />
+    <mesh name="Motor_collision22" file="meshes/mujoco/colliders/Motor/27.stl" />
+    <mesh name="Motor_collision23" file="meshes/mujoco/colliders/Motor/26.stl" />
     <mesh name="Motor_collision24" file="meshes/mujoco/colliders/Motor/24.stl" />
-    <mesh name="Motor_collision25" file="meshes/mujoco/colliders/Motor/25.stl" />
-    <mesh name="Motor_collision26" file="meshes/mujoco/colliders/Motor/26.stl" />
-    <mesh name="Motor_collision27" file="meshes/mujoco/colliders/Motor/27.stl" />
+    <mesh name="Motor_collision25" file="meshes/mujoco/colliders/Motor/18.stl" />
+    <mesh name="Motor_collision26" file="meshes/mujoco/colliders/Motor/19.stl" />
+    <mesh name="Motor_collision27" file="meshes/mujoco/colliders/Motor/25.stl" />
     <mesh name="Leg_Femur_collision00" file="meshes/mujoco/colliders/Leg_Femur/00.stl" />
     <mesh name="Leg_Femur_collision01" file="meshes/mujoco/colliders/Leg_Femur/01.stl" />
-    <mesh name="Leg_Femur_collision02" file="meshes/mujoco/colliders/Leg_Femur/02.stl" />
-    <mesh name="Leg_Femur_collision03" file="meshes/mujoco/colliders/Leg_Femur/03.stl" />
-    <mesh name="Leg_Femur_collision04" file="meshes/mujoco/colliders/Leg_Femur/04.stl" />
-    <mesh name="Leg_Femur_collision05" file="meshes/mujoco/colliders/Leg_Femur/05.stl" />
-    <mesh name="Leg_Femur_collision06" file="meshes/mujoco/colliders/Leg_Femur/06.stl" />
-    <mesh name="Leg_Femur_collision07" file="meshes/mujoco/colliders/Leg_Femur/07.stl" />
+    <mesh name="Leg_Femur_collision02" file="meshes/mujoco/colliders/Leg_Femur/03.stl" />
+    <mesh name="Leg_Femur_collision03" file="meshes/mujoco/colliders/Leg_Femur/02.stl" />
+    <mesh name="Leg_Femur_collision04" file="meshes/mujoco/colliders/Leg_Femur/06.stl" />
+    <mesh name="Leg_Femur_collision05" file="meshes/mujoco/colliders/Leg_Femur/07.stl" />
+    <mesh name="Leg_Femur_collision06" file="meshes/mujoco/colliders/Leg_Femur/05.stl" />
+    <mesh name="Leg_Femur_collision07" file="meshes/mujoco/colliders/Leg_Femur/04.stl" />
     <mesh name="Leg_Femur_collision08" file="meshes/mujoco/colliders/Leg_Femur/08.stl" />
     <mesh name="Leg_End_Bearing_Holder_collision00" file="meshes/mujoco/colliders/Leg_End_Bearing_Holder/00.stl" />
     <mesh name="Leg_End_Bearing_Holder_collision01" file="meshes/mujoco/colliders/Leg_End_Bearing_Holder/01.stl" />
-    <mesh name="Leg_End_Bearing_Holder_collision02" file="meshes/mujoco/colliders/Leg_End_Bearing_Holder/02.stl" />
-    <mesh name="Leg_End_Bearing_Holder_collision03" file="meshes/mujoco/colliders/Leg_End_Bearing_Holder/03.stl" />
-    <mesh name="Leg_End_Bearing_Holder_collision04" file="meshes/mujoco/colliders/Leg_End_Bearing_Holder/04.stl" />
+    <mesh name="Leg_End_Bearing_Holder_collision02" file="meshes/mujoco/colliders/Leg_End_Bearing_Holder/03.stl" />
+    <mesh name="Leg_End_Bearing_Holder_collision03" file="meshes/mujoco/colliders/Leg_End_Bearing_Holder/02.stl" />
+    <mesh name="Leg_End_Bearing_Holder_collision04" file="meshes/mujoco/colliders/Leg_End_Bearing_Holder/06.stl" />
     <mesh name="Leg_End_Bearing_Holder_collision05" file="meshes/mujoco/colliders/Leg_End_Bearing_Holder/05.stl" />
-    <mesh name="Leg_End_Bearing_Holder_collision06" file="meshes/mujoco/colliders/Leg_End_Bearing_Holder/06.stl" />
-    <mesh name="Leg_Hip_Bracket_collision00" file="meshes/mujoco/colliders/Leg_Hip_Bracket/00.stl" />
-    <mesh name="Leg_Hip_Bracket_collision01" file="meshes/mujoco/colliders/Leg_Hip_Bracket/01.stl" />
-    <mesh name="Leg_Hip_Bracket_collision02" file="meshes/mujoco/colliders/Leg_Hip_Bracket/02.stl" />
-    <mesh name="Leg_Hip_Bracket_collision03" file="meshes/mujoco/colliders/Leg_Hip_Bracket/03.stl" />
-    <mesh name="Leg_Hip_Bracket_collision04" file="meshes/mujoco/colliders/Leg_Hip_Bracket/04.stl" />
-    <mesh name="Leg_Hip_Bracket_collision05" file="meshes/mujoco/colliders/Leg_Hip_Bracket/05.stl" />
-    <mesh name="Leg_Hip_Bracket_collision06" file="meshes/mujoco/colliders/Leg_Hip_Bracket/06.stl" />
-    <mesh name="Leg_Hip_Bracket_collision07" file="meshes/mujoco/colliders/Leg_Hip_Bracket/07.stl" />
-    <mesh name="Leg_Hip_Bracket_collision08" file="meshes/mujoco/colliders/Leg_Hip_Bracket/08.stl" />
-    <mesh name="Leg_Hip_Bracket_collision09" file="meshes/mujoco/colliders/Leg_Hip_Bracket/09.stl" />
+    <mesh name="Leg_End_Bearing_Holder_collision06" file="meshes/mujoco/colliders/Leg_End_Bearing_Holder/04.stl" />
     <mesh name="Leg_Body_Bracket_collision00" file="meshes/mujoco/colliders/Leg_Body_Bracket/00.stl" />
     <mesh name="Leg_Body_Bracket_collision01" file="meshes/mujoco/colliders/Leg_Body_Bracket/01.stl" />
-    <mesh name="Leg_Body_Bracket_collision02" file="meshes/mujoco/colliders/Leg_Body_Bracket/02.stl" />
-    <mesh name="Leg_Body_Bracket_collision03" file="meshes/mujoco/colliders/Leg_Body_Bracket/03.stl" />
-    <mesh name="Leg_Body_Bracket_collision04" file="meshes/mujoco/colliders/Leg_Body_Bracket/04.stl" />
-    <mesh name="Leg_Body_Bracket_collision05" file="meshes/mujoco/colliders/Leg_Body_Bracket/05.stl" />
-    <mesh name="Leg_Body_Bracket_collision06" file="meshes/mujoco/colliders/Leg_Body_Bracket/06.stl" />
-    <mesh name="Leg_Body_Bracket_collision07" file="meshes/mujoco/colliders/Leg_Body_Bracket/07.stl" />
-    <mesh name="Leg_Body_Bracket_collision08" file="meshes/mujoco/colliders/Leg_Body_Bracket/08.stl" />
+    <mesh name="Leg_Body_Bracket_collision02" file="meshes/mujoco/colliders/Leg_Body_Bracket/03.stl" />
+    <mesh name="Leg_Body_Bracket_collision03" file="meshes/mujoco/colliders/Leg_Body_Bracket/02.stl" />
+    <mesh name="Leg_Body_Bracket_collision04" file="meshes/mujoco/colliders/Leg_Body_Bracket/06.stl" />
+    <mesh name="Leg_Body_Bracket_collision05" file="meshes/mujoco/colliders/Leg_Body_Bracket/07.stl" />
+    <mesh name="Leg_Body_Bracket_collision06" file="meshes/mujoco/colliders/Leg_Body_Bracket/05.stl" />
+    <mesh name="Leg_Body_Bracket_collision07" file="meshes/mujoco/colliders/Leg_Body_Bracket/04.stl" />
+    <mesh name="Leg_Body_Bracket_collision08" file="meshes/mujoco/colliders/Leg_Body_Bracket/10.stl" />
     <mesh name="Leg_Body_Bracket_collision09" file="meshes/mujoco/colliders/Leg_Body_Bracket/09.stl" />
-    <mesh name="Leg_Body_Bracket_collision10" file="meshes/mujoco/colliders/Leg_Body_Bracket/10.stl" />
+    <mesh name="Leg_Body_Bracket_collision10" file="meshes/mujoco/colliders/Leg_Body_Bracket/08.stl" />
     <mesh name="Leg_Tibia_Leg_collision00" file="meshes/mujoco/colliders/Leg_Tibia_Leg/00.stl" />
     <mesh name="Leg_Tibia_Leg_collision01" file="meshes/mujoco/colliders/Leg_Tibia_Leg/01.stl" />
     <mesh name="Leg_Tibia_Foot_collision00" file="meshes/mujoco/colliders/Leg_Tibia_Foot/00.stl" />
@@ -237,16 +227,6 @@
               <geom mesh="Leg_End_Bearing_Holder_collision05" type="mesh" pos="0 0 0" class="collision" />
               <geom mesh="Leg_End_Bearing_Holder_collision06" type="mesh" pos="0 0 0" class="collision" />
             </body>
-            <geom mesh="Leg_Hip_Bracket_collision00" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision01" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision02" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision03" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision04" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision05" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision06" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision07" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision08" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision09" type="mesh" pos="0 0 0" class="collision" />
           </body>
           <geom mesh="Motor_collision00" type="mesh" pos="0 0 0" class="collision" />
           <geom mesh="Motor_collision01" type="mesh" pos="0 0 0" class="collision" />
@@ -416,16 +396,6 @@
               <geom mesh="Leg_End_Bearing_Holder_collision05" type="mesh" pos="0 0 0" class="collision" />
               <geom mesh="Leg_End_Bearing_Holder_collision06" type="mesh" pos="0 0 0" class="collision" />
             </body>
-            <geom mesh="Leg_Hip_Bracket_collision00" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision01" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision02" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision03" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision04" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision05" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision06" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision07" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision08" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision09" type="mesh" pos="0 0 0" class="collision" />
           </body>
           <geom mesh="Motor_collision00" type="mesh" pos="0 0 0" class="collision" />
           <geom mesh="Motor_collision01" type="mesh" pos="0 0 0" class="collision" />
@@ -595,16 +565,6 @@
               <geom mesh="Leg_End_Bearing_Holder_collision05" type="mesh" pos="0 0 0" class="collision" />
               <geom mesh="Leg_End_Bearing_Holder_collision06" type="mesh" pos="0 0 0" class="collision" />
             </body>
-            <geom mesh="Leg_Hip_Bracket_collision00" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision01" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision02" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision03" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision04" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision05" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision06" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision07" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision08" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision09" type="mesh" pos="0 0 0" class="collision" />
           </body>
           <geom mesh="Motor_collision00" type="mesh" pos="0 0 0" class="collision" />
           <geom mesh="Motor_collision01" type="mesh" pos="0 0 0" class="collision" />
@@ -774,16 +734,6 @@
               <geom mesh="Leg_End_Bearing_Holder_collision05" type="mesh" pos="0 0 0" class="collision" />
               <geom mesh="Leg_End_Bearing_Holder_collision06" type="mesh" pos="0 0 0" class="collision" />
             </body>
-            <geom mesh="Leg_Hip_Bracket_collision00" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision01" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision02" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision03" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision04" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision05" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision06" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision07" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision08" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision09" type="mesh" pos="0 0 0" class="collision" />
           </body>
           <geom mesh="Motor_collision00" type="mesh" pos="0 0 0" class="collision" />
           <geom mesh="Motor_collision01" type="mesh" pos="0 0 0" class="collision" />
@@ -953,16 +903,6 @@
               <geom mesh="Leg_End_Bearing_Holder_collision05" type="mesh" pos="0 0 0" class="collision" />
               <geom mesh="Leg_End_Bearing_Holder_collision06" type="mesh" pos="0 0 0" class="collision" />
             </body>
-            <geom mesh="Leg_Hip_Bracket_collision00" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision01" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision02" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision03" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision04" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision05" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision06" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision07" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision08" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision09" type="mesh" pos="0 0 0" class="collision" />
           </body>
           <geom mesh="Motor_collision00" type="mesh" pos="0 0 0" class="collision" />
           <geom mesh="Motor_collision01" type="mesh" pos="0 0 0" class="collision" />
@@ -1132,16 +1072,6 @@
               <geom mesh="Leg_End_Bearing_Holder_collision05" type="mesh" pos="0 0 0" class="collision" />
               <geom mesh="Leg_End_Bearing_Holder_collision06" type="mesh" pos="0 0 0" class="collision" />
             </body>
-            <geom mesh="Leg_Hip_Bracket_collision00" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision01" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision02" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision03" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision04" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision05" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision06" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision07" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision08" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision09" type="mesh" pos="0 0 0" class="collision" />
           </body>
           <geom mesh="Motor_collision00" type="mesh" pos="0 0 0" class="collision" />
           <geom mesh="Motor_collision01" type="mesh" pos="0 0 0" class="collision" />
@@ -1311,16 +1241,6 @@
               <geom mesh="Leg_End_Bearing_Holder_collision05" type="mesh" pos="0 0 0" class="collision" />
               <geom mesh="Leg_End_Bearing_Holder_collision06" type="mesh" pos="0 0 0" class="collision" />
             </body>
-            <geom mesh="Leg_Hip_Bracket_collision00" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision01" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision02" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision03" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision04" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision05" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision06" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision07" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision08" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision09" type="mesh" pos="0 0 0" class="collision" />
           </body>
           <geom mesh="Motor_collision00" type="mesh" pos="0 0 0" class="collision" />
           <geom mesh="Motor_collision01" type="mesh" pos="0 0 0" class="collision" />
@@ -1490,16 +1410,6 @@
               <geom mesh="Leg_End_Bearing_Holder_collision05" type="mesh" pos="0 0 0" class="collision" />
               <geom mesh="Leg_End_Bearing_Holder_collision06" type="mesh" pos="0 0 0" class="collision" />
             </body>
-            <geom mesh="Leg_Hip_Bracket_collision00" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision01" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision02" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision03" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision04" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision05" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision06" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision07" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision08" type="mesh" pos="0 0 0" class="collision" />
-            <geom mesh="Leg_Hip_Bracket_collision09" type="mesh" pos="0 0 0" class="collision" />
           </body>
           <geom mesh="Motor_collision00" type="mesh" pos="0 0 0" class="collision" />
           <geom mesh="Motor_collision01" type="mesh" pos="0 0 0" class="collision" />
