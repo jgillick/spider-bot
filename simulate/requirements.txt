@@ -5,4 +5,5 @@ tensorboard
 tensorflow
 numpy
 moviepy>=2.0.0
-
+coacd
+trimesh
