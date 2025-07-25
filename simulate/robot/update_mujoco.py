@@ -35,6 +35,7 @@ JOINT_AXIS = {
 SKIP_COLLIDERS = [
     "Leg_KneeMotorPulley",
     "Leg_Knee_motor_bearings",
+    "Leg_Hip_Bracket",
 ]
 
 # Rename parts of the mesh
