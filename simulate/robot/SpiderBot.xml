@@ -69,28 +69,6 @@
     <mesh name="Leg_Femur_collision06" file="meshes/mujoco/colliders/Leg_Femur/05.stl" />
     <mesh name="Leg_Femur_collision07" file="meshes/mujoco/colliders/Leg_Femur/04.stl" />
     <mesh name="Leg_Femur_collision08" file="meshes/mujoco/colliders/Leg_Femur/08.stl" />
-    <mesh name="Leg_KneeMotorPulley_collision00" file="meshes/mujoco/colliders/Leg_KneeMotorPulley/00.stl" />
-    <mesh name="Leg_KneeMotorPulley_collision01" file="meshes/mujoco/colliders/Leg_KneeMotorPulley/01.stl" />
-    <mesh name="Leg_KneeMotorPulley_collision02" file="meshes/mujoco/colliders/Leg_KneeMotorPulley/03.stl" />
-    <mesh name="Leg_KneeMotorPulley_collision03" file="meshes/mujoco/colliders/Leg_KneeMotorPulley/02.stl" />
-    <mesh name="Leg_KneeMotorPulley_collision04" file="meshes/mujoco/colliders/Leg_KneeMotorPulley/06.stl" />
-    <mesh name="Leg_KneeMotorPulley_collision05" file="meshes/mujoco/colliders/Leg_KneeMotorPulley/12.stl" />
-    <mesh name="Leg_KneeMotorPulley_collision06" file="meshes/mujoco/colliders/Leg_KneeMotorPulley/07.stl" />
-    <mesh name="Leg_KneeMotorPulley_collision07" file="meshes/mujoco/colliders/Leg_KneeMotorPulley/11.stl" />
-    <mesh name="Leg_KneeMotorPulley_collision08" file="meshes/mujoco/colliders/Leg_KneeMotorPulley/05.stl" />
-    <mesh name="Leg_KneeMotorPulley_collision09" file="meshes/mujoco/colliders/Leg_KneeMotorPulley/04.stl" />
-    <mesh name="Leg_KneeMotorPulley_collision10" file="meshes/mujoco/colliders/Leg_KneeMotorPulley/10.stl" />
-    <mesh name="Leg_KneeMotorPulley_collision11" file="meshes/mujoco/colliders/Leg_KneeMotorPulley/09.stl" />
-    <mesh name="Leg_KneeMotorPulley_collision12" file="meshes/mujoco/colliders/Leg_KneeMotorPulley/08.stl" />
-    <mesh name="Leg_Knee_motor_bearings_collision00" file="meshes/mujoco/colliders/Leg_Knee_motor_bearings/00.stl" />
-    <mesh name="Leg_Knee_motor_bearings_collision01" file="meshes/mujoco/colliders/Leg_Knee_motor_bearings/01.stl" />
-    <mesh name="Leg_Knee_motor_bearings_collision02" file="meshes/mujoco/colliders/Leg_Knee_motor_bearings/03.stl" />
-    <mesh name="Leg_Knee_motor_bearings_collision03" file="meshes/mujoco/colliders/Leg_Knee_motor_bearings/02.stl" />
-    <mesh name="Leg_Knee_motor_bearings_collision04" file="meshes/mujoco/colliders/Leg_Knee_motor_bearings/06.stl" />
-    <mesh name="Leg_Knee_motor_bearings_collision05" file="meshes/mujoco/colliders/Leg_Knee_motor_bearings/07.stl" />
-    <mesh name="Leg_Knee_motor_bearings_collision06" file="meshes/mujoco/colliders/Leg_Knee_motor_bearings/05.stl" />
-    <mesh name="Leg_Knee_motor_bearings_collision07" file="meshes/mujoco/colliders/Leg_Knee_motor_bearings/04.stl" />
-    <mesh name="Leg_Knee_motor_bearings_collision08" file="meshes/mujoco/colliders/Leg_Knee_motor_bearings/08.stl" />
     <mesh name="Leg_End_Bearing_Holder_collision00" file="meshes/mujoco/colliders/Leg_End_Bearing_Holder/00.stl" />
     <mesh name="Leg_End_Bearing_Holder_collision01" file="meshes/mujoco/colliders/Leg_End_Bearing_Holder/01.stl" />
     <mesh name="Leg_End_Bearing_Holder_collision02" file="meshes/mujoco/colliders/Leg_End_Bearing_Holder/03.stl" />
@@ -181,32 +159,10 @@
                   <body name="Leg1_Knee_motor_bearings" pos="0.11894493236997285 -0.013337526072354038 -0.04049972533770614" quat="0.693519922661074 -0.137949689641472 0.693519922661074 -0.137949689641471">
                     <geom name="Leg1_Knee_motor_bearings" type="mesh" mesh="Leg_Knee_motor_bearings" pos="0 0 0" quat="1 0 0 0" />
                     <inertial mass="0.009270686219329867" pos="-0.04257533261304583 -0.003121778093608035 -0.12080177571379908" fullinertia="6.408471849585515e-06 6.408471849654663e-06 1.2750547945198572e-05 -4.44946407192684e-18 1.1017287307396517e-20 2.189948410265155e-19" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision00" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision01" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision02" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision03" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision04" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision05" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision06" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision07" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision08" type="mesh" pos="0 0 0" class="collision" />
                   </body>
                   <body name="Leg1_KneeMotorPulley" pos="0.04100000000000281 -0.03304157594374445 -0.019714907448651644" quat="1.32996137422238e-17 7.32959918813255e-17 -0.707106781186547 -0.707106781186548">
                     <geom name="Leg1_KneeMotorPulley" type="mesh" mesh="Leg_KneeMotorPulley" pos="0 0 0" quat="1 0 0 0" />
                     <inertial mass="0.08135375942547957" pos="0.00540570472678228 0.019714907448619024 0.033041575943703744" fullinertia="1.2462648308953017e-05 7.261200035419576e-06 7.2612000358480226e-06 -2.8927109600418425e-18 -4.646447059732442e-18 -2.650819254585487e-16" />
-                    <geom mesh="Leg_KneeMotorPulley_collision00" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision01" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision02" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision03" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision04" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision05" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision06" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision07" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision08" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision09" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision10" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision11" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision12" type="mesh" pos="0 0 0" class="collision" />
                   </body>
                   <geom mesh="Motor_collision00" type="mesh" pos="0 0 0" class="collision" />
           <geom mesh="Motor_collision01" type="mesh" pos="0 0 0" class="collision" />
@@ -382,32 +338,10 @@
                   <body name="Leg2_Knee_motor_bearings" pos="0.11894493236997264 -0.013337526072354073 -0.04049972533770635" quat="0.693519922661074 -0.137949689641471 0.693519922661074 -0.137949689641471">
                     <geom name="Leg2_Knee_motor_bearings" type="mesh" mesh="Leg_Knee_motor_bearings" pos="0 0 0" quat="1 0 0 0" />
                     <inertial mass="0.009270686219329867" pos="-0.04257533261304569 -0.003121778093608059 -0.12080177571379883" fullinertia="6.408471849585332e-06 6.408471849654837e-06 1.2750547945198282e-05 -4.318385723339237e-18 -9.154449617420558e-20 2.3220240711734653e-19" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision00" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision01" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision02" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision03" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision04" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision05" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision06" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision07" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision08" type="mesh" pos="0 0 0" class="collision" />
                   </body>
                   <body name="Leg2_KneeMotorPulley" pos="0.04100000000000239 -0.03304157594374441 -0.019714907448651894" quat="-9.48397750147039e-18 9.60795831250197e-17 0.707106781186548 0.707106781186547">
                     <geom name="Leg2_KneeMotorPulley" type="mesh" mesh="Leg_KneeMotorPulley" pos="0 0 0" quat="1 0 0 0" />
                     <inertial mass="0.08135375942547957" pos="0.005405704726782273 0.01971490744861899 0.03304157594370373" fullinertia="1.2462648308955394e-05 7.261200035420742e-06 7.261200035849e-06 -2.6916128650566056e-18 -4.480832430353576e-18 -2.6576632807993016e-16" />
-                    <geom mesh="Leg_KneeMotorPulley_collision00" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision01" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision02" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision03" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision04" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision05" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision06" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision07" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision08" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision09" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision10" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision11" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision12" type="mesh" pos="0 0 0" class="collision" />
                   </body>
                   <geom mesh="Motor_collision00" type="mesh" pos="0 0 0" class="collision" />
           <geom mesh="Motor_collision01" type="mesh" pos="0 0 0" class="collision" />
@@ -583,32 +517,10 @@
                   <body name="Leg3_Knee_motor_bearings" pos="0.11894493236997247 -0.013337526072353946 -0.040499725337706204" quat="0.693519922661074 -0.137949689641471 0.693519922661074 -0.137949689641471">
                     <geom name="Leg3_Knee_motor_bearings" type="mesh" mesh="Leg_Knee_motor_bearings" pos="0 0 0" quat="1 0 0 0" />
                     <inertial mass="0.009270686219329867" pos="-0.04257533261304582 -0.0031217780936080575 -0.12080177571379903" fullinertia="6.408471849585415e-06 6.408471849654894e-06 1.2750547945198773e-05 -4.279210449528725e-18 8.395513140849868e-20 2.25537102665894e-19" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision00" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision01" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision02" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision03" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision04" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision05" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision06" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision07" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision08" type="mesh" pos="0 0 0" class="collision" />
                   </body>
                   <body name="Leg3_KneeMotorPulley" pos="0.04100000000000217 -0.03304157594374439 -0.019714907448651797" quat="4.94845920226753e-17 3.71110136008741e-17 -0.707106781186548 -0.707106781186547">
                     <geom name="Leg3_KneeMotorPulley" type="mesh" mesh="Leg_KneeMotorPulley" pos="0 0 0" quat="1 0 0 0" />
                     <inertial mass="0.08135375942547957" pos="0.005405704726782301 0.01971490744861897 0.03304157594370368" fullinertia="1.2462648308958054e-05 7.261200035421787e-06 7.261200035850074e-06 -2.7115661820425036e-18 -4.410779403613814e-18 -2.6688949376798936e-16" />
-                    <geom mesh="Leg_KneeMotorPulley_collision00" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision01" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision02" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision03" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision04" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision05" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision06" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision07" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision08" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision09" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision10" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision11" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision12" type="mesh" pos="0 0 0" class="collision" />
                   </body>
                   <geom mesh="Motor_collision00" type="mesh" pos="0 0 0" class="collision" />
           <geom mesh="Motor_collision01" type="mesh" pos="0 0 0" class="collision" />
@@ -784,32 +696,10 @@
                   <body name="Leg4_Knee_motor_bearings" pos="0.1189449323699727 -0.013337526072354012 -0.040499725337706266" quat="0.693519922661074 -0.137949689641472 0.693519922661074 -0.137949689641471">
                     <geom name="Leg4_Knee_motor_bearings" type="mesh" mesh="Leg_Knee_motor_bearings" pos="0 0 0" quat="1 0 0 0" />
                     <inertial mass="0.009270686219329867" pos="-0.04257533261304583 -0.0031217780936080627 -0.1208017757137992" fullinertia="6.408471849585355e-06 6.4084718496547704e-06 1.2750547945198832e-05 -4.300174514973269e-18 5.681271697572109e-20 2.3231486875575183e-19" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision00" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision01" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision02" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision03" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision04" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision05" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision06" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision07" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision08" type="mesh" pos="0 0 0" class="collision" />
                   </body>
                   <body name="Leg4_KneeMotorPulley" pos="0.04100000000000237 -0.03304157594374443 -0.01971490744865179" quat="2.16577461240428e-17 6.49378594995065e-17 -0.707106781186547 -0.707106781186548">
                     <geom name="Leg4_KneeMotorPulley" type="mesh" mesh="Leg_KneeMotorPulley" pos="0 0 0" quat="1 0 0 0" />
                     <inertial mass="0.08135375942547957" pos="0.005405704726782277 0.019714907448619028 0.033041575943703744" fullinertia="1.246264830895789e-05 7.261200035421384e-06 7.261200035849745e-06 -2.653015229163979e-18 -4.424557955589256e-18 -2.6681580190157823e-16" />
-                    <geom mesh="Leg_KneeMotorPulley_collision00" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision01" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision02" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision03" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision04" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision05" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision06" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision07" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision08" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision09" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision10" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision11" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision12" type="mesh" pos="0 0 0" class="collision" />
                   </body>
                   <geom mesh="Motor_collision00" type="mesh" pos="0 0 0" class="collision" />
           <geom mesh="Motor_collision01" type="mesh" pos="0 0 0" class="collision" />
@@ -985,32 +875,10 @@
                   <body name="Leg5_Knee_motor_bearings" pos="0.11894493236997271 -0.013337526072353825 -0.04049972533770614" quat="0.693519922661074 -0.137949689641472 0.693519922661074 -0.137949689641471">
                     <geom name="Leg5_Knee_motor_bearings" type="mesh" mesh="Leg_Knee_motor_bearings" pos="0 0 0" quat="1 0 0 0" />
                     <inertial mass="0.009270686219329867" pos="-0.04257533261304579 -0.003121778093608099 -0.12080177571379913" fullinertia="6.408471849585625e-06 6.408471849655737e-06 1.275054794519988e-05 -3.903551337421443e-18 6.847452216235322e-20 2.369767363694207e-19" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision00" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision01" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision02" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision03" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision04" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision05" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision06" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision07" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision08" type="mesh" pos="0 0 0" class="collision" />
                   </body>
                   <body name="Leg5_KneeMotorPulley" pos="0.04100000000000256 -0.03304157594374431 -0.019714907448651786" quat="2.11084267177591e-17 6.54871789057902e-17 -0.707106781186547 -0.707106781186548">
                     <geom name="Leg5_KneeMotorPulley" type="mesh" mesh="Leg_KneeMotorPulley" pos="0 0 0" quat="1 0 0 0" />
                     <inertial mass="0.08135375942547957" pos="0.005405704726782272 0.0197149074486189 0.03304157594370365" fullinertia="1.2462648308963419e-05 7.261200035422719e-06 7.261200035851867e-06 -2.5645376211616386e-18 -4.3669026988547356e-18 -2.685136794443495e-16" />
-                    <geom mesh="Leg_KneeMotorPulley_collision00" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision01" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision02" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision03" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision04" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision05" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision06" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision07" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision08" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision09" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision10" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision11" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision12" type="mesh" pos="0 0 0" class="collision" />
                   </body>
                   <geom mesh="Motor_collision00" type="mesh" pos="0 0 0" class="collision" />
           <geom mesh="Motor_collision01" type="mesh" pos="0 0 0" class="collision" />
@@ -1186,32 +1054,10 @@
                   <body name="Leg6_Knee_motor_bearings" pos="0.11894493236997246 -0.013337526072353754 -0.040499725337706065" quat="0.693519922661074 -0.137949689641472 0.693519922661074 -0.137949689641471">
                     <geom name="Leg6_Knee_motor_bearings" type="mesh" mesh="Leg_Knee_motor_bearings" pos="0 0 0" quat="1 0 0 0" />
                     <inertial mass="0.009270686219329867" pos="-0.04257533261304578 -0.0031217780936080852 -0.1208017757137994" fullinertia="6.4084718495854865e-06 6.408471849655174e-06 1.2750547945199666e-05 -4.120815288392171e-18 -2.1138265962098427e-19 3.2352315159181315e-19" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision00" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision01" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision02" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision03" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision04" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision05" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision06" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision07" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision08" type="mesh" pos="0 0 0" class="collision" />
                   </body>
                   <body name="Leg6_KneeMotorPulley" pos="0.0410000000000025 -0.03304157594374441 -0.019714907448651786" quat="1.40260460461167e-16 -5.3664854837618e-17 -0.707106781186547 -0.707106781186548">
                     <geom name="Leg6_KneeMotorPulley" type="mesh" mesh="Leg_KneeMotorPulley" pos="0 0 0" quat="1 0 0 0" />
                     <inertial mass="0.08135375942547957" pos="0.00540570472678227 0.019714907448619007 0.03304157594370373" fullinertia="1.2462648308957812e-05 7.261200035422024e-06 7.261200035850967e-06 -2.416335134431386e-18 -4.297574347130965e-18 -2.675823667188434e-16" />
-                    <geom mesh="Leg_KneeMotorPulley_collision00" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision01" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision02" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision03" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision04" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision05" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision06" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision07" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision08" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision09" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision10" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision11" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision12" type="mesh" pos="0 0 0" class="collision" />
                   </body>
                   <geom mesh="Motor_collision00" type="mesh" pos="0 0 0" class="collision" />
           <geom mesh="Motor_collision01" type="mesh" pos="0 0 0" class="collision" />
@@ -1387,32 +1233,10 @@
                   <body name="Leg7_Knee_motor_bearings" pos="0.1189449323699727 -0.013337526072353856 -0.04049972533770612" quat="0.693519922661074 -0.137949689641472 0.693519922661074 -0.13794968964147">
                     <geom name="Leg7_Knee_motor_bearings" type="mesh" mesh="Leg_Knee_motor_bearings" pos="0 0 0" quat="1 0 0 0" />
                     <inertial mass="0.009270686219329867" pos="-0.0425753326130458 -0.003121778093608073 -0.12080177571379933" fullinertia="6.408471849585559e-06 6.4084718496548865e-06 1.275054794519894e-05 -4.242364516323163e-18 -3.651962719319399e-20 2.41785439486959e-19" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision00" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision01" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision02" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision03" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision04" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision05" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision06" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision07" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision08" type="mesh" pos="0 0 0" class="collision" />
                   </body>
                   <body name="Leg7_KneeMotorPulley" pos="0.04100000000000261 -0.03304157594374439 -0.019714907448651852" quat="8.13994356316953e-17 5.19616999185399e-18 -0.707106781186548 -0.707106781186547">
                     <geom name="Leg7_KneeMotorPulley" type="mesh" mesh="Leg_KneeMotorPulley" pos="0 0 0" quat="1 0 0 0" />
                     <inertial mass="0.08135375942547957" pos="0.0054057047267822705 0.01971490744861898 0.03304157594370369" fullinertia="1.2462648308958238e-05 7.261200035421726e-06 7.261200035850174e-06 -2.5474726340420826e-18 -4.2843186526051905e-18 -2.672956460661978e-16" />
-                    <geom mesh="Leg_KneeMotorPulley_collision00" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision01" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision02" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision03" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision04" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision05" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision06" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision07" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision08" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision09" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision10" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision11" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision12" type="mesh" pos="0 0 0" class="collision" />
                   </body>
                   <geom mesh="Motor_collision00" type="mesh" pos="0 0 0" class="collision" />
           <geom mesh="Motor_collision01" type="mesh" pos="0 0 0" class="collision" />
@@ -1588,32 +1412,10 @@
                   <body name="Leg8_Knee_motor_bearings" pos="0.11894493236997267 -0.013337526072353913 -0.040499725337706155" quat="0.693519922661074 -0.137949689641471 0.693519922661074 -0.137949689641471">
                     <geom name="Leg8_Knee_motor_bearings" type="mesh" mesh="Leg_Knee_motor_bearings" pos="0 0 0" quat="1 0 0 0" />
                     <inertial mass="0.009270686219329867" pos="-0.04257533261304572 -0.0031217780936080887 -0.12080177571379905" fullinertia="6.408471849585329e-06 6.408471849654948e-06 1.275054794519887e-05 -4.2103890225643134e-18 -1.1650804080516934e-20 2.4087370975715943e-19" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision00" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision01" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision02" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision03" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision04" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision05" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision06" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision07" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Knee_motor_bearings_collision08" type="mesh" pos="0 0 0" class="collision" />
                   </body>
                   <body name="Leg8_KneeMotorPulley" pos="0.04100000000000242 -0.03304157594374443 -0.019714907448651744" quat="3.57876509116512e-17 5.08079547118982e-17 -0.707106781186547 -0.707106781186548">
                     <geom name="Leg8_KneeMotorPulley" type="mesh" mesh="Leg_KneeMotorPulley" pos="0 0 0" quat="1 0 0 0" />
                     <inertial mass="0.08135375942547957" pos="0.005405704726782258 0.01971490744861893 0.03304157594370365" fullinertia="1.246264830895814e-05 7.2612000354215194e-06 7.261200035849963e-06 -2.7307425157242867e-18 -4.508992001567143e-18 -2.6706737068691276e-16" />
-                    <geom mesh="Leg_KneeMotorPulley_collision00" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision01" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision02" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision03" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision04" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision05" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision06" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision07" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision08" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision09" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision10" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision11" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_KneeMotorPulley_collision12" type="mesh" pos="0 0 0" class="collision" />
                   </body>
                   <geom mesh="Motor_collision00" type="mesh" pos="0 0 0" class="collision" />
           <geom mesh="Motor_collision01" type="mesh" pos="0 0 0" class="collision" />
