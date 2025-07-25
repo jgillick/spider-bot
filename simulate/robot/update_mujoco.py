@@ -33,8 +33,8 @@ JOINT_AXIS = {
 
 # Skip collider geoms for these geom meshes
 SKIP_COLLIDERS = [
-    "Leg_Knee_actuator_assembly_KneeMotorPulley",
-    "Leg_Knee_actuator_assembly_Knee_motor_bearings",
+    "Leg_KneeMotorPulley",
+    "Leg_Knee_motor_bearings",
 ]
 
 # Rename parts of the mesh
