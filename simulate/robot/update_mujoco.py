@@ -50,11 +50,15 @@ RENAME_PARTS = {
     "_Tibia_Leg_Tibia": "_Tibia",
 }
 
+DEFAULT_MATERIAL_NAME = "body_material"
+
 
 def main(
     tree, input_dir, output_path, ground=False, light=False, head=False, imu=False
 ):
     output_dir = path.dirname(output_path)
+
+    tree = create_materials(tree)
     tree = simplify_names(tree)
     tree = update_joint_values(tree)
 
@@ -234,10 +238,10 @@ def ground_plain(tree):
             "name": "floor",
             "size": "40 40 40",
             "type": "plane",
-            "material": "groundplane",
             "contype": "1",
             "conaffinity": "1",
             "rgba": "1 1 1 1",
+            "material": "groundplane",
         },
     )
     worldbody.insert(0, ground_plane)
@@ -284,7 +288,7 @@ def add_defaults(tree):
     ET.SubElement(
         default,
         "geom",
-        {"contype": "0", "conaffinity": "0", "rgba": "0.1 0.1 0.1 1"},
+        {"contype": "0", "conaffinity": "0", "material": DEFAULT_MATERIAL_NAME},
     )
 
     # Add collision default
@@ -300,6 +304,7 @@ def add_defaults(tree):
             "contype": "1",
             "conaffinity": "1",
             "group": "3",
+            "material": "",
         },
     )
 
@@ -396,7 +401,8 @@ def main_body(tree, head=False, imu=False):
                 "pos": "0.49 0 0.015",
                 "size": "0.025",
                 "type": "sphere",
-                "rgba": "0 .5 0 1",
+                "rgba": "0.0 0.5 0.9 1.9",
+                "material": "",
             },
         )
         root_body.insert(0, head)
@@ -469,6 +475,29 @@ def add_foot_friction(tree):
         foot = tree.find(f".//geom[@name='{foot_name}']")
         if foot is not None:
             foot.set("friction", "2.0 0.1 0.01")
+    return tree
+
+
+def create_materials(tree):
+    """
+    Create materials for the robot
+    """
+    assets = tree.find("./asset")
+    if not assets:
+        print(f"Missing <asset> element")
+        exit(1)
+
+    ET.SubElement(
+        assets,
+        "material",
+        {
+            "name": DEFAULT_MATERIAL_NAME,
+            "rgba": "0.1 0.1 0.1 1.0",
+            "reflectance": "0.3",
+            "shininess": "1.0",
+            "roughness": "1.0",
+        },
+    )
     return tree
 
 
