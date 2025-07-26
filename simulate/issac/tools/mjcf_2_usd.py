@@ -81,7 +81,7 @@ async def main():
     # Conversion config
     import_config = _mjcf.ImportConfig()
     import_config.set_fix_base(False)
-    import_config.set_import_sites(False)
+    import_config.set_import_sites(True)
     import_config.set_import_inertia_tensor(True)
     import_config.set_make_instanceable(True)
     import_config.set_make_default_prim(True)
