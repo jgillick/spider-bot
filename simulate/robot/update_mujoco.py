@@ -55,7 +55,6 @@ DEFAULT_COLLISION_THRESHOLD = 0.15
 COLLISION_THRESHOLDS = {
     "MOTOR": 0.2,
     "Leg_Tibia_Leg": 0.05,
-    "Leg_Tibia_Foot": 0.05,
 }
 
 DEFAULT_MATERIAL_NAME = "body_material"

@@ -47,6 +47,7 @@ import argparse
 import omni
 import omni.kit.commands
 from isaacsim.asset.importer.mjcf import _mjcf
+from pxr import UsdPhysics, PhysxSchema, UsdShade, Sdf
 
 # add argparse arguments
 parser = argparse.ArgumentParser(
@@ -66,6 +67,53 @@ def printout(info_str):
     """Simple print wrapper, since the Python print() statements are suppressed sometimes."""
     sys.stdout.write(f"{info_str}\n")
     sys.stdout.flush()
+
+
+def set_materials(stage):
+    """Update the materials and set them to bodies"""
+
+    # Default everything to the body material
+    omni.kit.commands.execute(
+        "BindMaterialCommand",
+        prim_path=[f"{ROOT_PATH}/Body"],
+        material_path=f"{ROOT_PATH}/Looks/material_body_material",
+        strength="strongerThanDescendants",
+        stage=stage,
+    )
+
+    # Create rubber material for feet
+    material_prim = stage.DefinePrim("{ROOT_PATH}/Looks/rubber", "Material")
+
+    physx_material = PhysxSchema.PhysxMaterialAPI.Apply(material_prim)
+    physx_material.CreateStaticFrictionAttr().Set(1.2)
+    physx_material.CreateDynamicFrictionAttr().Set(1.0)
+    physx_material.CreateRestitutionAttr().Set(0.15)
+
+    shade_material = UsdShade.Material(material_prim)
+    surface_shader = UsdShade.Shader.Define(
+        stage, material_prim.GetPath().AppendChild("Shader")
+    )
+    surface_shader.CreateIdAttr("UsdPreviewSurface")
+    surface_shader.CreateInput("diffuseColor", Sdf.ValueTypeNames.Color3f).Set(
+        (0.5, 0.5, 0.5)
+    )
+    surface_shader.CreateInput("roughness", Sdf.ValueTypeNames.Float).Set(0.8)
+    surface_shader.CreateInput("metallic", Sdf.ValueTypeNames.Float).Set(0.0)
+    shade_material.CreateSurfaceOutput().ConnectToSource(
+        surface_shader.ConnectableAPI(), "surface"
+    )
+
+    # Apply rubber to feet
+    for leg in range(1, 9):
+        foot = stage.GetPrimAtPath(f"{ROOT_PATH}/joints/Leg{leg}_Tibia_Foot")
+        if foot:
+            UsdPhysics.MaterialBindingAPI.Apply(foot)
+            binding_api = UsdPhysics.MaterialBindingAPI(foot)
+            binding_api.Bind(
+                material_prim.GetPath(),
+                bindingStrength=UsdShade.Tokens.strongerThanDescendants,
+            )
+
 
 async def main():
     # check valid file path
@@ -102,11 +150,13 @@ async def main():
         worldbody.SetActive(False)
 
     # Set body material
-    omni.kit.commands.execute('BindMaterialCommand',
-                          prim_path=[f"{ROOT_PATH}/Body"],
-                          material_path=f"{ROOT_PATH}/Looks/material_body_material",
-                          strength='strongerThanDescendants',
-                          stage=stage)
+    omni.kit.commands.execute(
+        "BindMaterialCommand",
+        prim_path=[f"{ROOT_PATH}/Body"],
+        material_path=f"{ROOT_PATH}/Looks/material_body_material",
+        strength="strongerThanDescendants",
+        stage=stage,
+    )
 
     # Save
     stage.Export(dest_path)
