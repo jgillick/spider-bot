@@ -82,12 +82,17 @@ def set_materials(stage):
     )
 
     # Create rubber material for feet
+    # Static friction: ~0.8 - 1.5
+    # Dynamic friction: ~0.5 - 1.0
+    # Restitution (bounciness): ~0.0 - 0.2
     material_prim = stage.DefinePrim("{ROOT_PATH}/Looks/rubber", "Material")
 
     physx_material = PhysxSchema.PhysxMaterialAPI.Apply(material_prim)
     physx_material.CreateStaticFrictionAttr().Set(1.2)
     physx_material.CreateDynamicFrictionAttr().Set(1.0)
     physx_material.CreateRestitutionAttr().Set(0.15)
+    physx_material.CreateFrictionCombineModeAttr().Set("multiply")
+    physx_material.CreateRestitutionCombineModeAttr().Set("average")
 
     shade_material = UsdShade.Material(material_prim)
     surface_shader = UsdShade.Shader.Define(
