@@ -36,62 +36,62 @@
     <material name="body_material" rgba="0.1 0.1 0.1 1.0" reflectance="0.3" shininess="1.0" roughness="1.0" />
     <mesh name="Body_collision00" file="meshes/mujoco/colliders/Body/00.stl" />
     <mesh name="Body_collision01" file="meshes/mujoco/colliders/Body/01.stl" />
-    <mesh name="Body_collision02" file="meshes/mujoco/colliders/Body/03.stl" />
-    <mesh name="Body_collision03" file="meshes/mujoco/colliders/Body/02.stl" />
-    <mesh name="Body_collision04" file="meshes/mujoco/colliders/Body/05.stl" />
-    <mesh name="Body_collision05" file="meshes/mujoco/colliders/Body/04.stl" />
-    <mesh name="Motor_collision00" file="meshes/mujoco/colliders/Motor/14.stl" />
-    <mesh name="Motor_collision01" file="meshes/mujoco/colliders/Motor/00.stl" />
-    <mesh name="Motor_collision02" file="meshes/mujoco/colliders/Motor/01.stl" />
-    <mesh name="Motor_collision03" file="meshes/mujoco/colliders/Motor/15.stl" />
-    <mesh name="Motor_collision04" file="meshes/mujoco/colliders/Motor/03.stl" />
-    <mesh name="Motor_collision05" file="meshes/mujoco/colliders/Motor/17.stl" />
-    <mesh name="Motor_collision06" file="meshes/mujoco/colliders/Motor/16.stl" />
-    <mesh name="Motor_collision07" file="meshes/mujoco/colliders/Motor/02.stl" />
-    <mesh name="Motor_collision08" file="meshes/mujoco/colliders/Motor/06.stl" />
-    <mesh name="Motor_collision09" file="meshes/mujoco/colliders/Motor/12.stl" />
-    <mesh name="Motor_collision10" file="meshes/mujoco/colliders/Motor/13.stl" />
-    <mesh name="Motor_collision11" file="meshes/mujoco/colliders/Motor/07.stl" />
-    <mesh name="Motor_collision12" file="meshes/mujoco/colliders/Motor/11.stl" />
-    <mesh name="Motor_collision13" file="meshes/mujoco/colliders/Motor/05.stl" />
-    <mesh name="Motor_collision14" file="meshes/mujoco/colliders/Motor/04.stl" />
-    <mesh name="Motor_collision15" file="meshes/mujoco/colliders/Motor/10.stl" />
-    <mesh name="Motor_collision16" file="meshes/mujoco/colliders/Motor/09.stl" />
-    <mesh name="Motor_collision17" file="meshes/mujoco/colliders/Motor/21.stl" />
-    <mesh name="Motor_collision18" file="meshes/mujoco/colliders/Motor/20.stl" />
-    <mesh name="Motor_collision19" file="meshes/mujoco/colliders/Motor/08.stl" />
-    <mesh name="Motor_collision20" file="meshes/mujoco/colliders/Motor/22.stl" />
-    <mesh name="Motor_collision21" file="meshes/mujoco/colliders/Motor/23.stl" />
-    <mesh name="Motor_collision22" file="meshes/mujoco/colliders/Motor/27.stl" />
-    <mesh name="Motor_collision23" file="meshes/mujoco/colliders/Motor/26.stl" />
+    <mesh name="Body_collision02" file="meshes/mujoco/colliders/Body/02.stl" />
+    <mesh name="Body_collision03" file="meshes/mujoco/colliders/Body/03.stl" />
+    <mesh name="Body_collision04" file="meshes/mujoco/colliders/Body/04.stl" />
+    <mesh name="Body_collision05" file="meshes/mujoco/colliders/Body/05.stl" />
+    <mesh name="Motor_collision00" file="meshes/mujoco/colliders/Motor/00.stl" />
+    <mesh name="Motor_collision01" file="meshes/mujoco/colliders/Motor/01.stl" />
+    <mesh name="Motor_collision02" file="meshes/mujoco/colliders/Motor/02.stl" />
+    <mesh name="Motor_collision03" file="meshes/mujoco/colliders/Motor/03.stl" />
+    <mesh name="Motor_collision04" file="meshes/mujoco/colliders/Motor/04.stl" />
+    <mesh name="Motor_collision05" file="meshes/mujoco/colliders/Motor/05.stl" />
+    <mesh name="Motor_collision06" file="meshes/mujoco/colliders/Motor/06.stl" />
+    <mesh name="Motor_collision07" file="meshes/mujoco/colliders/Motor/07.stl" />
+    <mesh name="Motor_collision08" file="meshes/mujoco/colliders/Motor/08.stl" />
+    <mesh name="Motor_collision09" file="meshes/mujoco/colliders/Motor/09.stl" />
+    <mesh name="Motor_collision10" file="meshes/mujoco/colliders/Motor/10.stl" />
+    <mesh name="Motor_collision11" file="meshes/mujoco/colliders/Motor/11.stl" />
+    <mesh name="Motor_collision12" file="meshes/mujoco/colliders/Motor/12.stl" />
+    <mesh name="Motor_collision13" file="meshes/mujoco/colliders/Motor/13.stl" />
+    <mesh name="Motor_collision14" file="meshes/mujoco/colliders/Motor/14.stl" />
+    <mesh name="Motor_collision15" file="meshes/mujoco/colliders/Motor/15.stl" />
+    <mesh name="Motor_collision16" file="meshes/mujoco/colliders/Motor/16.stl" />
+    <mesh name="Motor_collision17" file="meshes/mujoco/colliders/Motor/17.stl" />
+    <mesh name="Motor_collision18" file="meshes/mujoco/colliders/Motor/18.stl" />
+    <mesh name="Motor_collision19" file="meshes/mujoco/colliders/Motor/19.stl" />
+    <mesh name="Motor_collision20" file="meshes/mujoco/colliders/Motor/20.stl" />
+    <mesh name="Motor_collision21" file="meshes/mujoco/colliders/Motor/21.stl" />
+    <mesh name="Motor_collision22" file="meshes/mujoco/colliders/Motor/22.stl" />
+    <mesh name="Motor_collision23" file="meshes/mujoco/colliders/Motor/23.stl" />
     <mesh name="Motor_collision24" file="meshes/mujoco/colliders/Motor/24.stl" />
-    <mesh name="Motor_collision25" file="meshes/mujoco/colliders/Motor/18.stl" />
-    <mesh name="Motor_collision26" file="meshes/mujoco/colliders/Motor/19.stl" />
-    <mesh name="Motor_collision27" file="meshes/mujoco/colliders/Motor/25.stl" />
+    <mesh name="Motor_collision25" file="meshes/mujoco/colliders/Motor/25.stl" />
+    <mesh name="Motor_collision26" file="meshes/mujoco/colliders/Motor/26.stl" />
+    <mesh name="Motor_collision27" file="meshes/mujoco/colliders/Motor/27.stl" />
     <mesh name="Leg_Femur_collision00" file="meshes/mujoco/colliders/Leg_Femur/00.stl" />
     <mesh name="Leg_Femur_collision01" file="meshes/mujoco/colliders/Leg_Femur/01.stl" />
-    <mesh name="Leg_Femur_collision02" file="meshes/mujoco/colliders/Leg_Femur/03.stl" />
-    <mesh name="Leg_Femur_collision03" file="meshes/mujoco/colliders/Leg_Femur/02.stl" />
-    <mesh name="Leg_Femur_collision04" file="meshes/mujoco/colliders/Leg_Femur/06.stl" />
-    <mesh name="Leg_Femur_collision05" file="meshes/mujoco/colliders/Leg_Femur/07.stl" />
-    <mesh name="Leg_Femur_collision06" file="meshes/mujoco/colliders/Leg_Femur/05.stl" />
-    <mesh name="Leg_Femur_collision07" file="meshes/mujoco/colliders/Leg_Femur/04.stl" />
+    <mesh name="Leg_Femur_collision02" file="meshes/mujoco/colliders/Leg_Femur/02.stl" />
+    <mesh name="Leg_Femur_collision03" file="meshes/mujoco/colliders/Leg_Femur/03.stl" />
+    <mesh name="Leg_Femur_collision04" file="meshes/mujoco/colliders/Leg_Femur/04.stl" />
+    <mesh name="Leg_Femur_collision05" file="meshes/mujoco/colliders/Leg_Femur/05.stl" />
+    <mesh name="Leg_Femur_collision06" file="meshes/mujoco/colliders/Leg_Femur/06.stl" />
+    <mesh name="Leg_Femur_collision07" file="meshes/mujoco/colliders/Leg_Femur/07.stl" />
     <mesh name="Leg_Femur_collision08" file="meshes/mujoco/colliders/Leg_Femur/08.stl" />
     <mesh name="Leg_End_Bearing_Holder_collision00" file="meshes/mujoco/colliders/Leg_End_Bearing_Holder/00.stl" />
     <mesh name="Leg_End_Bearing_Holder_collision01" file="meshes/mujoco/colliders/Leg_End_Bearing_Holder/01.stl" />
-    <mesh name="Leg_End_Bearing_Holder_collision02" file="meshes/mujoco/colliders/Leg_End_Bearing_Holder/03.stl" />
-    <mesh name="Leg_End_Bearing_Holder_collision03" file="meshes/mujoco/colliders/Leg_End_Bearing_Holder/02.stl" />
-    <mesh name="Leg_End_Bearing_Holder_collision04" file="meshes/mujoco/colliders/Leg_End_Bearing_Holder/06.stl" />
+    <mesh name="Leg_End_Bearing_Holder_collision02" file="meshes/mujoco/colliders/Leg_End_Bearing_Holder/02.stl" />
+    <mesh name="Leg_End_Bearing_Holder_collision03" file="meshes/mujoco/colliders/Leg_End_Bearing_Holder/03.stl" />
+    <mesh name="Leg_End_Bearing_Holder_collision04" file="meshes/mujoco/colliders/Leg_End_Bearing_Holder/04.stl" />
     <mesh name="Leg_End_Bearing_Holder_collision05" file="meshes/mujoco/colliders/Leg_End_Bearing_Holder/05.stl" />
-    <mesh name="Leg_End_Bearing_Holder_collision06" file="meshes/mujoco/colliders/Leg_End_Bearing_Holder/04.stl" />
+    <mesh name="Leg_End_Bearing_Holder_collision06" file="meshes/mujoco/colliders/Leg_End_Bearing_Holder/06.stl" />
     <mesh name="Leg_Body_Bracket_collision00" file="meshes/mujoco/colliders/Leg_Body_Bracket/00.stl" />
     <mesh name="Leg_Body_Bracket_collision01" file="meshes/mujoco/colliders/Leg_Body_Bracket/01.stl" />
-    <mesh name="Leg_Body_Bracket_collision02" file="meshes/mujoco/colliders/Leg_Body_Bracket/03.stl" />
-    <mesh name="Leg_Body_Bracket_collision03" file="meshes/mujoco/colliders/Leg_Body_Bracket/02.stl" />
-    <mesh name="Leg_Body_Bracket_collision04" file="meshes/mujoco/colliders/Leg_Body_Bracket/06.stl" />
-    <mesh name="Leg_Body_Bracket_collision05" file="meshes/mujoco/colliders/Leg_Body_Bracket/07.stl" />
-    <mesh name="Leg_Body_Bracket_collision06" file="meshes/mujoco/colliders/Leg_Body_Bracket/05.stl" />
-    <mesh name="Leg_Body_Bracket_collision07" file="meshes/mujoco/colliders/Leg_Body_Bracket/04.stl" />
+    <mesh name="Leg_Body_Bracket_collision02" file="meshes/mujoco/colliders/Leg_Body_Bracket/02.stl" />
+    <mesh name="Leg_Body_Bracket_collision03" file="meshes/mujoco/colliders/Leg_Body_Bracket/03.stl" />
+    <mesh name="Leg_Body_Bracket_collision04" file="meshes/mujoco/colliders/Leg_Body_Bracket/04.stl" />
+    <mesh name="Leg_Body_Bracket_collision05" file="meshes/mujoco/colliders/Leg_Body_Bracket/05.stl" />
+    <mesh name="Leg_Body_Bracket_collision06" file="meshes/mujoco/colliders/Leg_Body_Bracket/06.stl" />
+    <mesh name="Leg_Body_Bracket_collision07" file="meshes/mujoco/colliders/Leg_Body_Bracket/07.stl" />
     <mesh name="Leg_Body_Bracket_collision08" file="meshes/mujoco/colliders/Leg_Body_Bracket/08.stl" />
     <mesh name="Leg_Tibia_Leg_collision00" file="meshes/mujoco/colliders/Leg_Tibia_Leg/00.stl" />
     <mesh name="Leg_Tibia_Leg_collision01" file="meshes/mujoco/colliders/Leg_Tibia_Leg/01.stl" />
@@ -99,14 +99,7 @@
     <mesh name="Leg_Tibia_Leg_collision03" file="meshes/mujoco/colliders/Leg_Tibia_Leg/03.stl" />
     <mesh name="Leg_Tibia_Leg_collision04" file="meshes/mujoco/colliders/Leg_Tibia_Leg/04.stl" />
     <mesh name="Leg_Tibia_Foot_collision00" file="meshes/mujoco/colliders/Leg_Tibia_Foot/00.stl" />
-    <mesh name="Leg_Tibia_Foot_collision01" file="meshes/mujoco/colliders/Leg_Tibia_Foot/01.stl" />
-    <mesh name="Leg_Tibia_Foot_collision02" file="meshes/mujoco/colliders/Leg_Tibia_Foot/02.stl" />
-    <mesh name="Leg_Tibia_Foot_collision03" file="meshes/mujoco/colliders/Leg_Tibia_Foot/03.stl" />
-    <mesh name="Leg_Tibia_Foot_collision04" file="meshes/mujoco/colliders/Leg_Tibia_Foot/04.stl" />
-    <mesh name="Leg_Tibia_Foot_collision05" file="meshes/mujoco/colliders/Leg_Tibia_Foot/05.stl" />
-    <mesh name="Leg_Tibia_Foot_collision06" file="meshes/mujoco/colliders/Leg_Tibia_Foot/06.stl" />
     <mesh name="Leg_Tibia_BadTouch_collision00" file="meshes/mujoco/colliders/Leg_Tibia_BadTouch/00.stl" />
-    <mesh name="Leg_Tibia_BadTouch_collision01" file="meshes/mujoco/colliders/Leg_Tibia_BadTouch/01.stl" />
   </asset>
   <worldbody>
     <body name="Body" pos="0.0 0.0 0.134" quat="1 0 0 0">
@@ -139,20 +132,13 @@
                   <inertial mass="0.6725091028785471" pos="0.04001154243509636 0.019163093803882206 0.14548911503848536" fullinertia="0.004260036865887494 0.0012761171982820765 0.003006962044340202 -5.996624089927643e-07 4.7629142662614277e-07 0.0018068460830890768" />
                   <body name="Leg1_Tibia_Foot" pos="-2.4424906541753446e-16 3.375077994860476e-16 -3.552713678800501e-16" quat="1 9.43689570931381e-16 3.03296564102136e-18 1.13191818699025e-17">
                     <geom name="Leg1_Tibia_Foot" type="mesh" mesh="Leg_Tibia_Foot" pos="0 0 0" quat="1 0 0 0" />
-                    <inertial mass="0.0033582167119050204" pos="0.03999999998976392 -0.12455789359446619 0.19877759739733944" fullinertia="7.883798354164258e-08 9.62193429075932e-08 6.32158417207282e-08 2.2131514535866993e-17 -1.3129360867152885e-16 2.865923038688697e-08" />
+                    <inertial mass="0.008914076725409616" pos="0.0400000000000026 -0.12297984604109308 0.19969277665165125" fullinertia="1.5823785953685762e-07 2.0579120245570816e-07 1.6638449849355725e-07 4.021198653723188e-20 4.5355704334008996e-20 3.413978377808881e-08" />
                     <geom mesh="Leg_Tibia_Foot_collision00" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_Foot_collision01" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_Foot_collision02" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_Foot_collision03" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_Foot_collision04" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_Foot_collision05" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_Foot_collision06" type="mesh" pos="0 0 0" class="collision" />
                   </body>
                   <body name="Leg1_Tibia_BadTouch" pos="-3.406004253778905e-05 -0.008928296405293032 0.15038254739440368" quat="0.991444861373811 -0.130526192220051 8.61968382424067e-17 4.33792815898972e-17">
                     <geom name="Leg1_Tibia_BadTouch" type="mesh" mesh="Leg_Tibia_BadTouch" pos="0 0 0" quat="1 0 0 0" />
-                    <inertial mass="0.01039519929835698" pos="0.04003406004254023 -0.005122083261167613 0.022198823320187824" fullinertia="5.189342126901934e-05 2.668831429692448e-06 4.923151997219302e-05 2.720327213703194e-20 4.9665904314614585e-21 8.177574070395314e-06" />
+                    <inertial mass="0.002145956690530226" pos="0.04003406004254021 -0.11594088343820054 0.02769910657635761" fullinertia="7.921741061538698e-08 1.4608756595375035e-08 6.603929181391909e-08 -1.6811455126805082e-21 -1.3540900284323853e-20 -1.7685955266353576e-08" />
                     <geom mesh="Leg_Tibia_BadTouch_collision00" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_BadTouch_collision01" type="mesh" pos="0 0 0" class="collision" />
                   </body>
                   <geom mesh="Leg_Tibia_Leg_collision00" type="mesh" pos="0 0 0" class="collision" />
                   <geom mesh="Leg_Tibia_Leg_collision01" type="mesh" pos="0 0 0" class="collision" />
@@ -313,20 +299,13 @@
                   <inertial mass="0.6725091028785471" pos="0.04001154243509633 0.019163093803882276 0.14548911503848566" fullinertia="0.00426003686588736 0.0012761171982820234 0.0030069620443402066 -5.996624089906599e-07 4.762914266253818e-07 0.00180684608308909" />
                   <body name="Leg2_Tibia_Foot" pos="-9.903189379656396e-16 2.6645352591003756e-16 -8.171241461241152e-16" quat="1 5.55111512312578e-16 3.46222700662253e-17 -7.795836582117e-17">
                     <geom name="Leg2_Tibia_Foot" type="mesh" mesh="Leg_Tibia_Foot" pos="0 0 0" quat="1 0 0 0" />
-                    <inertial mass="0.0033582167119050204" pos="0.03999999998976388 -0.12455789359446609 0.1987775973973393" fullinertia="7.883798354211787e-08 9.621934290789283e-08 6.321584172075281e-08 2.2107487935010345e-17 -1.3136257733455048e-16 2.8659230386799057e-08" />
+                    <inertial mass="0.008914076725409616" pos="0.040000000000002596 -0.12297984604109302 0.1996927766516511" fullinertia="1.5823785953765997e-07 2.0579120245550413e-07 1.6638449849358227e-07 6.487339012524682e-20 1.0145967370053133e-19 3.413978377814546e-08" />
                     <geom mesh="Leg_Tibia_Foot_collision00" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_Foot_collision01" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_Foot_collision02" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_Foot_collision03" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_Foot_collision04" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_Foot_collision05" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_Foot_collision06" type="mesh" pos="0 0 0" class="collision" />
                   </body>
                   <body name="Leg2_Tibia_BadTouch" pos="-3.4060042538479604e-05 -0.008928296405292998 0.15038254739440318" quat="0.99144486137381 -0.130526192220051 -6.22819048331426e-17 -7.24565919596746e-18">
                     <geom name="Leg2_Tibia_BadTouch" type="mesh" mesh="Leg_Tibia_BadTouch" pos="0 0 0" quat="1 0 0 0" />
-                    <inertial mass="0.01039519929835698" pos="0.04003406004254026 -0.005122083261167619 0.022198823320187903" fullinertia="5.189342126901912e-05 2.668831429692437e-06 4.923151997219296e-05 1.8530827344263194e-20 -1.5924219408380849e-19 8.17757407039529e-06" />
+                    <inertial mass="0.002145956690530226" pos="0.04003406004254021 -0.11594088343820058 0.027699106576357727" fullinertia="7.921741061505953e-08 1.4608756595049811e-08 6.60392918139281e-08 -4.1401358465671246e-21 -6.332894769705974e-21 -1.76859552663685e-08" />
                     <geom mesh="Leg_Tibia_BadTouch_collision00" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_BadTouch_collision01" type="mesh" pos="0 0 0" class="collision" />
                   </body>
                   <geom mesh="Leg_Tibia_Leg_collision00" type="mesh" pos="0 0 0" class="collision" />
                   <geom mesh="Leg_Tibia_Leg_collision01" type="mesh" pos="0 0 0" class="collision" />
@@ -487,20 +466,13 @@
                   <inertial mass="0.6725091028785471" pos="0.04001154243509631 0.01916309380388221 0.1454891150384854" fullinertia="0.004260036865887332 0.0012761171982820045 0.0030069620443401953 -5.996624089910519e-07 4.762914266277132e-07 0.0018068460830890957" />
                   <body name="Leg3_Tibia_Foot" pos="1.4921397450962103e-15 2.248201624865942e-17 -1.4210854715202005e-15" quat="1 1.47104550762833e-15 2.61844704926278e-17 9.07828803438673e-17">
                     <geom name="Leg3_Tibia_Foot" type="mesh" mesh="Leg_Tibia_Foot" pos="0 0 0" quat="1 0 0 0" />
-                    <inertial mass="0.0033582167119050204" pos="0.039999999989763925 -0.12455789359446606 0.19877759739733925" fullinertia="7.883798354219586e-08 9.621934290776715e-08 6.321584172073272e-08 2.2113259814053364e-17 -1.3130568551671062e-16 2.865923038680563e-08" />
+                    <inertial mass="0.008914076725409616" pos="0.04000000000000261 -0.12297984604109297 0.19969277665165103" fullinertia="1.5823785953773393e-07 2.0579120245566827e-07 1.66384498493588e-07 -4.066678299169141e-21 5.981401088549415e-20 3.413978377812716e-08" />
                     <geom mesh="Leg_Tibia_Foot_collision00" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_Foot_collision01" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_Foot_collision02" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_Foot_collision03" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_Foot_collision04" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_Foot_collision05" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_Foot_collision06" type="mesh" pos="0 0 0" class="collision" />
                   </body>
                   <body name="Leg3_Tibia_BadTouch" pos="-3.406004253612594e-05 -0.008928296405293348 0.1503825473944029" quat="0.991444861373811 -0.13052619222005 -7.34972944608031e-17 8.54449410711051e-17">
                     <geom name="Leg3_Tibia_BadTouch" type="mesh" mesh="Leg_Tibia_BadTouch" pos="0 0 0" quat="1 0 0 0" />
-                    <inertial mass="0.01039519929835698" pos="0.04003406004254023 -0.005122083261167616 0.022198823320187855" fullinertia="5.189342126901927e-05 2.6688314296924072e-06 4.923151997219303e-05 2.5759720114928223e-20 5.082197683525792e-20 8.177574070395312e-06" />
+                    <inertial mass="0.002145956690530226" pos="0.0400340600425402 -0.11594088343820065 0.02769910657635769" fullinertia="7.92174106150839e-08 1.4608756595056541e-08 6.603929181389694e-08 -1.2012416573748299e-21 1.1309213334824997e-20 -1.7685955266365563e-08" />
                     <geom mesh="Leg_Tibia_BadTouch_collision00" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_BadTouch_collision01" type="mesh" pos="0 0 0" class="collision" />
                   </body>
                   <geom mesh="Leg_Tibia_Leg_collision00" type="mesh" pos="0 0 0" class="collision" />
                   <geom mesh="Leg_Tibia_Leg_collision01" type="mesh" pos="0 0 0" class="collision" />
@@ -661,20 +633,13 @@
                   <inertial mass="0.6725091028785471" pos="0.040011542435096296 0.019163093803882245 0.14548911503848555" fullinertia="0.004260036865887351 0.001276117198281992 0.0030069620443401992 -5.996624089924826e-07 4.7629142662460614e-07 0.0018068460830891026" />
                   <body name="Leg4_Tibia_Foot" pos="1.616484723854228e-15 2.353672812205332e-16 -7.815970093361102e-16" quat="1 1.30451205393456e-15 -4.75280886849775e-18 -1.77377241758975e-17">
                     <geom name="Leg4_Tibia_Foot" type="mesh" mesh="Leg_Tibia_Foot" pos="0 0 0" quat="1 0 0 0" />
-                    <inertial mass="0.0033582167119050204" pos="0.03999999998976391 -0.12455789359446615 0.19877759739733936" fullinertia="7.883798354202205e-08 9.621934290778783e-08 6.321584172073678e-08 2.211971496753065e-17 -1.3131147925843726e-16 2.8659230386817586e-08" />
+                    <inertial mass="0.008914076725409616" pos="0.0400000000000026 -0.12297984604109304 0.19969277665165108" fullinertia="1.582378595373455e-07 2.0579120245588283e-07 1.6638449849343663e-07 3.1932486238063035e-20 4.057822063631286e-20 3.413978377801918e-08" />
                     <geom mesh="Leg_Tibia_Foot_collision00" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_Foot_collision01" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_Foot_collision02" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_Foot_collision03" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_Foot_collision04" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_Foot_collision05" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_Foot_collision06" type="mesh" pos="0 0 0" class="collision" />
                   </body>
                   <body name="Leg4_Tibia_BadTouch" pos="-3.4060042535983825e-05 -0.008928296405293258 0.15038254739440343" quat="0.991444861373811 -0.13052619222005 -1.86162404150118e-16 -3.85047562220835e-17">
                     <geom name="Leg4_Tibia_BadTouch" type="mesh" mesh="Leg_Tibia_BadTouch" pos="0 0 0" quat="1 0 0 0" />
-                    <inertial mass="0.01039519929835698" pos="0.04003406004254023 -0.005122083261167618 0.022198823320187886" fullinertia="5.189342126901922e-05 2.6688314296924902e-06 4.923151997219313e-05 2.4471240795442945e-20 4.476019932966091e-21 8.17757407039531e-06" />
+                    <inertial mass="0.002145956690530226" pos="0.040034060042540204 -0.11594088343820072 0.027699106576357733" fullinertia="7.921741061505494e-08 1.4608756595056544e-08 6.60392918139124e-08 -6.793223576695529e-21 8.468769008909481e-21 -1.768595526637389e-08" />
                     <geom mesh="Leg_Tibia_BadTouch_collision00" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_BadTouch_collision01" type="mesh" pos="0 0 0" class="collision" />
                   </body>
                   <geom mesh="Leg_Tibia_Leg_collision00" type="mesh" pos="0 0 0" class="collision" />
                   <geom mesh="Leg_Tibia_Leg_collision01" type="mesh" pos="0 0 0" class="collision" />
@@ -835,20 +800,13 @@
                   <inertial mass="0.6725091028785471" pos="0.04001154243509625 0.019163093803882213 0.14548911503848533" fullinertia="0.004260036865887523 0.0012761171982819995 0.0030069620443401997 -5.996624089943478e-07 4.762914266191596e-07 0.001806846083089099" />
                   <body name="Leg5_Tibia_Foot" pos="-1.8829382497642656e-15 3.1974423109204507e-16 -6.394884621840901e-16" quat="1 1.41553435639707e-15 3.08095575921208e-20 1.14982834292646e-19">
                     <geom name="Leg5_Tibia_Foot" type="mesh" mesh="Leg_Tibia_Foot" pos="0 0 0" quat="1 0 0 0" />
-                    <inertial mass="0.0033582167119050204" pos="0.03999999998976387 -0.12455789359446615 0.1987775973973393" fullinertia="7.883798354207634e-08 9.62193429075941e-08 6.321584172074075e-08 2.20969097954253e-17 -1.3139660443184539e-16 2.8659230386890318e-08" />
+                    <inertial mass="0.008914076725409616" pos="0.040000000000002554 -0.12297984604109301 0.19969277665165108" fullinertia="1.582378595385925e-07 2.0579120245617424e-07 1.6638449849363314e-07 -1.5903711521879917e-20 -1.6414966124358037e-19 3.4139783778101353e-08" />
                     <geom mesh="Leg_Tibia_Foot_collision00" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_Foot_collision01" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_Foot_collision02" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_Foot_collision03" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_Foot_collision04" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_Foot_collision05" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_Foot_collision06" type="mesh" pos="0 0 0" class="collision" />
                   </body>
                   <body name="Leg5_Tibia_BadTouch" pos="-3.406004253927009e-05 -0.008928296405293246 0.15038254739440376" quat="0.991444861373811 -0.13052619222005 -1.5513219403143e-16 -2.16040150534418e-18">
                     <geom name="Leg5_Tibia_BadTouch" type="mesh" mesh="Leg_Tibia_BadTouch" pos="0 0 0" quat="1 0 0 0" />
-                    <inertial mass="0.01039519929835698" pos="0.04003406004254028 -0.005122083261167623 0.02219882332018794" fullinertia="5.189342126901944e-05 2.668831429692465e-06 4.923151997219319e-05 2.2277788673800303e-20 -1.3094200499174056e-19 8.177574070395297e-06" />
+                    <inertial mass="0.002145956690530226" pos="0.04003406004254026 -0.11594088343820065 0.027699106576357775" fullinertia="7.921741061517027e-08 1.4608756594941334e-08 6.60392918139396e-08 -2.1712348613547524e-23 -4.504927774491398e-23 -1.768595526638066e-08" />
                     <geom mesh="Leg_Tibia_BadTouch_collision00" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_BadTouch_collision01" type="mesh" pos="0 0 0" class="collision" />
                   </body>
                   <geom mesh="Leg_Tibia_Leg_collision00" type="mesh" pos="0 0 0" class="collision" />
                   <geom mesh="Leg_Tibia_Leg_collision01" type="mesh" pos="0 0 0" class="collision" />
@@ -1009,20 +967,13 @@
                   <inertial mass="0.6725091028785471" pos="0.04001154243509651 0.019163093803882383 0.14548911503848605" fullinertia="0.004260036865887581 0.0012761171982820273 0.003006962044340235 -5.996624090017498e-07 4.7629142659940215e-07 0.0018068460830891033" />
                   <body name="Leg6_Tibia_Foot" pos="-2.0872192862952944e-15 6.572520305780927e-16 -3.907985046680551e-16" quat="1 2.33146835171283e-15 2.64218446825805e-17 9.86076667850834e-17">
                     <geom name="Leg6_Tibia_Foot" type="mesh" mesh="Leg_Tibia_Foot" pos="0 0 0" quat="1 0 0 0" />
-                    <inertial mass="0.0033582167119050204" pos="0.0399999999897639 -0.12455789359446615 0.19877759739733933" fullinertia="7.883798354204555e-08 9.621934290800772e-08 6.32158417207917e-08 2.211923834224156e-17 -1.3133876438455476e-16 2.8659230386801314e-08" />
+                    <inertial mass="0.008914076725409616" pos="0.040000000000002575 -0.12297984604109304 0.1996927766516511" fullinertia="1.582378595381454e-07 2.0579120245592714e-07 1.6638449849370405e-07 -5.727760325942112e-20 -2.462993389876311e-19 3.413978377808319e-08" />
                     <geom mesh="Leg_Tibia_Foot_collision00" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_Foot_collision01" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_Foot_collision02" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_Foot_collision03" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_Foot_collision04" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_Foot_collision05" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_Foot_collision06" type="mesh" pos="0 0 0" class="collision" />
                   </body>
                   <body name="Leg6_Tibia_BadTouch" pos="-3.406004253981187e-05 -0.008928296405293334 0.15038254739440313" quat="0.991444861373811 -0.130526192220049 -6.44402204658437e-17 1.81758370936162e-16">
                     <geom name="Leg6_Tibia_BadTouch" type="mesh" mesh="Leg_Tibia_BadTouch" pos="0 0 0" quat="1 0 0 0" />
-                    <inertial mass="0.01039519929835698" pos="0.040034060042540266 -0.0051220832611676105 0.022198823320187893" fullinertia="5.18934212690201e-05 2.6688314296924987e-06 4.9231519972193114e-05 2.978333960513045e-20 -1.965116437629979e-19 8.17757407039533e-06" />
+                    <inertial mass="0.002145956690530226" pos="0.04003406004254023 -0.11594088343820068 0.027699106576357678" fullinertia="7.921741061506755e-08 1.4608756594941272e-08 6.603929181387968e-08 -7.820307023753406e-21 1.7344323084011923e-20 -1.7685955266384685e-08" />
                     <geom mesh="Leg_Tibia_BadTouch_collision00" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_BadTouch_collision01" type="mesh" pos="0 0 0" class="collision" />
                   </body>
                   <geom mesh="Leg_Tibia_Leg_collision00" type="mesh" pos="0 0 0" class="collision" />
                   <geom mesh="Leg_Tibia_Leg_collision01" type="mesh" pos="0 0 0" class="collision" />
@@ -1183,20 +1134,13 @@
                   <inertial mass="0.6725091028785471" pos="0.040011542435096345 0.019163093803882272 0.1454891150384856" fullinertia="0.004260036865887365 0.001276117198281986 0.0030069620443401945 -5.996624089884401e-07 4.762914266333477e-07 0.0018068460830891015" />
                   <body name="Leg7_Tibia_Foot" pos="6.217248937900877e-16 3.327893516313907e-16 -5.329070518200751e-16" quat="1 1.47104550762833e-15 -8.2766093349283e-17 -8.09001470300962e-17">
                     <geom name="Leg7_Tibia_Foot" type="mesh" mesh="Leg_Tibia_Foot" pos="0 0 0" quat="1 0 0 0" />
-                    <inertial mass="0.0033582167119050204" pos="0.03999999998976388 -0.1245578935944662 0.1987775973973394" fullinertia="7.88379835422147e-08 9.621934290780677e-08 6.32158417207693e-08 2.2113128984236093e-17 -1.3137293854059063e-16 2.865923038680294e-08" />
+                    <inertial mass="0.008914076725409616" pos="0.04000000000000261 -0.1229798460410931 0.19969277665165114" fullinertia="1.582378595378381e-07 2.0579120245601407e-07 1.6638449849351792e-07 -4.761910213186719e-20 -1.5726801686302346e-19 3.413978377811203e-08" />
                     <geom mesh="Leg_Tibia_Foot_collision00" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_Foot_collision01" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_Foot_collision02" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_Foot_collision03" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_Foot_collision04" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_Foot_collision05" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_Foot_collision06" type="mesh" pos="0 0 0" class="collision" />
                   </body>
                   <body name="Leg7_Tibia_BadTouch" pos="-3.406004253692529e-05 -0.008928296405293317 0.15038254739440382" quat="0.991444861373811 -0.13052619222005 1.0554395427687e-16 -6.11835193591808e-17">
                     <geom name="Leg7_Tibia_BadTouch" type="mesh" mesh="Leg_Tibia_BadTouch" pos="0 0 0" quat="1 0 0 0" />
-                    <inertial mass="0.01039519929835698" pos="0.040034060042540294 -0.005122083261167626 0.022198823320187862" fullinertia="5.1893421269019464e-05 2.668831429692525e-06 4.923151997219313e-05 9.663839838471197e-21 -6.437450399132685e-20 8.177574070395306e-06" />
+                    <inertial mass="0.002145956690530226" pos="0.04003406004254026 -0.11594088343820068 0.02769910657635772" fullinertia="7.921741061510916e-08 1.4608756595049741e-08 6.603929181390576e-08 -8.767642800797094e-21 -7.087283488354308e-21 -1.76859552663755e-08" />
                     <geom mesh="Leg_Tibia_BadTouch_collision00" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_BadTouch_collision01" type="mesh" pos="0 0 0" class="collision" />
                   </body>
                   <geom mesh="Leg_Tibia_Leg_collision00" type="mesh" pos="0 0 0" class="collision" />
                   <geom mesh="Leg_Tibia_Leg_collision01" type="mesh" pos="0 0 0" class="collision" />
@@ -1357,20 +1301,13 @@
                   <inertial mass="0.6725091028785471" pos="0.0400115424350962 0.019163093803882168 0.14548911503848516" fullinertia="0.004260036865887363 0.0012761171982820204 0.003006962044340186 -5.996624089955023e-07 4.762914266178903e-07 0.0018068460830890888" />
                   <body name="Leg8_Tibia_Foot" pos="1.1635137298071641e-15 3.419486915845482e-16 -8.260059303211165e-16" quat="1 1.19348975147204e-15 -4.46802762171096e-18 -1.66749060938465e-17">
                     <geom name="Leg8_Tibia_Foot" type="mesh" mesh="Leg_Tibia_Foot" pos="0 0 0" quat="1 0 0 0" />
-                    <inertial mass="0.0033582167119050204" pos="0.03999999998976387 -0.12455789359446603 0.19877759739733925" fullinertia="7.883798354230673e-08 9.621934290778214e-08 6.321584172081017e-08 2.2106721008757604e-17 -1.3139924780268515e-16 2.8659230386816934e-08" />
+                    <inertial mass="0.008914076725409616" pos="0.040000000000002554 -0.12297984604109297 0.19969277665165097" fullinertia="1.5823785953826724e-07 2.057912024558963e-07 1.6638449849359916e-07 -3.602941612157937e-20 -1.8683795146791866e-19 3.4139783778093505e-08" />
                     <geom mesh="Leg_Tibia_Foot_collision00" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_Foot_collision01" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_Foot_collision02" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_Foot_collision03" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_Foot_collision04" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_Foot_collision05" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_Foot_collision06" type="mesh" pos="0 0 0" class="collision" />
                   </body>
                   <body name="Leg8_Tibia_BadTouch" pos="-3.406004253645234e-05 -0.008928296405293117 0.15038254739440396" quat="0.991444861373811 -0.13052619222005 -3.47777411771044e-17 8.28660101776672e-18">
                     <geom name="Leg8_Tibia_BadTouch" type="mesh" mesh="Leg_Tibia_BadTouch" pos="0 0 0" quat="1 0 0 0" />
-                    <inertial mass="0.01039519929835698" pos="0.04003406004254027 -0.005122083261167613 0.02219882332018787" fullinertia="5.1893421269019424e-05 2.668831429692452e-06 4.9231519972193154e-05 3.6517160501893953e-20 -4.491088704180173e-20 8.177574070395295e-06" />
+                    <inertial mass="0.002145956690530226" pos="0.04003406004254022 -0.11594088343820057 0.02769910657635774" fullinertia="7.921741061515669e-08 1.4608756595049778e-08 6.603929181395988e-08 5.1053620235980414e-21 -8.495158708118403e-21 -1.7685955266380688e-08" />
                     <geom mesh="Leg_Tibia_BadTouch_collision00" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_BadTouch_collision01" type="mesh" pos="0 0 0" class="collision" />
                   </body>
                   <geom mesh="Leg_Tibia_Leg_collision00" type="mesh" pos="0 0 0" class="collision" />
                   <geom mesh="Leg_Tibia_Leg_collision01" type="mesh" pos="0 0 0" class="collision" />
