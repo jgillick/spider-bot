@@ -10,5 +10,5 @@ HIP_RANGES = (
     ("0", "1.8"),  # Leg7
     ("0", "1.8"),  # Leg8
 )
-FEMUR_RANGE = ("0", "1.0")
+FEMUR_RANGE = ("0", "1.25")
 TIBIA_RANGE = ("-2.7", "0.0")
