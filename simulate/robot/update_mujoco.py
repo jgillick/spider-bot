@@ -26,9 +26,9 @@ MOTOR_DAMPING = 0.2
 COLLISION_GEOM_CLASS = "collision"
 
 JOINT_AXIS = {
-    "Hip": "0 1 0",
-    "Femur": "1 0 0",
-    "Tibia": "1 0 0",
+    "hip": "0 1 0",
+    "femur": "1 0 0",
+    "tibia": "1 0 0",
 }
 
 # Skip collider geoms for these geom meshes
@@ -60,6 +60,7 @@ def main(
     output_dir = path.dirname(output_path)
 
     tree = create_materials(tree)
+    tree = add_defaults(tree)
     tree = simplify_names(tree)
     tree = update_joint_values(tree)
 
@@ -70,7 +71,6 @@ def main(
         tree = remove_default_light(tree)
 
     tree = visual_settings(tree)
-    tree = add_defaults(tree)
     tree = actuator_definitions(tree)
     tree = main_body(tree, head=head, imu=imu)
     tree = add_foot_friction(tree)
@@ -134,30 +134,78 @@ def update_joint_values(tree):
     """
     Update the joint max range, damping, and stiffness
     """
+    default = tree.find("./default")
+    if default is None:
+        print("No <default> found.")
+        exit(1)
 
     # Damping and stiffness
+    ET.SubElement(
+        default,
+        "joint",
+        {
+            "damping": str(MOTOR_DAMPING),
+            "stiffness": str(MOTOR_STIFFNESS),
+            "limited": "true",
+        },
+    )
+
+    # Ranges
+    hip_joint_def = ET.SubElement(
+        default,
+        "default",
+        {"class": "hip_joint"},
+    )
+    femur_joint_def = ET.SubElement(
+        default,
+        "default",
+        {"class": "femur_joint"},
+    )
+    tibia_joint_def = ET.SubElement(
+        default,
+        "default",
+        {"class": "tibia_joint"},
+    )
+    ET.SubElement(
+        hip_joint_def,
+        "joint",
+        {
+            "axis": JOINT_AXIS["hip"],
+        },
+    )
+    ET.SubElement(
+        femur_joint_def,
+        "joint",
+        {
+            "axis": JOINT_AXIS["femur"],
+            "range": " ".join(FEMUR_RANGE),
+        },
+    )
+    ET.SubElement(
+        tibia_joint_def,
+        "joint",
+        {
+            "axis": JOINT_AXIS["tibia"],
+            "range": " ".join(TIBIA_RANGE),
+        },
+    )
+
+    # Add classes to joints
     for leg in range(1, 9):
         for joint_type in ["Hip", "Femur", "Tibia"]:
             joint_name = f"Leg{leg}_{joint_type}"
             joint = tree.find(f".//joint[@name='{joint_name}']")
             if joint is None:
                 continue
+            joint_class = f"{joint_type}_joint".lower()
+            joint.set("class", joint_class)
+            del joint.attrib["axis"]
+            del joint.attrib["limited"]
 
-            joint.attrib["damping"] = str(MOTOR_DAMPING)
-            joint.attrib["stiffness"] = str(MOTOR_STIFFNESS)
-            joint.set("axis", JOINT_AXIS[joint_type])
-
-            # Hip range and axis
             if joint_type == "Hip":
                 joint.set("range", " ".join(HIP_RANGES[leg - 1]))
-
-            # Femur range
-            if joint_type == "Femur":
-                joint.set("range", " ".join(FEMUR_RANGE))
-
-            # Tibia range
-            if joint_type == "Tibia":
-                joint.set("range", " ".join(TIBIA_RANGE))
+            elif "axis" in joint.attrib:
+                del joint.attrib["axis"]
 
     return tree
 
