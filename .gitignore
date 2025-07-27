@@ -210,9 +210,12 @@ __marimo__/
 # Other files
 .DS_Store
 .vscode/
+*.tmp.usd
 simulate/robot/export/
 simulate/gymnasium/logs
 simulate/issac/cloud.cfg
 simulate/issac/env.cfg
 simulate/issac/logs
+simulate/robot/meshes/._*
+simulate/robot/meshes/mujoco/._*
 secrets.cfg
