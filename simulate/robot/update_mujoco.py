@@ -51,6 +51,13 @@ RENAME_PARTS = {
     "_Tibia_Leg_Tibia": "_Tibia",
 }
 
+DEFAULT_COLLISION_THRESHOLD = 0.15
+COLLISION_THRESHOLDS = {
+    "MOTOR": 0.2,
+    "Leg_Tibia_Leg": 0.05,
+    "Leg_Tibia_Foot": 0.05,
+}
+
 DEFAULT_MATERIAL_NAME = "body_material"
 
 
@@ -204,8 +211,8 @@ def update_joint_values(tree):
 
             if joint_type == "Hip":
                 joint.set("range", " ".join(HIP_RANGES[leg - 1]))
-            elif "axis" in joint.attrib:
-                del joint.attrib["axis"]
+            else:
+                del joint.attrib["range"]
 
     return tree
 
@@ -581,13 +588,16 @@ def create_collision_meshes(mesh_path, collision_dir):
         os.makedirs(out_dir)
 
     print(f" - Creating collision meshes for {mesh_basename}")
-    mesh = trimesh.load(path.abspath(mesh_path), force="mesh")
+
+    threshold = DEFAULT_COLLISION_THRESHOLD
+    if mesh_basename in COLLISION_THRESHOLDS:
+        threshold = COLLISION_THRESHOLDS[mesh_basename]
     coacd.set_log_level("error")
+    mesh = trimesh.load(path.abspath(mesh_path), force="mesh")
     coacd_mesh = coacd.Mesh(mesh.vertices, mesh.faces)
     parts = coacd.run_coacd(
         coacd_mesh,
-        threshold=0.15,
-        mcts_iterations=100,
+        threshold=threshold,
     )
 
     results = {}
