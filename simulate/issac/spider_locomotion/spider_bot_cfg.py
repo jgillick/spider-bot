@@ -20,11 +20,11 @@ class SpiderBotCfg(ArticulationCfg):
     spawn = sim_utils.UsdFileCfg(
         usd_path=SPIDER_BOT_USD_PATH,
         activate_contact_sensors=True,
-        # articulation_props=sim_utils.ArticulationRootPropertiesCfg(
-        #     enabled_self_collisions=True,
-        #     solver_position_iteration_count=4,
-        #     solver_velocity_iteration_count=0,
-        # ),
+        articulation_props=sim_utils.ArticulationRootPropertiesCfg(
+            enabled_self_collisions=True,
+            # solver_position_iteration_count=8,
+            # solver_velocity_iteration_count=0,
+        ),
     )
 
     init_state = ArticulationCfg.InitialStateCfg(
@@ -42,22 +42,22 @@ class SpiderBotCfg(ArticulationCfg):
             # Femur joints
             ".*_Femur": 0.9,
             # Tibia joints
-            ".*_Tibia": -1.0,
+            ".*_Tibia": -0.9,
         },
     )
 
     actuators = {
         "legs": ImplicitActuatorCfg(
             joint_names_expr=[".*Leg[1-8]_Hip", ".*Leg[1-8]_Femur", ".*Leg[1-8]_Tibia"],
-            effort_limit_sim=8.0,
-            velocity_limit_sim=12.0,  # Slightly below nominal speed (12.57 rad/s)
-            stiffness={".*": 20.0},
-            damping={".*": 0.5},
+            effort_limit_sim=10.0,
+            velocity_limit_sim=12.0,  # Rated: 12.5 rad/s, Max: 43 rad/s
+            stiffness={".*": 200.0},
+            damping={".*": 0.2},
         ),
     }
 
     # Limit joints to 90% of their range
-    soft_joint_pos_limit_factor = 0.9
+    # soft_joint_pos_limit_factor = 0.9
 
     # Collision properties to apply to all rigid bodies
     collision_props = sim_utils.CollisionPropertiesCfg(

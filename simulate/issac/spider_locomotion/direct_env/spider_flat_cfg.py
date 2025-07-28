@@ -10,7 +10,8 @@ from isaaclab.envs import DirectRLEnvCfg, ViewerCfg
 from isaaclab.managers import EventTermCfg as EventTerm
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.scene import InteractiveSceneCfg
-from isaaclab.sensors import ContactSensorCfg, RayCasterCfg, patterns
+from isaaclab.managers import RewardTermCfg as RewTerm
+from isaaclab.sensors import ContactSensorCfg
 from isaaclab.sim import SimulationCfg
 from isaaclab.terrains import TerrainImporterCfg
 from isaaclab.utils import configclass
@@ -20,6 +21,48 @@ from gymnasium import spaces
 
 from ..spider_bot_cfg import SpiderBotCfg
 
+
+@configclass
+class RewardsCfg:
+    """Reward terms"""
+
+    # Still alive
+    # is_alive = RewTerm(
+    #     func=mdp.is_alive,
+    #     weight=1.0,
+    # )
+
+    # -- Regularization rewards
+    # Penalize rapid movement along the Z axis (vertical)
+    # lin_vel_z_l2 = RewTerm(func=mdp.lin_vel_z_l2, weight=-2.0)
+    # Penalize for not maintaining a flat orientation
+    flat_orientation_l2 = RewTerm(func=mdp.flat_orientation_l2, weight=2.5)
+    # Penalize angular velocity in X and Y to discourage tipping/rolling
+    ang_vel_xy_l2 = RewTerm(func=mdp.ang_vel_xy_l2, weight=-0.05)
+    # Penalize large joint torques to encourage energy efficiency
+    dof_torques_l2 = RewTerm(func=mdp.joint_torques_l2, weight=-1.0e-5)
+    # Penalize large joint accelerations for smoother motion
+    dof_acc_l2 = RewTerm(func=mdp.joint_acc_l2, weight=-2.5e-7)
+    # Penalize rapid changes in action for smoother control
+    action_rate_l2 = RewTerm(func=mdp.action_rate_l2, weight=-0.01)
+
+    # Penalize feet sliding
+    # feet_slide = RewTerm(
+    #     func=mdp.feet_slide,
+    #     weight=-0.1,
+    #     params={
+    #         "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_Tibia_Foot"),
+    #         "asset_cfg": SceneEntityCfg("robot", body_names=".*_Tibia_Foot"),
+    #     },
+    # )
+
+    # Penalize deviation from target base height
+    base_height_l2 = RewTerm(
+        func=mdp.base_height_l2, weight=-0.5, params={"target_height": 0.13}
+    )
+
+    # Terminated
+    termination_penalty = RewTerm(func=mdp.is_terminated, weight=-100.0)
 
 @configclass
 class EventCfg:
@@ -54,15 +97,14 @@ class SpiderFlatEnvCfg(DirectRLEnvCfg):
     debug_vis = True
     episode_length_s = 16.0
     decimation = 4
-    observation_space = 60
     state_space = 0
     observation_space = 84
     action_space = spaces.Box(
         low=-1.0,
         high=1.0,
         shape=(24,),
-        dtype=np.float32,
     )
+    rewards: RewardsCfg = RewardsCfg()
 
     # simulation
     sim: SimulationCfg = SimulationCfg(
@@ -101,7 +143,6 @@ class SpiderFlatEnvCfg(DirectRLEnvCfg):
     # robot
     robot: ArticulationCfg = SpiderBotCfg(
         prim_path="/World/envs/env_.*/Robot",
-        init_state=SpiderBotCfg.InitialStateCfg(pos=(0.0, 0.0, 0.135)),
     )
     contact_sensor: ContactSensorCfg = ContactSensorCfg(
         prim_path="/World/envs/env_.*/Robot/Body/.*",
@@ -109,6 +150,7 @@ class SpiderFlatEnvCfg(DirectRLEnvCfg):
         update_period=0.005,
         track_air_time=True,
     )
+
     # Viwer settings
     viewer: ViewerCfg = ViewerCfg(
         origin_type="asset_root",
@@ -121,9 +163,10 @@ class SpiderFlatEnvCfg(DirectRLEnvCfg):
     max_command_velocity = 0.3  # m/s
 
     # reward scales
-    lin_vel_reward_scale = 2.0
+    lin_vel_reward_scale = 4.0  # Increased reward for forward movement
     yaw_rate_reward_scale = 0.5
-    feet_air_time_reward_scale = 0.5
+    feet_air_time_reward_scale = 2.0  # Increased reward for stepping
+    feet_on_ground_reward_scale = 5.0  # Reward for each foot in contact with the ground
 
     # penalty scales
     z_vel_reward_scale = -0.0
@@ -131,5 +174,12 @@ class SpiderFlatEnvCfg(DirectRLEnvCfg):
     joint_torque_reward_scale = -2.5e-5
     joint_accel_reward_scale = -2.5e-7
     action_rate_reward_scale = 0.0
-    undesired_contact_reward_scale = -0.2
-    flat_orientation_reward_scale = -0.0
+    undesired_contact_reward_scale = -1.5  # Reduced penalty from -2.0
+    flat_orientation_reward_scale = -100.0  # Strong penalty for being tilted (uprightness)
+    # Add a new penalty for low height
+    low_height_penalty_scale = -5.0  # Reduced penalty for being too low
+    low_height_buffer_steps = 10  # Number of consecutive steps below threshold before termination
+    bad_touch_penalty_scale = -1.0  # Reduced penalty for continuous BadTouch contact
+    standing_height_reward_scale = 5.0  # Much stronger reward for standing up
+    curriculum_standing_only = True  # If True, only reward standing, not walking
+    low_height_threshold = 0.135  # Raise threshold for low height 

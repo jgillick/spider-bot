@@ -6,7 +6,7 @@ from . import agents
 # Register for rough terrain
 gym.register(
     id="Isaac-SpiderLocomotion-v0",
-    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    entry_point=f"{__name__}.manager_env:SpiderBotRLManagerEnv",
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": f"{__name__}.manager_env.spider_env_cfg:SpiderLocomotionEnvCfg",
@@ -17,7 +17,7 @@ gym.register(
 # Register for flat terrain variant
 gym.register(
     id="Isaac-SpiderLocomotion-Flat-v0",
-    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    entry_point=f"{__name__}.manager_env:SpiderBotRLManagerEnv",
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": f"{__name__}.manager_env.spider_flat_env_cfg:SpiderLocomotionFlatEnvCfg",

@@ -9,9 +9,9 @@ from isaaclab_rl.rsl_rl import (
 
 @configclass
 class SpiderBotRoughPPORunnerCfg(RslRlOnPolicyRunnerCfg):
-    # Target batch size is 98,304 (800 parallel envs * 123 num steps per env)
+    # Target training batch size of ~98,304 (98,304 / num parallel envs = num_steps_per_env)
     # Based on: https://ar5iv.labs.arxiv.org/html/2109.11978
-    num_steps_per_env = 123
+    num_steps_per_env = 160
     max_iterations = 1500
     save_interval = 50
     experiment_name = "spider_bot"
@@ -28,9 +28,9 @@ class SpiderBotRoughPPORunnerCfg(RslRlOnPolicyRunnerCfg):
         value_loss_coef=1.0,
         use_clipped_value_loss=True,
         clip_param=0.2,
-        entropy_coef=0.01,  # Increased from 0.008 to match paper's recommendation
+        entropy_coef=0.01,
         num_learning_epochs=5,
-        num_mini_batches=4,  # Keep at 4 to achieve optimal mini-batch size of ~24,576 (98,400/4)
+        num_mini_batches=4,
         learning_rate=1.0e-3,
         schedule="adaptive",
         gamma=0.99,

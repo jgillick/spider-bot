@@ -25,7 +25,6 @@ class SpiderLocomotionFlatDirectEnv(DirectRLEnv):
         super().__init__(cfg, render_mode, **kwargs)
         self.set_debug_vis(self.cfg.debug_vis)
 
-        # Joint position command (deviation from default joint positions)
         self._actions = torch.zeros(
             self.num_envs,
             gym.spaces.flatdim(self.single_action_space),
@@ -44,19 +43,23 @@ class SpiderLocomotionFlatDirectEnv(DirectRLEnv):
         self._episode_sums = {
             key: torch.zeros(self.num_envs, dtype=torch.float, device=self.device)
             for key in [
-                "track_lin_vel_xy_exp",
-                "track_ang_vel_z_exp",
-                "lin_vel_z_l2",
-                "ang_vel_xy_l2",
-                "dof_torques_l2",
-                "dof_acc_l2",
-                "action_rate_l2",
-                "feet_air_time",
-                "undesired_contacts",
+                # "track_lin_vel_xy_exp",
+                # "track_ang_vel_z_exp",
+                # "lin_vel_z_l2",
+                # "ang_vel_xy_l2",
+                # "dof_torques_l2",
+                # "dof_acc_l2",
+                # "action_rate_l2",
+                # "feet_air_time",
+                # "undesired_contacts",
+                # "bad_touch",
+                # "tipped_over",
+                # "bottom_contact",
+                # "bad_touch_continuous",  # Continuous penalty for BadTouch
+                "standing_height",  # Positive reward for standing up
+                "low_height",  # Added for new penalty
                 "flat_orientation_l2",
-                "bad_touch",
-                "tipped_over",
-                "bottom_contact",
+                "feet_on_ground", # Reward for number of feet on the ground
             ]
         }
         self._episode_metrics = {
@@ -69,6 +72,8 @@ class SpiderLocomotionFlatDirectEnv(DirectRLEnv):
         self._bad_touch_bodies, _ = self._contact_sensor.find_bodies(
             ".*_BadTouch"
         )
+        # Buffer for low height termination
+        self._low_height_buffer = torch.zeros(self.num_envs, dtype=torch.int, device=self.device)
 
     def _setup_scene(self):
         self._robot = Articulation(self.cfg.robot)
@@ -97,8 +102,8 @@ class SpiderLocomotionFlatDirectEnv(DirectRLEnv):
         self._actions = actions.clone().clamp(-1.0, 1.0)
         target_positions = math_utils.unscale_transform(
             actions,
-            self._robot.data.soft_joint_pos_limits[:, :, 0],
-            self._robot.data.soft_joint_pos_limits[:, :, 1],
+            self._robot.data.joint_pos_limits[:, :, 0],
+            self._robot.data.joint_pos_limits[:, :, 1],
         )
         self._processed_actions = (target_positions)
 
@@ -172,6 +177,19 @@ class SpiderLocomotionFlatDirectEnv(DirectRLEnv):
             torch.square(self._robot.data.projected_gravity_b[:, :2]), dim=1
         )
 
+        # Continuous penalty for any contact on BadTouch bodies
+        bad_touch_force = torch.sum(
+            torch.norm(net_contact_forces[:, :, self._bad_touch_bodies], dim=-1), dim=(1, 2)
+        )
+        
+        # Standing height reward (encourage standing up)
+        standing_height = torch.clamp(self._robot.data.root_pos_w[:, 2] - self.cfg.low_height_threshold, min=0.0)
+
+        # Reward for number of feet on the ground
+        feet_contact_forces = self._contact_sensor.data.net_forces_w_history[:, :, self._feet_ids]
+        feet_in_contact = (feet_contact_forces.norm(dim=-1) > 1.0).float()
+        num_feet_on_ground = feet_in_contact.sum(dim=(1, 2))  # Sum over time and feet dimensions
+
         rewards = {
             "track_lin_vel_xy_exp": self._mdp_commanded_velocity_reward(),
             "track_ang_vel_z_exp": yaw_rate_error_mapped
@@ -199,7 +217,22 @@ class SpiderLocomotionFlatDirectEnv(DirectRLEnv):
             "flat_orientation_l2": flat_orientation
             * self.cfg.flat_orientation_reward_scale
             * self.step_dt,
+            # Add low height penalty
+            "low_height": (self._robot.data.root_pos_w[:, 2] < self.cfg.low_height_threshold).float() * self.cfg.low_height_penalty_scale * self.step_dt,
+            # Add continuous bad touch penalty
+            "bad_touch_continuous": bad_touch_force * self.cfg.bad_touch_penalty_scale * self.step_dt,
+            # Add standing height reward
+            "standing_height": standing_height * self.cfg.standing_height_reward_scale * self.step_dt,
+            "feet_on_ground": num_feet_on_ground * self.cfg.feet_on_ground_reward_scale * self.step_dt,
         }
+        # If curriculum_standing_only, only use standing_height and low_height rewards
+        if self.cfg.curriculum_standing_only:
+            rewards = {
+                "standing_height": rewards["standing_height"],
+                "low_height": rewards["low_height"],
+                "flat_orientation_l2": rewards["flat_orientation_l2"],
+                "feet_on_ground": rewards["feet_on_ground"],
+            }
         reward = torch.sum(torch.stack(list(rewards.values())), dim=0)
         
         # Logging
@@ -227,23 +260,20 @@ class SpiderLocomotionFlatDirectEnv(DirectRLEnv):
             dim=1,
         )
 
-        # Is the robot putting force on the bottom body
-        # bottom_contact = torch.any(
-        #     torch.max(
-        #         torch.norm(net_contact_forces[:, :, self._bottom_body_ids], dim=-1),
-        #         dim=1,
-        #     )[0]
-        #     > 1.0,
-        #     dim=1,
-        # )
-
         # The robot has tipped over
         tipped_over = (
             torch.acos(-self._robot.data.projected_gravity_b[:, 2]).abs() > 0.7
         )
 
-        died = torch.any(torch.stack([bad_touch, tipped_over]), dim=0)
-        return died, time_out
+        # Terminate if height is below threshold for a number of steps
+        is_down = (self._robot.data.root_pos_w[:, 2] < self.cfg.low_height_threshold)
+        # Update buffer
+        self._low_height_buffer[is_down] += 1
+        self._low_height_buffer[~is_down] = 0
+        low_height_terminate = self._low_height_buffer >= self.cfg.low_height_buffer_steps
+
+        # died = torch.any(torch.stack([bad_touch, tipped_over, low_height_terminate]), dim=0)
+        return torch.tensor(False), time_out
 
     def _reset_idx(self, env_ids: torch.Tensor | None):
         if env_ids is None or len(env_ids) == self.num_envs:
@@ -261,9 +291,10 @@ class SpiderLocomotionFlatDirectEnv(DirectRLEnv):
         self._previous_actions[env_ids] = 0.0
 
         # Sample new commands
-        self._commands[env_ids] = torch.zeros_like(self._commands[env_ids]).uniform_(
-            -self.cfg.max_command_velocity, self.cfg.max_command_velocity
-        )
+        if not self.cfg.curriculum_standing_only:
+            self._commands[env_ids] = torch.zeros_like(self._commands[env_ids]).uniform_(
+                -self.cfg.max_command_velocity, self.cfg.max_command_velocity
+            )
 
         # Reset robot state
         joint_pos = self._robot.data.default_joint_pos[env_ids]
@@ -273,6 +304,9 @@ class SpiderLocomotionFlatDirectEnv(DirectRLEnv):
         self._robot.write_root_pose_to_sim(default_root_state[:, :7], env_ids)
         self._robot.write_root_velocity_to_sim(default_root_state[:, 7:], env_ids)
         self._robot.write_joint_state_to_sim(joint_pos, joint_vel, None, env_ids)
+
+        # Reset low height buffer for these envs
+        self._low_height_buffer[env_ids] = 0
 
         # Logging
         extras = dict()
@@ -319,7 +353,7 @@ class SpiderLocomotionFlatDirectEnv(DirectRLEnv):
     def _debug_vis_callback(self, event):
         # check if robot is initialized
         # note: this is needed in-case the robot is de-initialized. we can't access the data
-        if not self._robot.is_initialized:
+        if not self._robot.is_initialized or self.cfg.curriculum_standing_only:
             return
         # get marker location
         # -- base state
@@ -338,7 +372,7 @@ class SpiderLocomotionFlatDirectEnv(DirectRLEnv):
         default_scale = self.goal_vel_visualizer.cfg.markers["arrow"].scale
         # arrow-scale
         arrow_scale = torch.tensor(default_scale, device=self.device).repeat(xy_velocity.shape[0], 1)
-        arrow_scale[:, 0] *= torch.linalg.norm(xy_velocity, dim=1) * 3.0
+        arrow_scale[:, 0] *= torch.linalg.norm(xy_velocity, dim=1) * 5.0
         # arrow-direction
         heading_angle = torch.atan2(xy_velocity[:, 1], xy_velocity[:, 0])
         zeros = torch.zeros_like(heading_angle)
