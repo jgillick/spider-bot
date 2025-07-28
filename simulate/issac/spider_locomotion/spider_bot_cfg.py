@@ -61,6 +61,6 @@ class SpiderBotCfg(ArticulationCfg):
 
     # Collision properties to apply to all rigid bodies
     collision_props = sim_utils.CollisionPropertiesCfg(
-        contact_offset=0.01,
+        contact_offset=1e-5,
         rest_offset=0.0,
     )
