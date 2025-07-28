@@ -72,52 +72,63 @@ def printout(info_str):
 def set_materials(stage):
     """Update the materials and set them to bodies"""
 
-    # Default everything to the body material
-    omni.kit.commands.execute(
-        "BindMaterialCommand",
-        prim_path=[f"{ROOT_PATH}/Body"],
-        material_path=f"{ROOT_PATH}/Looks/material_body_material",
-        strength="strongerThanDescendants",
-        stage=stage,
-    )
-
+    ##
     # Create rubber material for feet
     # Static friction: ~0.8 - 1.5
     # Dynamic friction: ~0.5 - 1.0
     # Restitution (bounciness): ~0.0 - 0.2
-    material_prim = stage.DefinePrim("{ROOT_PATH}/Looks/rubber", "Material")
+    material_prim = stage.DefinePrim(f"{ROOT_PATH}/Looks/rubber", "Material")
 
     physx_material = PhysxSchema.PhysxMaterialAPI.Apply(material_prim)
-    physx_material.CreateStaticFrictionAttr().Set(1.2)
-    physx_material.CreateDynamicFrictionAttr().Set(1.0)
-    physx_material.CreateRestitutionAttr().Set(0.15)
     physx_material.CreateFrictionCombineModeAttr().Set("multiply")
     physx_material.CreateRestitutionCombineModeAttr().Set("average")
+    material_api = UsdPhysics.MaterialAPI.Apply(material_prim)
+    material_api.CreateStaticFrictionAttr().Set(1.2)
+    material_api.CreateDynamicFrictionAttr().Set(1.0)
+    material_api.CreateRestitutionAttr().Set(0.15)
 
-    shade_material = UsdShade.Material(material_prim)
+    rubber_shade_material = UsdShade.Material(material_prim)
     surface_shader = UsdShade.Shader.Define(
         stage, material_prim.GetPath().AppendChild("Shader")
     )
     surface_shader.CreateIdAttr("UsdPreviewSurface")
     surface_shader.CreateInput("diffuseColor", Sdf.ValueTypeNames.Color3f).Set(
-        (0.5, 0.5, 0.5)
+        (0.2, 0.2, 0.2)
     )
     surface_shader.CreateInput("roughness", Sdf.ValueTypeNames.Float).Set(0.8)
     surface_shader.CreateInput("metallic", Sdf.ValueTypeNames.Float).Set(0.0)
-    shade_material.CreateSurfaceOutput().ConnectToSource(
+    rubber_shade_material.CreateSurfaceOutput().ConnectToSource(
         surface_shader.ConnectableAPI(), "surface"
     )
 
     # Apply rubber to feet
     for leg in range(1, 9):
-        foot = stage.GetPrimAtPath(f"{ROOT_PATH}/joints/Leg{leg}_Tibia_Foot")
-        if foot:
-            UsdPhysics.MaterialBindingAPI.Apply(foot)
-            binding_api = UsdPhysics.MaterialBindingAPI(foot)
-            binding_api.Bind(
-                material_prim.GetPath(),
+        foot_prim = stage.GetPrimAtPath(f"{ROOT_PATH}/Body/Leg{leg}_Tibia_Foot")
+        
+        if foot_prim:
+            material_binding_api = UsdShade.MaterialBindingAPI.Apply(foot_prim)
+            material_binding_api.Bind(
+                rubber_shade_material,
                 bindingStrength=UsdShade.Tokens.strongerThanDescendants,
             )
+        else:
+            printout(f"WARNING: Could the foot prim for Leg{leg}")
+    
+    ##
+    # Apply default material to all bodies but feet
+    default_material_prim = stage.GetPrimAtPath(f"{ROOT_PATH}/Looks/material_body_material")
+    if default_material_prim:
+        default_material = UsdShade.Material(default_material_prim)
+        root_body = stage.GetPrimAtPath(f"{ROOT_PATH}/Body")
+        if root_body:
+            body_prims = root_body.GetChildren()
+            for prim in body_prims:
+                if not prim.GetName().endswith("_Tibia_Foot"):
+                    material_binding_api = UsdShade.MaterialBindingAPI.Apply(prim)
+                    material_binding_api.Bind(
+                        default_material,
+                        bindingStrength=UsdShade.Tokens.strongerThanDescendants,
+                    )
 
 
 async def main():
@@ -127,20 +138,18 @@ async def main():
         printout(f"ERROR: Invalid file path: {mjcf_path}")
         return False
     dest_path = os.path.abspath(args_cli.output)
-
-    # create destination path
     printout(f"Mujoco input: {mjcf_path}")
 
     # Conversion config
     import_config = _mjcf.ImportConfig()
-    import_config.set_fix_base(False)
-    import_config.set_import_sites(True)
-    import_config.set_import_inertia_tensor(True)
-    import_config.set_make_instanceable(True)
     import_config.set_make_default_prim(True)
+    import_config.set_make_instanceable(True)
     import_config.set_merge_fixed_joints(True)
+    import_config.set_convex_decomp(True)
+    import_config.set_fix_base(False)
+    import_config.set_import_sites(False)
+    import_config.set_import_inertia_tensor(True)
     import_config.set_self_collision(False)
-    # import_config.set_convex_decomp(True)
     import_config.set_default_drive_strength(11)
     import_config.set_visualize_collision_geoms(False)
 
@@ -155,13 +164,7 @@ async def main():
         worldbody.SetActive(False)
 
     # Set body material
-    omni.kit.commands.execute(
-        "BindMaterialCommand",
-        prim_path=[f"{ROOT_PATH}/Body"],
-        material_path=f"{ROOT_PATH}/Looks/material_body_material",
-        strength="strongerThanDescendants",
-        stage=stage,
-    )
+    set_materials(stage)
 
     # Save
     stage.Export(dest_path)
