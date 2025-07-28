@@ -8,7 +8,8 @@
 #
 #
 
-source env.cfg
+SCRIPT_DIR="$(dirname "$(realpath $0)")"
+source $SCRIPT_DIR/env.cfg
 
 #######################################################
 # CONFIGURATION
@@ -22,7 +23,7 @@ VIDEO_LENGTH=1000
 VIDEO_INTERVAL=500
 
 # TRAINING_TASK="Isaac-SpiderLocomotion-Flat-v0"
-TRAINING_TASK="Isaac-SpiderLocomotion-Direct-v0"
+TRAINING_TASK="Isaac-SpiderLocomotion-Flat-v0"
 TRAINING_SCRIPT="./scripts/reinforcement_learning/rsl_rl/train.py"
 
 #######################################################
