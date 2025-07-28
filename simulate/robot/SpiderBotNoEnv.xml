@@ -102,6 +102,7 @@
     <mesh name="Leg_Tibia_Leg_collision06" file="meshes/mujoco/colliders/Leg_Tibia_Leg/06.stl" />
     <mesh name="Leg_Tibia_Foot_collision00" file="meshes/mujoco/colliders/Leg_Tibia_Foot/00.stl" />
     <mesh name="Leg_Tibia_BadTouch_collision00" file="meshes/mujoco/colliders/Leg_Tibia_BadTouch/00.stl" />
+    <mesh name="Leg_Tibia_BadTouch_collision01" file="meshes/mujoco/colliders/Leg_Tibia_BadTouch/01.stl" />
   </asset>
   <worldbody>
     <body name="Body" pos="0.0 0.0 0.134" quat="1 0 0 0">
@@ -139,8 +140,9 @@
                   </body>
                   <body name="Leg1_Tibia_BadTouch" pos="-3.406004253778905e-05 -0.008928296405293032 0.15038254739440368" quat="0.991444861373811 -0.130526192220051 8.61968382424067e-17 4.33792815898972e-17">
                     <geom name="Leg1_Tibia_BadTouch" type="mesh" mesh="Leg_Tibia_BadTouch" pos="0 0 0" quat="1 0 0 0" />
-                    <inertial mass="0.002457510787372112" pos="0.040034060042540204 -0.11615725081482123 0.02800425509248945" fullinertia="9.943121375409e-08 1.7746793992147972e-08 8.332276028713156e-08 1.604984029698194e-23 1.422194803881622e-23 -1.91477569784742e-08" />
+                    <inertial mass="0.0005883837658738169" pos="0.04003406004254017 -0.11221456645803127 0.03113413156039271" fullinertia="1.2707199603673089e-08 5.112584032615922e-10 1.2588197044379517e-08 2.543209427149077e-21 -6.774791322823713e-21 -6.704321676000003e-10" />
                     <geom mesh="Leg_Tibia_BadTouch_collision00" type="mesh" pos="0 0 0" class="collision" />
+                    <geom mesh="Leg_Tibia_BadTouch_collision01" type="mesh" pos="0 0 0" class="collision" />
                   </body>
                   <geom mesh="Leg_Tibia_Leg_collision00" type="mesh" pos="0 0 0" class="collision" />
                   <geom mesh="Leg_Tibia_Leg_collision01" type="mesh" pos="0 0 0" class="collision" />
@@ -308,8 +310,9 @@
                   </body>
                   <body name="Leg2_Tibia_BadTouch" pos="-3.4060042538479604e-05 -0.008928296405292998 0.15038254739440318" quat="0.99144486137381 -0.130526192220051 -6.22819048331426e-17 -7.24565919596746e-18">
                     <geom name="Leg2_Tibia_BadTouch" type="mesh" mesh="Leg_Tibia_BadTouch" pos="0 0 0" quat="1 0 0 0" />
-                    <inertial mass="0.002457510787372112" pos="0.04003406004254022 -0.11615725081482127 0.028004255092489508" fullinertia="9.943121375384649e-08 1.774679399182275e-08 8.332276028714474e-08 1.0429858834602374e-21 2.2148588081719866e-20 -1.914775697849511e-08" />
+                    <inertial mass="0.0005883837658738169" pos="0.04003406004254015 -0.11221456645803134 0.03113413156039285" fullinertia="1.2707199603587259e-08 5.112584031802785e-10 1.258819704436541e-08 3.0167621577351773e-21 -1.4589811644210308e-20 -6.704321676098459e-10" />
                     <geom mesh="Leg_Tibia_BadTouch_collision00" type="mesh" pos="0 0 0" class="collision" />
+                    <geom mesh="Leg_Tibia_BadTouch_collision01" type="mesh" pos="0 0 0" class="collision" />
                   </body>
                   <geom mesh="Leg_Tibia_Leg_collision00" type="mesh" pos="0 0 0" class="collision" />
                   <geom mesh="Leg_Tibia_Leg_collision01" type="mesh" pos="0 0 0" class="collision" />
@@ -477,8 +480,9 @@
                   </body>
                   <body name="Leg3_Tibia_BadTouch" pos="-3.406004253612594e-05 -0.008928296405293348 0.1503825473944029" quat="0.991444861373811 -0.13052619222005 -7.34972944608031e-17 8.54449410711051e-17">
                     <geom name="Leg3_Tibia_BadTouch" type="mesh" mesh="Leg_Tibia_BadTouch" pos="0 0 0" quat="1 0 0 0" />
-                    <inertial mass="0.002457510787372112" pos="0.040034060042540204 -0.11615725081482137 0.028004255092489466" fullinertia="9.943121375380205e-08 1.774679399183625e-08 8.332276028709427e-08 5.76940907139987e-21 7.67623608449208e-21 -1.9147756978494653e-08" />
+                    <inertial mass="0.0005883837658738169" pos="0.0400340600425402 -0.11221456645803136 0.03113413156039276" fullinertia="1.2707199603635907e-08 5.112584032378749e-10 1.2588197044376043e-08 -2.292552389592053e-23 4.3501428414163725e-21 -6.704321676003714e-10" />
                     <geom mesh="Leg_Tibia_BadTouch_collision00" type="mesh" pos="0 0 0" class="collision" />
+                    <geom mesh="Leg_Tibia_BadTouch_collision01" type="mesh" pos="0 0 0" class="collision" />
                   </body>
                   <geom mesh="Leg_Tibia_Leg_collision00" type="mesh" pos="0 0 0" class="collision" />
                   <geom mesh="Leg_Tibia_Leg_collision01" type="mesh" pos="0 0 0" class="collision" />
@@ -646,8 +650,9 @@
                   </body>
                   <body name="Leg4_Tibia_BadTouch" pos="-3.4060042535983825e-05 -0.008928296405293258 0.15038254739440343" quat="0.991444861373811 -0.13052619222005 -1.86162404150118e-16 -3.85047562220835e-17">
                     <geom name="Leg4_Tibia_BadTouch" type="mesh" mesh="Leg_Tibia_BadTouch" pos="0 0 0" quat="1 0 0 0" />
-                    <inertial mass="0.002457510787372112" pos="0.0400340600425402 -0.1161572508148214 0.02800425509248952" fullinertia="9.943121375377829e-08 1.774679399180916e-08 8.332276028711814e-08 6.756598861406971e-21 1.6926852191909809e-21 -1.9147756978494508e-08" />
+                    <inertial mass="0.0005883837658738169" pos="0.04003406004254016 -0.1122145664580314 0.03113413156039282" fullinertia="1.2707199603632431e-08 5.112584032294048e-10 1.2588197044374448e-08 2.115857345062954e-21 1.0941485611108601e-24 -6.70432167603381e-10" />
                     <geom mesh="Leg_Tibia_BadTouch_collision00" type="mesh" pos="0 0 0" class="collision" />
+                    <geom mesh="Leg_Tibia_BadTouch_collision01" type="mesh" pos="0 0 0" class="collision" />
                   </body>
                   <geom mesh="Leg_Tibia_Leg_collision00" type="mesh" pos="0 0 0" class="collision" />
                   <geom mesh="Leg_Tibia_Leg_collision01" type="mesh" pos="0 0 0" class="collision" />
@@ -815,8 +820,9 @@
                   </body>
                   <body name="Leg5_Tibia_BadTouch" pos="-3.406004253927009e-05 -0.008928296405293246 0.15038254739440376" quat="0.991444861373811 -0.13052619222005 -1.5513219403143e-16 -2.16040150534418e-18">
                     <geom name="Leg5_Tibia_BadTouch" type="mesh" mesh="Leg_Tibia_BadTouch" pos="0 0 0" quat="1 0 0 0" />
-                    <inertial mass="0.002457510787372112" pos="0.04003406004254025 -0.11615725081482134 0.028004255092489543" fullinertia="9.943121375398176e-08 1.7746793991931112e-08 8.332276028717243e-08 -2.546132322079052e-23 -1.3608295761696205e-20 -1.914775697847417e-08" />
+                    <inertial mass="0.0005883837658738169" pos="0.04003406004254023 -0.11221456645803138 0.031134131560392804" fullinertia="1.2707199603646007e-08 5.112584032073815e-10 1.258819704437954e-08 1.6916196661514335e-21 -3.393761875178142e-21 -6.704321676067671e-10" />
                     <geom mesh="Leg_Tibia_BadTouch_collision00" type="mesh" pos="0 0 0" class="collision" />
+                    <geom mesh="Leg_Tibia_BadTouch_collision01" type="mesh" pos="0 0 0" class="collision" />
                   </body>
                   <geom mesh="Leg_Tibia_Leg_collision00" type="mesh" pos="0 0 0" class="collision" />
                   <geom mesh="Leg_Tibia_Leg_collision01" type="mesh" pos="0 0 0" class="collision" />
@@ -984,8 +990,9 @@
                   </body>
                   <body name="Leg6_Tibia_BadTouch" pos="-3.406004253981187e-05 -0.008928296405293334 0.15038254739440313" quat="0.991444861373811 -0.130526192220049 -6.44402204658437e-17 1.81758370936162e-16">
                     <geom name="Leg6_Tibia_BadTouch" type="mesh" mesh="Leg_Tibia_BadTouch" pos="0 0 0" quat="1 0 0 0" />
-                    <inertial mass="0.002457510787372112" pos="0.04003406004254023 -0.11615725081482137 0.02800425509248945" fullinertia="9.943121375380443e-08 1.7746793991822632e-08 8.332276028710579e-08 -2.2938092247642194e-21 3.4820995066032265e-20 -1.914775697849712e-08" />
+                    <inertial mass="0.0005883837658738169" pos="0.04003406004254025 -0.11221456645803142 0.03113413156039279" fullinertia="1.270719960363102e-08 5.112584032344841e-10 1.2588197044386052e-08 5.6021115792485895e-22 -3.8116482626443545e-21 -6.704321676090565e-10" />
                     <geom mesh="Leg_Tibia_BadTouch_collision00" type="mesh" pos="0 0 0" class="collision" />
+                    <geom mesh="Leg_Tibia_BadTouch_collision01" type="mesh" pos="0 0 0" class="collision" />
                   </body>
                   <geom mesh="Leg_Tibia_Leg_collision00" type="mesh" pos="0 0 0" class="collision" />
                   <geom mesh="Leg_Tibia_Leg_collision01" type="mesh" pos="0 0 0" class="collision" />
@@ -1153,8 +1160,9 @@
                   </body>
                   <body name="Leg7_Tibia_BadTouch" pos="-3.406004253692529e-05 -0.008928296405293317 0.15038254739440382" quat="0.991444861373811 -0.13052619222005 1.0554395427687e-16 -6.11835193591808e-17">
                     <geom name="Leg7_Tibia_BadTouch" type="mesh" mesh="Leg_Tibia_BadTouch" pos="0 0 0" quat="1 0 0 0" />
-                    <inertial mass="0.002457510787372112" pos="0.040034060042540266 -0.11615725081482135 0.028004255092489518" fullinertia="9.943121375384502e-08 1.7746793991795573e-08 8.332276028710578e-08 -3.584132185441835e-21 -1.0779817742791043e-20 -1.9147756978502088e-08" />
+                    <inertial mass="0.0005883837658738169" pos="0.040034060042540204 -0.11221456645803136 0.031134131560392804" fullinertia="1.270719960364939e-08 5.112584032310978e-10 1.2588197044377843e-08 2.0016977012226952e-21 -2.0356914874930086e-21 -6.704321676020788e-10" />
                     <geom mesh="Leg_Tibia_BadTouch_collision00" type="mesh" pos="0 0 0" class="collision" />
+                    <geom mesh="Leg_Tibia_BadTouch_collision01" type="mesh" pos="0 0 0" class="collision" />
                   </body>
                   <geom mesh="Leg_Tibia_Leg_collision00" type="mesh" pos="0 0 0" class="collision" />
                   <geom mesh="Leg_Tibia_Leg_collision01" type="mesh" pos="0 0 0" class="collision" />
@@ -1322,8 +1330,9 @@
                   </body>
                   <body name="Leg8_Tibia_BadTouch" pos="-3.406004253645234e-05 -0.008928296405293117 0.15038254739440396" quat="0.991444861373811 -0.13052619222005 -3.47777411771044e-17 8.28660101776672e-18">
                     <geom name="Leg8_Tibia_BadTouch" type="mesh" mesh="Leg_Tibia_BadTouch" pos="0 0 0" quat="1 0 0 0" />
-                    <inertial mass="0.002457510787372112" pos="0.04003406004254021 -0.11615725081482127 0.028004255092489543" fullinertia="9.943121375387329e-08 1.774679399180916e-08 8.332276028717237e-08 1.0194463205424027e-20 -8.501875722806356e-21 -1.9147756978514866e-08" />
+                    <inertial mass="0.0005883837658738169" pos="0.04003406004254018 -0.11221456645803134 0.031134131560392825" fullinertia="1.2707199603652777e-08 5.112584032294052e-10 1.2588197044384619e-08 2.9692713632778963e-21 -2.968374118859016e-21 -6.704321676033874e-10" />
                     <geom mesh="Leg_Tibia_BadTouch_collision00" type="mesh" pos="0 0 0" class="collision" />
+                    <geom mesh="Leg_Tibia_BadTouch_collision01" type="mesh" pos="0 0 0" class="collision" />
                   </body>
                   <geom mesh="Leg_Tibia_Leg_collision00" type="mesh" pos="0 0 0" class="collision" />
                   <geom mesh="Leg_Tibia_Leg_collision01" type="mesh" pos="0 0 0" class="collision" />
