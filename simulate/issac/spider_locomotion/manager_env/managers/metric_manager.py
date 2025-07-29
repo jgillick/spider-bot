@@ -93,7 +93,8 @@ class MetricManager(ManagerBase):
         # store information
         extras = {}
         for key in self._episode_sums.keys():
-            extras["Episode_Metric/" + key] = torch.mean(self._episode_sums[key][env_ids])
+            episode_mean = torch.mean(self._episode_sums[key][env_ids])
+            extras["Episode_Metric/" + key] = episode_mean / self._env.max_episode_length
             # reset episodic sum
             self._episode_sums[key][env_ids] = 0.0
         # reset all the metric terms

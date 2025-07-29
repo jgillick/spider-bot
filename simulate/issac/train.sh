@@ -50,5 +50,5 @@ if [ $HEADLESS -eq 1 ]; then
     --video_length $VIDEO_LENGTH \
     --video_interval $VIDEO_INTERVAL
 else
-  ./isaaclab.sh -p ./scripts/reinforcement_learning/rsl_rl/train.py --task Isaac-SpiderLocomotion-Direct-v0 --num_envs $NUM_ENVS --max_iterations $MAX_ITERATIONS 
+  ./isaaclab.sh -p ./scripts/reinforcement_learning/rsl_rl/train.py --task $TRAINING_TASK --num_envs $NUM_ENVS --max_iterations $MAX_ITERATIONS 
 fi

@@ -3,6 +3,7 @@ import torch
 import gymnasium as gym
 from collections.abc import Sequence
 from isaaclab.envs import ManagerBasedRLEnv
+from isaaclab.envs.manager_based_rl_env_cfg import ManagerBasedRLEnvCfg
 from isaaclab.envs.common import VecEnvStepReturn
 
 from .metric_manager import MetricManager
@@ -11,6 +12,9 @@ class SpiderBotRLManagerEnv(ManagerBasedRLEnv):
     """
     RL Manager that limits the action space to be -1 to 1 and adds metrics to the logger
     """
+    def __init__(self, cfg: ManagerBasedRLEnvCfg, render_mode: str | None = None, **kwargs):
+        print("SPIDERBOT RL MANAGER ENV")
+        super().__init__(cfg, render_mode, **kwargs)
 
     def _configure_gym_env_spaces(self):
         super()._configure_gym_env_spaces()
@@ -30,7 +34,6 @@ class SpiderBotRLManagerEnv(ManagerBasedRLEnv):
 
     def _reset_idx(self, env_ids: Sequence[int]):
         super()._reset_idx(env_ids)
-
         metric_logs = self.metrics_manager.reset(env_ids)
         self.extras["log"].update(metric_logs)
     
