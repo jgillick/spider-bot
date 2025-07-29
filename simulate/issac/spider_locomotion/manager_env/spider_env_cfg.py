@@ -26,9 +26,9 @@ from isaaclab.terrains.config.rough import ROUGH_TERRAINS_CFG
 # Import spider robot configuration
 from ..spider_bot_cfg import SpiderBotCfg
 from .managers.metric_manager import MetricsTermCfg
-from .mdp.metrics import robot_height
+from .mdp.metrics import robot_height, max_contact_forces
 from .mdp.rewards import desired_contacts
-from .mdp.relative_joint_action import SpiderJointPositionActionCfg
+
 
 ##
 # Scene definition
@@ -59,7 +59,27 @@ class SpiderSceneCfg(InteractiveSceneCfg):
     )
 
     # Robots
-    robot = SpiderBotCfg(prim_path="{ENV_REGEX_NS}/Robot")
+    robot = SpiderBotCfg(
+        prim_path="{ENV_REGEX_NS}/Robot",
+        init_state=SpiderBotCfg.InitialStateCfg(
+            pos=(0.0, 0.0, 0.16),
+            joint_pos={
+                # Hip joints
+                ".*Leg1_Hip": 1.0,
+                ".*Leg2_Hip": 1.0,
+                ".*Leg3_Hip": -1.0,
+                ".*Leg4_Hip": -1.0,
+                ".*Leg5_Hip": -1.0,
+                ".*Leg6_Hip": -1.0,
+                ".*Leg7_Hip": 1.0,
+                ".*Leg8_Hip": 1.0,
+                # Femur joints
+                ".*_Femur": 0.9,
+                # Tibia joints
+                ".*_Tibia": -0.9,
+            },
+        ),
+    )
 
     # Add contact sensors to all parts connected to the root body
     contact_forces = ContactSensorCfg(
@@ -84,7 +104,7 @@ class CommandsCfg:
     """Command specifications for the MDP."""
 
     pass
-    # base_velocity = velocity_mdp.UniformVelocityCommandCfg(
+    # base_velocity = mdp.UniformVelocityCommandCfg(
     #     asset_name="robot",
     #     resampling_time_range=(10.0, 10.0),
     #     rel_standing_envs=0.02,
@@ -92,7 +112,7 @@ class CommandsCfg:
     #     heading_command=True,
     #     heading_control_stiffness=0.5,
     #     debug_vis=True,
-    #     ranges=velocity_mdp.UniformVelocityCommandCfg.Ranges(
+    #     ranges=mdp.UniformVelocityCommandCfg.Ranges(
     #         lin_vel_x=(-1.0, 1.0),
     #         lin_vel_y=(-1.0, 1.0),
     #         ang_vel_z=(-1.0, 1.0),
@@ -105,10 +125,8 @@ class CommandsCfg:
 class ActionsCfg:
     """Action specifications for the spider robot."""
 
-    joint_pos = SpiderJointPositionActionCfg(
-        asset_name="robot",
-        joint_names=[".*"],
-        range=(-0.1, 0.1), # ~5 rad/s at 50Hz control rate
+    joint_pos = mdp.JointPositionToLimitsActionCfg(
+        asset_name="robot", joint_names=[".*"], rescale_to_limits=True
     )
 
 
@@ -139,12 +157,14 @@ class ObservationsCfg:
 
         # Joint information
         joint_pos = ObsTerm(
-            func=velocity_mdp.joint_pos_rel, noise=Unoise(n_min=-0.01, n_max=0.01)
+            func=mdp.joint_pos, noise=Unoise(n_min=-0.01, n_max=0.01)
         )
-        joint_vel = ObsTerm(func=velocity_mdp.joint_vel_rel, noise=Unoise(n_min=-1.5, n_max=1.5))
+        joint_vel = ObsTerm(
+            func=mdp.joint_vel, noise=Unoise(n_min=-1.5, n_max=1.5)
+        )
 
         # Actions
-        actions = ObsTerm(func=velocity_mdp.last_action)
+        actions = ObsTerm(func=mdp.last_action)
 
         def __post_init__(self):
             self.enable_corruption = True
@@ -164,64 +184,19 @@ class EventCfg:
         mode="startup",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names=".*"),
-            "static_friction_range": (0.1, 0.8),
-            "dynamic_friction_range": (0.1, 0.8),
-            "restitution_range": (0.0, 0.0),
+            # Friction of rubber feet
+            "static_friction_range": (0.8, 1.5),
+            "dynamic_friction_range": (0.5, 1.0),
+            "restitution_range": (0.0, 0.2),
             "num_buckets": 64,
         },
     )
-    add_base_mass = EventTerm(
-        func=mdp.randomize_rigid_body_mass,
-        mode="startup",
-        params={
-            "asset_cfg": SceneEntityCfg("robot", body_names="Body"),
-            "mass_distribution_params": (0.0, 0.1),
-            "operation": "add",
-        },
-    )
-    # base_com = EventTerm(
-    #     func=mdp.randomize_rigid_body_com,
-    #     mode="startup",
-    #     params={
-    #         "asset_cfg": SceneEntityCfg("robot", body_names="Body"),
-    #         "com_range": {"x": (-0.05, 0.05), "y": (-0.05, 0.05), "z": (-0.01, 0.01)},
-    #     },
-    # )
 
     # -- Reset
-    reset_base = EventTerm(
-        func=mdp.reset_root_state_uniform,
-        mode="reset",
-        params={
-            "pose_range": {"x": (-0.5, 0.5), "y": (-0.5, 0.5), "yaw": (-3.14, 3.14)},
-            "velocity_range": {
-                "x": (-0.5, 0.5),
-                "y": (-0.5, 0.5),
-                "z": (-0.5, 0.5),
-                "roll": (-0.5, 0.5),
-                "pitch": (-0.5, 0.5),
-                "yaw": (-0.5, 0.5),
-            },
-        },
-    )
     reset_robot_joints = EventTerm(
-        func=mdp.reset_joints_by_scale,
+        func=mdp.reset_scene_to_default,
         mode="reset",
-        params={
-            "position_range": (0.5, 1.0),
-            "velocity_range": (0.0, 0.0),
-        },
     )
-
-    # -- Interval
-
-    # Randomly push the robot during training
-    # push_robot = EventTerm(
-    #     func=mdp.push_by_setting_velocity,
-    #     mode="interval",
-    #     interval_range_s=(10.0, 15.0),
-    #     params={"velocity_range": {"x": (-0.5, 0.5), "y": (-0.5, 0.5)}},
-    # )
 
 
 @configclass
@@ -267,14 +242,23 @@ class RewardsCfg:
     # Penalize angular velocity in X and Y to discourage tipping/rolling
     ang_vel_xy_l2 = RewTerm(func=mdp.ang_vel_xy_l2, weight=-0.1)
     # Penalize large joint torques to encourage energy efficiency
-    dof_torques_l2 = RewTerm(func=mdp.joint_torques_l2, weight=-1.0e-5)
+    # dof_torques_l2 = RewTerm(func=mdp.joint_torques_l2, weight=-1.0e-5)
     # Penalize large joint accelerations for smoother motion
     dof_acc_l2 = RewTerm(func=mdp.joint_acc_l2, weight=-2.5e-7)
     # Penalize rapid changes in action for smoother control
-    action_rate_l2 = RewTerm(func=mdp.action_rate_l2, weight=-0.01)
+    action_rate_l2 = RewTerm(func=mdp.action_rate_l2, weight=-0.05)
 
     # Penalize offsets from the default joint positions when the command is very small.
-    # joint_pos_offset_l2 = RewTerm(func=mdp.stand_still_joint_deviation_l1, weight=-0.4)
+    # joint_pos_offset_l2 = RewTerm(func=velocity_mdp.stand_still_joint_deviation_l1, weight=-0.4)
+    stable_pose = RewTerm(
+        func=mdp.joint_deviation_l1,
+        weight=-1.0,
+        params={
+            "asset_cfg": SceneEntityCfg(
+                "robot", joint_names=[".*_Femur"]
+            )
+        },
+    )
 
     # Penalize undesired contacts
     # undesired_contacts = RewTerm(
@@ -296,12 +280,12 @@ class RewardsCfg:
     )
 
     # Penalize bad touch forces
-    bad_touch_forces = RewTerm(
-        func=velocity_mdp.undesired_contacts,
-        weight=-1.0,
+    bad_touch = RewTerm(
+        func=mdp.contact_forces,
+        weight=-2.0,
         params={
             "sensor_cfg": SceneEntityCfg("contact_forces", body_names=[".*_BadTouch"]),
-            "threshold": 2.0,
+            "threshold": 0.3,
         },
     )
 
@@ -317,12 +301,9 @@ class RewardsCfg:
 
     # -- Optional rewards
 
-    # Penalize joint positions if they cross the soft limits.
-    # dof_pos_limits = RewTerm(func=mdp.joint_pos_limits, weight=0.0)
-
     # Penalize deviation from target base height
     base_height_l2 = RewTerm(
-        func=mdp.base_height_l2, weight=-1.0, params={"target_height": 0.135}
+        func=mdp.base_height_l2, weight=-3.0, params={"target_height": 0.14}
     )
 
 
@@ -344,7 +325,7 @@ class TerminationsCfg:
         func=mdp.illegal_contact,
         params={
             "sensor_cfg": SceneEntityCfg("contact_forces", body_names=[".*_BadTouch"]),
-            "threshold": 20.0,
+            "threshold": 40.0,
         },
     )
 
@@ -385,6 +366,12 @@ class MetricsCfg:
 
     height = MetricsTermCfg(
         func=robot_height,
+    )
+    bad_touch = MetricsTermCfg(
+        func=max_contact_forces,
+        params={
+            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=[".*_BadTouch"]),
+        },
     )
 
 

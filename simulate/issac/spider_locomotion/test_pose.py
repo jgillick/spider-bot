@@ -198,7 +198,7 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene):
         
         if count % 10 == 0:
             log_bad_touch_forces(contact_sensor)
-            log_foot_forces(contact_sensor)  
+            # log_foot_forces(contact_sensor)  
             # log_forces(contact_sensor)
         
         robot.set_joint_position_target(target_joint_pos)
