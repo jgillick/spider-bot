@@ -93,10 +93,25 @@ class MetricManager(ManagerBase):
         # store information
         extras = {}
         for key in self._episode_sums.keys():
-            episode_mean = torch.mean(self._episode_sums[key][env_ids])
-            extras["Episode_Metric/" + key] = episode_mean / self._env.max_episode_length
+            # Get episode lengths and ensure they're valid
+            episode_lengths = self._env.episode_length_buf[env_ids]
+            
+            # Handle edge cases where episode lengths might be zero
+            valid_mask = episode_lengths > 0
+            if torch.any(valid_mask):
+                # Calculate average for each episode based on its actual length
+                episode_avg = torch.zeros_like(self._episode_sums[key][env_ids])
+                episode_avg[valid_mask] = self._episode_sums[key][env_ids][valid_mask] / episode_lengths[valid_mask]
+                # Take the mean across valid episodes only
+                episode_mean = torch.mean(episode_avg[valid_mask])
+            else:
+                # Fallback if no valid episodes
+                episode_mean = torch.tensor(0.0, device=self.device)
+            
+            extras["Episode_Metric/" + key] = episode_mean
             # reset episodic sum
             self._episode_sums[key][env_ids] = 0.0
+        
         # reset all the metric terms
         for term_cfg in self._class_term_cfgs:
             term_cfg.func.reset(env_ids=env_ids)

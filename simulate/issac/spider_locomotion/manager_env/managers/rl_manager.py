@@ -33,8 +33,10 @@ class SpiderBotRLManagerEnv(ManagerBasedRLEnv):
         self.metrics_manager = MetricManager(self.cfg.metrics, self)
 
     def _reset_idx(self, env_ids: Sequence[int]):
-        super()._reset_idx(env_ids)
+        # Log metrics before episode lengths reset
         metric_logs = self.metrics_manager.reset(env_ids)
+
+        super()._reset_idx(env_ids)
         self.extras["log"].update(metric_logs)
     
     def close(self):

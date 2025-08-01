@@ -27,8 +27,34 @@ from isaaclab.terrains.config.rough import ROUGH_TERRAINS_CFG
 from ..spider_bot_cfg import SpiderBotCfg
 from .managers.metric_manager import MetricsTermCfg
 from .mdp.metrics import robot_height, max_contact_forces
-from .mdp.rewards import desired_contacts
+from .mdp.rewards import (
+    desired_contacts, 
+    upright_posture, 
+    standing_stability, 
+    proper_leg_configuration,
+    action_symmetry_bonus
+)
 
+
+def joints_by_leg():
+    """Return a list of joints, ordered by leg.
+    For example:
+        - Leg1_Hip
+        - Leg1_Femur
+        - Leg1_Tibia
+        - Leg2_Hip
+        - Leg2_Femur
+        - Leg2_Tibia
+        - ...
+        - Leg8_Hip
+        - Leg8_Femur
+    """
+    joints = []
+    for leg in range(1, 9):
+        joints.append(f".*Leg{leg}_Hip")
+        joints.append(f".*Leg{leg}_Femur")
+        joints.append(f".*Leg{leg}_Tibia")
+    return joints
 
 ##
 # Scene definition
@@ -126,7 +152,7 @@ class ActionsCfg:
     """Action specifications for the spider robot."""
 
     joint_pos = mdp.JointPositionToLimitsActionCfg(
-        asset_name="robot", joint_names=[".*"], rescale_to_limits=True
+        asset_name="robot", joint_names=joints_by_leg(), rescale_to_limits=True
     )
 
 
@@ -203,107 +229,80 @@ class EventCfg:
 class RewardsCfg:
     """Reward terms for the spider robot."""
 
-    # Terminated
-    termination_penalty = RewTerm(func=mdp.is_terminated, weight=-100.0)
-    # Still alive
-    is_alive = RewTerm(func=mdp.is_alive, weight=1.0)
+    # Terminated - REDUCED penalty to prevent quick termination learning
+    termination_penalty = RewTerm(func=mdp.is_terminated, weight=-10.0)  # was -100.0
+    # Still alive - INCREASED to better balance termination
+    is_alive = RewTerm(func=mdp.is_alive, weight=2.0)  # was 1.0
 
-    # -- Task rewards
-    # Reward for matching commanded linear velocity in the XY plane
-    # track_lin_vel_xy_exp = RewTerm(
-    #     func=mdp.track_lin_vel_xy_exp,
-    #     weight=1.0,
-    #     params={"command_name": "base_velocity", "std": math.sqrt(0.25)},
-    # )
-    # # Reward for matching commanded angular velocity around the Z axis
-    # track_ang_vel_z_exp = RewTerm(
-    #     func=mdp.track_ang_vel_z_exp,
-    #     weight=0.5,
-    #     params={"command_name": "base_velocity", "std": math.sqrt(0.25)},
-    # )
-
-    # Reward for keeping feet in the air for appropriate durations (encourages stepping)
-    # feet_air_time = RewTerm(
-    #     func=spider_mdp.feet_air_time,
-    #     weight=2.0,
-    #     params={
-    #         "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_Tibia_Foot"),
-    #         "command_name": "base_velocity",
-    #         "threshold_min": 0.5,
-    #         "threshold_max": 2.0,
-    #     },
-    # )
+    # -- Standing rewards
+    # Reward for maintaining upright posture
+    # upright = RewTerm(func=upright_posture, weight=5.0, params={"threshold": 0.85})  # Increased from 3.0, lowered threshold
+    # Reward for stable standing with multiple feet
+    stable_standing = RewTerm(
+        func=standing_stability, 
+        weight=3.0,
+        params={
+            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=[".*_Tibia_Foot"]),
+            "min_contacts": 8,
+            "threshold": 0.5  # Reduced from 1.0 N for easier detection
+        }
+    )
+    # Direct reward for proper leg angles
+    proper_leg_angles = RewTerm(
+        func=proper_leg_configuration,
+        weight=10.0,
+        params={
+            "target_femur_angle": 0.9,
+            "target_tibia_angle": -0.9,
+            "angle_tolerance": 0.3  # Generous tolerance initially
+        }
+    )
+    # Encourage symmetric/coordinated actions
+    action_symmetry = RewTerm(
+        func=action_symmetry_bonus,
+        weight=2.0,  # Moderate weight to guide coordination
+        params={
+            "symmetry_threshold": 0.2
+        }
+    )
 
     # -- Regularization rewards
-    # Penalize rapid movement along the Z axis (vertical)
-    # lin_vel_z_l2 = RewTerm(func=mdp.lin_vel_z_l2, weight=-2.0)
     # Penalize deviation from flat orientation
     flat_orientation_l2 = RewTerm(func=mdp.flat_orientation_l2, weight=-0.1)
-    # Penalize angular velocity in X and Y to discourage tipping/rolling
-    ang_vel_xy_l2 = RewTerm(func=mdp.ang_vel_xy_l2, weight=-0.1)
+    # Penalize angular velocity in X and Y to discourage tipping/rolling - INCREASED
+    # ang_vel_xy_l2 = RewTerm(func=mdp.ang_vel_xy_l2, weight=-0.5)  # was -0.1
     # Penalize large joint torques to encourage energy efficiency
     # dof_torques_l2 = RewTerm(func=mdp.joint_torques_l2, weight=-1.0e-5)
     # Penalize large joint accelerations for smoother motion
-    dof_acc_l2 = RewTerm(func=mdp.joint_acc_l2, weight=-2.5e-7)
+    # dof_acc_l2 = RewTerm(func=mdp.joint_acc_l2, weight=-1.0e-6)  # was -2.5e-7
     # Penalize rapid changes in action for smoother control
-    action_rate_l2 = RewTerm(func=mdp.action_rate_l2, weight=-0.05)
+    action_rate_l2 = RewTerm(func=mdp.action_rate_l2, weight=-0.001)
 
-    # Penalize offsets from the default joint positions when the command is very small.
-    # joint_pos_offset_l2 = RewTerm(func=velocity_mdp.stand_still_joint_deviation_l1, weight=-0.4)
-    stable_pose = RewTerm(
-        func=mdp.joint_deviation_l1,
-        weight=-1.0,
-        params={
-            "asset_cfg": SceneEntityCfg(
-                "robot", joint_names=[".*_Femur"]
-            )
-        },
-    )
-
-    # Penalize undesired contacts
-    # undesired_contacts = RewTerm(
-    #     func=mdp.undesired_contacts,
-    #     weight=-0.5,
-    #     params={
-    #         "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_BadTouch"),
-    #         "threshold": 1.0,
-    #     },
-    # )
 
     # Penalize all feet in the air
-    no_contact = RewTerm(
-        func=desired_contacts,
-        weight=-0.5,
-        params={
-            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=[".*_Tibia_Foot"])
-        },
-    )
+    # no_contact = RewTerm(
+    #     func=desired_contacts,
+    #     weight=-0.5,
+    #     params={
+    #         "sensor_cfg": SceneEntityCfg("contact_forces", body_names=[".*_Tibia_Foot"])
+    #     },
+    # )
 
     # Penalize bad touch forces
     bad_touch = RewTerm(
         func=mdp.contact_forces,
-        weight=-2.0,
+        weight=-0.2,
         params={
             "sensor_cfg": SceneEntityCfg("contact_forces", body_names=[".*_BadTouch"]),
-            "threshold": 0.3,
+            "threshold": 30.0,
         },
     )
-
-    # Penalize feet sliding
-    # feet_slide = RewTerm(
-    #     func=mdp.feet_slide,
-    #     weight=-0.1,
-    #     params={
-    #         "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_Tibia_Foot"),
-    #         "asset_cfg": SceneEntityCfg("robot", body_names=".*_Tibia_Foot"),
-    #     },
-    # )
-
-    # -- Optional rewards
-
-    # Penalize deviation from target base height
+    # Penalize deviation from target base height 
+    # Calcuation: (current_height - target_height)²
+    # Since the height value discrepency will be so small, we need to use a much higher weight
+    # to make the reward signal strong enough to learn.
     base_height_l2 = RewTerm(
-        func=mdp.base_height_l2, weight=-3.0, params={"target_height": 0.14}
+        func=mdp.base_height_l2, weight=-1_000.0, params={"target_height": 0.16}
     )
 
 
@@ -315,19 +314,21 @@ class TerminationsCfg:
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
 
     # Terminate if the robot is upside down (orientation deviation too large)
+    # RELAXED: Increased angle tolerance to give more recovery time
     upside_down = DoneTerm(
         func=mdp.bad_orientation,
-        params={"limit_angle": 0.7},
+        params={"limit_angle": 1.2},  # was 0.7 (~69 degrees instead of ~40 degrees)
     )
 
     # Terminate if the robot is putting weight on the "BadTouch" bodies
-    bad_touch = DoneTerm(
-        func=mdp.illegal_contact,
-        params={
-            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=[".*_BadTouch"]),
-            "threshold": 40.0,
-        },
-    )
+    # RELAXED: Increased threshold to only terminate on significant contact
+    # bad_touch = DoneTerm(
+    #     func=mdp.illegal_contact,
+    #     params={
+    #         "sensor_cfg": SceneEntityCfg("contact_forces", body_names=[".*_BadTouch"]),
+    #         "threshold": 200.0,  # Increased from 100.0 to allow more recovery
+    #     },
+    # )
 
     # Terminate if the robot bottoms out
     # base_contact = DoneTerm(
@@ -385,7 +386,7 @@ class SpiderLocomotionEnvCfg(ManagerBasedRLEnvCfg):
     """Configuration for the spider locomotion environment."""
 
     # Scene settings
-    scene: SpiderSceneCfg = SpiderSceneCfg(num_envs=4096, env_spacing=2.5)
+    scene: SpiderSceneCfg = SpiderSceneCfg(num_envs=600, env_spacing=2.5)  # Reduced from 4096
     # Basic settings
     observations: ObservationsCfg = ObservationsCfg()
     actions: ActionsCfg = ActionsCfg()
@@ -407,7 +408,7 @@ class SpiderLocomotionEnvCfg(ManagerBasedRLEnvCfg):
         self.sim.dt = 0.005  # 200Hz physics
         self.sim.render_interval = self.decimation
         self.sim.physics_material = self.scene.terrain.physics_material
-        self.sim.physx.gpu_max_rigid_patch_count = 20 * 2**15
+        self.sim.physx.gpu_max_rigid_patch_count = 5 * 2**15
 
         # Viewer settings
         self.viewer: ViewerCfg = ViewerCfg(
