@@ -389,14 +389,16 @@ class SpiderRobotEnv(MujocoEnv):
 
         # Calculate torques with safety checks
         position_errors = target_positions - current_positions
-        velocity_errors = current_velocities
+        velocity_errors = (
+            -current_velocities
+        )  # target_velocities - current_velocities (target_velocities = 0)
 
         # Clip position & velocity errors to prevent extreme corrections
         position_errors = np.clip(position_errors, -0.5, 0.5)
         velocity_errors = np.clip(velocity_errors, -5.0, 5.0)
 
         torques = (
-            self.position_gain * position_errors - self.velocity_gain * velocity_errors
+            self.position_gain * position_errors + self.velocity_gain * velocity_errors
         )
         torques = np.clip(torques, -self.max_torque, self.max_torque)
 
