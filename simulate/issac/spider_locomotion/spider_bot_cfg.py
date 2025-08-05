@@ -51,8 +51,8 @@ class SpiderBotCfg(ArticulationCfg):
             joint_names_expr=[".*Leg[1-8]_Hip", ".*Leg[1-8]_Femur", ".*Leg[1-8]_Tibia"],
             effort_limit_sim=11.0,
             velocity_limit_sim=12.0,  # Rated: 12.5 rad/s, Max: 43 rad/s
-            stiffness={".*": 200.0},
-            damping={".*": 0.2},
+            stiffness={".*": 150.0},
+            damping={".*": 1.5},
         ),
     }
 
