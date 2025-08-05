@@ -18,7 +18,6 @@ from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 from isaaclab.assets import AssetBaseCfg
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR, ISAACLAB_NUCLEUS_DIR
 
-import isaaclab.envs.mdp as mdp
 import isaaclab_tasks.manager_based.locomotion.velocity.mdp as velocity_mdp
 import isaaclab.sim as sim_utils
 from isaaclab.terrains.config.rough import ROUGH_TERRAINS_CFG
@@ -26,14 +25,7 @@ from isaaclab.terrains.config.rough import ROUGH_TERRAINS_CFG
 # Import spider robot configuration
 from ..spider_bot_cfg import SpiderBotCfg
 from .managers.metric_manager import MetricsTermCfg
-from .mdp.metrics import robot_height, max_contact_forces
-from .mdp.rewards import (
-    desired_contacts, 
-    upright_posture, 
-    standing_stability, 
-    proper_leg_configuration,
-    action_symmetry_bonus
-)
+from . import mdp
 
 
 def joints_by_leg():
@@ -151,9 +143,20 @@ class CommandsCfg:
 class ActionsCfg:
     """Action specifications for the spider robot."""
 
+    # Option 1: Standard full control (current)
     joint_pos = mdp.JointPositionToLimitsActionCfg(
         asset_name="robot", joint_names=joints_by_leg(), rescale_to_limits=True
     )
+
+    # Option 2: Progressive symmetric control (uncomment to use)
+    # Start with this for learning to stand:
+    # symmetric_pos = ProgressiveSymmetricActionCfg(
+    #     asset_name="robot",
+    #     stage=1,  # Start with 4D: height + base angles
+    #     joint_names=[".*"],
+    # )
+
+    # Then gradually increase stage as robot masters each level
 
 
 @configclass
@@ -193,7 +196,7 @@ class ObservationsCfg:
         actions = ObsTerm(func=mdp.last_action)
 
         def __post_init__(self):
-            self.enable_corruption = True
+            self.enable_corruption = False
             self.concatenate_terms = True
 
     # Observation groups
@@ -234,59 +237,74 @@ class RewardsCfg:
     # Still alive - INCREASED to better balance termination
     is_alive = RewTerm(func=mdp.is_alive, weight=2.0)  # was 1.0
 
+    height = RewTerm(
+        func=mdp.base_height_gaussian,
+        weight=5.0,
+        params={
+            "target_height": 0.17,
+            "min_height": 0.1,
+        }
+    )
+
     # -- Standing rewards
     # Reward for maintaining upright posture
     # upright = RewTerm(func=upright_posture, weight=5.0, params={"threshold": 0.85})  # Increased from 3.0, lowered threshold
     # Reward for stable standing with multiple feet
-    stable_standing = RewTerm(
-        func=standing_stability, 
-        weight=3.0,
+    feet_on_ground = RewTerm(
+        func=mdp.contact_reward,
+        weight=2.0,
         params={
             "sensor_cfg": SceneEntityCfg("contact_forces", body_names=[".*_Tibia_Foot"]),
-            "min_contacts": 8,
-            "threshold": 0.5  # Reduced from 1.0 N for easier detection
-        }
-    )
-    # Direct reward for proper leg angles
-    proper_leg_angles = RewTerm(
-        func=proper_leg_configuration,
-        weight=10.0,
-        params={
-            "target_femur_angle": 0.9,
-            "target_tibia_angle": -0.9,
-            "angle_tolerance": 0.3  # Generous tolerance initially
-        }
-    )
-    # Encourage symmetric/coordinated actions
-    action_symmetry = RewTerm(
-        func=action_symmetry_bonus,
-        weight=2.0,  # Moderate weight to guide coordination
-        params={
-            "symmetry_threshold": 0.2
+            "min_contacts": 4,
+            "threshold": 5.0
         }
     )
 
     # -- Regularization rewards
     # Penalize deviation from flat orientation
-    flat_orientation_l2 = RewTerm(func=mdp.flat_orientation_l2, weight=-0.1)
-    # Penalize angular velocity in X and Y to discourage tipping/rolling - INCREASED
+    # flat_orientation_l2 = RewTerm(func=mdp.flat_orientation_l2, weight=3.0)
+    # Penalize angular velocity in X and Y to discourage tipping/rolling
     # ang_vel_xy_l2 = RewTerm(func=mdp.ang_vel_xy_l2, weight=-0.5)  # was -0.1
     # Penalize large joint torques to encourage energy efficiency
     # dof_torques_l2 = RewTerm(func=mdp.joint_torques_l2, weight=-1.0e-5)
     # Penalize large joint accelerations for smoother motion
     # dof_acc_l2 = RewTerm(func=mdp.joint_acc_l2, weight=-1.0e-6)  # was -2.5e-7
     # Penalize rapid changes in action for smoother control
-    action_rate_l2 = RewTerm(func=mdp.action_rate_l2, weight=-0.001)
+    # action_rate_l2 = RewTerm(func=mdp.action_rate_l2, weight=-0.001)
+
+    flat = RewTerm(func=mdp.flat_orientation_exp, weight=3.0)
+    tilt = RewTerm(func=mdp.ang_vel_xy_exp, weight=1.0)
+
+    # Reward for maintaining equal force on all feet
+    balanced_feet = RewTerm(
+        func=mdp.balanced_contact_force,
+        weight=0.5,
+        params={
+            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=[".*_Tibia_Foot"]),
+            "threshold": 5.0,
+        },
+    )
+
+    # Reward for maintaining equal force between left and right feet
+    lateral_balance = RewTerm(
+        func=mdp.lateral_force_distribution,
+        weight=2.0,
+        params={
+            "sensor1_cfg": SceneEntityCfg("contact_forces", body_names=["Leg[1-4]_Tibia_Foot"]),
+            "sensor2_cfg": SceneEntityCfg("contact_forces", body_names=["Leg[5-8]_Tibia_Foot"]),
+            "threshold": 5.0,
+        },
+    )
 
 
     # Penalize all feet in the air
-    # no_contact = RewTerm(
-    #     func=desired_contacts,
-    #     weight=-0.5,
-    #     params={
-    #         "sensor_cfg": SceneEntityCfg("contact_forces", body_names=[".*_Tibia_Foot"])
-    #     },
-    # )
+    no_contact = RewTerm(
+        func=mdp.desired_contacts,
+        weight=-10.0,
+        params={
+            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=[".*_Tibia_Foot"])
+        },
+    )
 
     # Penalize bad touch forces
     bad_touch = RewTerm(
@@ -296,13 +314,6 @@ class RewardsCfg:
             "sensor_cfg": SceneEntityCfg("contact_forces", body_names=[".*_BadTouch"]),
             "threshold": 30.0,
         },
-    )
-    # Penalize deviation from target base height 
-    # Calcuation: (current_height - target_height)²
-    # Since the height value discrepency will be so small, we need to use a much higher weight
-    # to make the reward signal strong enough to learn.
-    base_height_l2 = RewTerm(
-        func=mdp.base_height_l2, weight=-1_000.0, params={"target_height": 0.16}
     )
 
 
@@ -320,38 +331,6 @@ class TerminationsCfg:
         params={"limit_angle": 1.2},  # was 0.7 (~69 degrees instead of ~40 degrees)
     )
 
-    # Terminate if the robot is putting weight on the "BadTouch" bodies
-    # RELAXED: Increased threshold to only terminate on significant contact
-    # bad_touch = DoneTerm(
-    #     func=mdp.illegal_contact,
-    #     params={
-    #         "sensor_cfg": SceneEntityCfg("contact_forces", body_names=[".*_BadTouch"]),
-    #         "threshold": 200.0,  # Increased from 100.0 to allow more recovery
-    #     },
-    # )
-
-    # Terminate if the robot bottoms out
-    # base_contact = DoneTerm(
-    #     func=mdp.illegal_contact,
-    #     params={
-    #         "sensor_cfg": SceneEntityCfg(
-    #             "contact_forces",
-    #             body_names=[
-    #                 ".*_Hip_actuator_assembly_Hip_Bracket",
-    #                 ".*_Femur_actuator_assembly_Motor",
-    #                 ".*_Knee_actuator_assembly_Motor",
-    #             ],
-    #         ),
-    #         "threshold": 10.0,
-    #     },
-    # )
-    # ground_contact = DoneTerm(
-    #     func=mdp.root_height_below_minimum,
-    #     params={
-    #         "minimum_height": 0.09,
-    #     },
-    # )
-
 
 @configclass
 class CurriculumCfg:
@@ -366,12 +345,18 @@ class MetricsCfg:
     """Metrics to average over the episode and send to the logger"""
 
     height = MetricsTermCfg(
-        func=robot_height,
+        func=mdp.robot_height,
     )
     bad_touch = MetricsTermCfg(
-        func=max_contact_forces,
+        func=mdp.max_contact_forces,
         params={
             "sensor_cfg": SceneEntityCfg("contact_forces", body_names=[".*_BadTouch"]),
+        },
+    )
+    feet_force = MetricsTermCfg(
+        func=mdp.mean_contact_forces,
+        params={
+            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=[".*Tibia_Foot"]),
         },
     )
 
