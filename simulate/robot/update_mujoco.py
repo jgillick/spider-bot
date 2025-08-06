@@ -10,6 +10,7 @@ import coacd
 import glob
 from os import path
 import numpy as np
+from copy import deepcopy
 import xml.etree.ElementTree as ET
 
 from constants import (
@@ -21,8 +22,6 @@ from constants import (
 
 SOURCE_PATH = "./export/mujoco/SpiderBody/SpiderBody.xml"
 
-MOTOR_STIFFNESS = 15.0
-MOTOR_DAMPING = 0.2
 COLLISION_GEOM_CLASS = "collision"
 
 JOINT_AXIS = {
@@ -30,13 +29,6 @@ JOINT_AXIS = {
     "femur": "1 0 0",
     "tibia": "1 0 0",
 }
-
-# Skip collider geoms for these geom meshes
-SKIP_COLLIDERS = [
-    "Leg_KneeMotorPulley",
-    "Leg_Knee_motor_bearings",
-    "Leg_Hip_Bracket",
-]
 
 # Rename parts of the mesh
 RENAME_PARTS = {
@@ -51,10 +43,20 @@ RENAME_PARTS = {
     "_Tibia_Leg_Tibia": "_Tibia",
 }
 
-DEFAULT_COLLISION_THRESHOLD = 0.15
+# Skip collider geoms for these geom meshes
+SKIP_COLLIDERS = [
+    "Leg_KneeMotorPulley",
+    "Leg_Knee_motor_bearings",
+    "Motor",
+    "Leg_Hip_Bracket",
+    "Leg_End_Bearing_Holder",
+]
+
+DEFAULT_COLLISION_THRESHOLD = 0.1
 COLLISION_THRESHOLDS = {
-    "MOTOR": 0.2,
     "Leg_Tibia_Leg": 0.04,
+    "Leg_Femur": 0.05,
+    "Leg_Body_Bracket": 0.2,
 }
 
 DEFAULT_MATERIAL_NAME = "body_material"
@@ -69,14 +71,8 @@ def main(
     tree = add_defaults(tree)
     tree = simplify_names(tree)
     tree = update_joint_values(tree)
-
     tree = remove_default_ground_plane(tree)
-    if ground:
-        tree = ground_plain(tree)
-    if not light:
-        tree = remove_default_light(tree)
-
-    tree = visual_settings(tree)
+    tree = remove_default_light(tree)
     tree = actuator_definitions(tree)
     tree = main_body(tree, head=head, imu=imu)
     tree = add_foot_friction(tree)
@@ -138,20 +134,18 @@ def simplify_names(tree):
 
 def update_joint_values(tree):
     """
-    Update the joint max range, damping, and stiffness
+    Update the joint max ranges and defaults
     """
     default = tree.find("./default")
     if default is None:
         print("No <default> found.")
         exit(1)
 
-    # Damping and stiffness
+    # Joint defaults
     ET.SubElement(
         default,
         "joint",
         {
-            "damping": str(MOTOR_DAMPING),
-            "stiffness": str(MOTOR_STIFFNESS),
             "limited": "true",
         },
     )
@@ -248,62 +242,6 @@ def remove_default_light(tree):
     return tree
 
 
-def ground_plain(tree):
-    """
-    Add a better ground plane
-    """
-    # Ensure there are container elements
-    assets = tree.find("./asset")
-    worldbody = tree.find("./worldbody")
-    if assets is None:
-        assets = ET.SubElement(tree.getroot(), "asset")
-    if worldbody is None:
-        worldbody = ET.SubElement(tree.getroot(), "worldbody")
-
-    # Create ground plane texture and material
-    ET.SubElement(
-        assets,
-        "texture",
-        {
-            "type": "2d",
-            "name": "groundplane",
-            "builtin": "checker",
-            "mark": "edge",
-            "rgb1": "0.2 0.3 0.4",
-            "rgb2": "0.1 0.2 0.3",
-            "markrgb": "0.8 0.8 0.8",
-            "width": "300",
-            "height": "300",
-        },
-    )
-    ET.SubElement(
-        assets,
-        "material",
-        {
-            "name": "groundplane",
-            "texture": "groundplane",
-            "texuniform": "true",
-            "texrepeat": "5 5",
-            "reflectance": "0.2",
-        },
-    )
-    ground_plane = ET.Element(
-        "geom",
-        {
-            "name": "floor",
-            "size": "40 40 40",
-            "type": "plane",
-            "contype": "1",
-            "conaffinity": "1",
-            "rgba": "1 1 1 1",
-            "material": "groundplane",
-        },
-    )
-    worldbody.insert(0, ground_plane)
-
-    return tree
-
-
 def add_defaults(tree):
     """
     Add default settings to the XML tree.
@@ -333,8 +271,6 @@ def add_defaults(tree):
         "motor",
         {
             "ctrlrange": " ".join(ACTUATOR_TORQUE_RANGE),
-            "forcerange": " ".join(ACTUATOR_TORQUE_RANGE),
-            "forcelimited": "true",
             "gear": "1",
         },
     )
@@ -343,7 +279,12 @@ def add_defaults(tree):
     ET.SubElement(
         default,
         "geom",
-        {"contype": "0", "conaffinity": "0", "material": DEFAULT_MATERIAL_NAME},
+        {
+            "contype": "0",
+            "conaffinity": "0",
+            "material": DEFAULT_MATERIAL_NAME,
+            "group": "2",
+        },
     )
 
     # Add collision default
@@ -359,28 +300,11 @@ def add_defaults(tree):
             "contype": "1",
             "conaffinity": "1",
             "group": "3",
+            "pos": "0 0 0",
+            "mass": "0.0",
             "material": "",
         },
     )
-
-    return tree
-
-
-def visual_settings(tree):
-    """
-    Add visual settings to the XML tree.
-    """
-    # Insert visual element after compiler, if it exists
-    visual = tree.find("./visual")
-    if visual is None:
-        compiler = tree.find("./compiler")
-        visual = ET.Element("visual")
-        insert_at = 0
-        if compiler is not None:
-            insert_at = list(tree.getroot()).index(compiler) + 1
-        tree.getroot().insert(insert_at, visual)
-
-    ET.SubElement(visual, "global", {"offwidth": "1200", "offheight": "800"})
 
     return tree
 
@@ -614,9 +538,49 @@ def create_collision_meshes(mesh_path, collision_dir):
     return results
 
 
+def add_motor_collision_geoms(tree):
+    """
+    Add collision geoms for the motor.
+    The motor is simple enough, it's easier to represent it as a pair of cylinders.
+    """
+
+    # Create geoms
+    quat = "0.7071 0 0.7071 0"
+    motor_collision_geom = ET.Element(
+        "geom",
+        {
+            "quat": quat,
+            "type": "cylinder",
+            "size": "0.04 0.013",
+            "pos": "0.013 0 0",
+            "class": COLLISION_GEOM_CLASS,
+            "mass": "0.0",
+        },
+    )
+    motor_electronics_collision_geom = ET.Element(
+        "geom",
+        {
+            "quat": quat,
+            "type": "cylinder",
+            "size": "0.028 0.011",
+            "pos": "0.0 0 0",
+            "class": COLLISION_GEOM_CLASS,
+            "mass": "0.0",
+        },
+    )
+
+    # Add to all bodies who's names end with "_Motor"
+    for elem in tree.iter():
+        if elem.tag == "body" and elem.attrib["name"].endswith("_Motor"):
+            elem.append(deepcopy(motor_collision_geom))
+            elem.append(deepcopy(motor_electronics_collision_geom))
+
+    return tree
+
+
 def process_meshes(tree, input_dir, output_dir):
     """
-    Move referenced mesh files and consolodate all leg meshes, to reduce duplicate files.
+    Move referenced mesh files and consolidate all leg meshes, to reduce duplicate files.
     """
     print("Processing meshes (this might take a few minutes)...")
 
@@ -625,12 +589,11 @@ def process_meshes(tree, input_dir, output_dir):
 
     # Delete and recreate the mesh directory
     mesh_dir = path.join(output_dir, "meshes/mujoco/")
-    if not path.exists(mesh_dir):
-        os.makedirs(mesh_dir)
-
     collision_dir = path.join(mesh_dir, "colliders/")
-    if not path.exists(collision_dir):
-        os.makedirs(collision_dir)
+    if path.exists(mesh_dir):
+        shutil.rmtree(mesh_dir)
+    os.makedirs(mesh_dir)
+    os.makedirs(collision_dir)
 
     assets = tree.find("./asset")
     if not assets:
@@ -646,16 +609,16 @@ def process_meshes(tree, input_dir, output_dir):
         if "file" not in mesh.attrib:
             continue
 
-        org_name = mesh.attrib["name"]
+        orig_name = mesh.attrib["name"]
         orig_file = mesh.attrib["file"]
         orig_filename = path.basename(orig_file)
         orig_filepath = path.join(input_dir, orig_file)
 
-        new_name = org_name
+        new_name = orig_name
         new_filename = orig_filename
 
         # De-dupe motor meshes
-        if org_name.endswith("_Motor"):
+        if orig_name.endswith("_Motor"):
             new_name = "Motor"
             new_filename = "Motor.stl"
 
@@ -693,8 +656,7 @@ def process_meshes(tree, input_dir, output_dir):
                     {
                         "mesh": name,
                         "type": "mesh",
-                        "pos": "0 0 0",
-                        "class": "collision",
+                        "class": COLLISION_GEOM_CLASS,
                     },
                 )
                 collision_geoms[new_name].append(geom)
@@ -703,18 +665,25 @@ def process_meshes(tree, input_dir, output_dir):
         existing_meshes.append(new_name)
 
         # Update all references to the new mesh name
-        geoms = tree.findall(f".//geom[@mesh='{org_name}']")
+        geoms = tree.findall(f".//geom[@mesh='{orig_name}']")
         for geom in geoms:
-            if geom.attrib["mesh"] == org_name:
+            if geom.attrib["mesh"] == orig_name:
                 geom.attrib["mesh"] = new_name
 
             # Add collision geoms to the parent body
             parent_body = parents[geom]
             if parent_body is not None:
-                for c_geom in collision_geoms[new_name]:
-                    parent_body.append(c_geom)
+                for i, c_geom in enumerate(collision_geoms[new_name]):
+                    collision_geom = deepcopy(c_geom)
+                    collision_geom.attrib["name"] = (
+                        f"{parent_body.attrib['name']}_collision{i:02d}"
+                    )
+                    parent_body.append(collision_geom)
             else:
-                print(f"No parent body found for {org_name}")
+                print(f"No parent body found for {orig_name}")
+
+    # Add motor collision elements
+    add_motor_collision_geoms(tree)
 
     return tree
 

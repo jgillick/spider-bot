@@ -1,16 +1,13 @@
 <mujoco model="SpiderBody">
   <compiler angle="radian" />
-  <visual>
-    <global offwidth="1200" offheight="800" />
-  </visual>
   <default>
     <mesh scale="0.001 0.001 0.001" />
-    <motor ctrlrange="-11.0 11.0" forcerange="-11.0 11.0" forcelimited="true" gear="1" />
-    <geom contype="0" conaffinity="0" rgba="0.1 0.1 0.1 0.0" />
+    <motor ctrlrange="-11.0 11.0" gear="1" />
+    <geom contype="0" conaffinity="0" material="body_material" group="2" />
     <default class="collision">
-      <geom contype="1" conaffinity="1" rgba="0.5 0.5 0.5 1.0" />
+      <geom contype="1" conaffinity="1" group="3" pos="0 0 0" mass="0.0" material="" />
     </default>
-    <joint damping="0.2" stiffness="15.0" limited="true" />
+    <joint limited="true" />
     <default class="hip_joint">
       <joint axis="0 1 0" />
     </default>
@@ -34,42 +31,16 @@
     <mesh name="Leg_Tibia_Foot" file="meshes/mujoco/Leg_Tibia_Foot.stl" scale="0.001 0.001 0.001" />
     <mesh name="Leg_Tibia_BadTouch" file="meshes/mujoco/Leg_Tibia_BadTouch.stl" scale="0.001 0.001 0.001" />
     <material name="body_material" rgba="0.1 0.1 0.1 1.0" reflectance="0.3" shininess="1.0" roughness="1.0" />
-    <texture type="2d" name="groundplane" builtin="checker" mark="edge" rgb1="0.2 0.3 0.4" rgb2="0.1 0.2 0.3" markrgb="0.8 0.8 0.8" width="300" height="300" />
-    <material name="groundplane" texture="groundplane" texuniform="true" texrepeat="5 5" reflectance="0.2" />
     <mesh name="Body_collision00" file="meshes/mujoco/colliders/Body/00.stl" />
     <mesh name="Body_collision01" file="meshes/mujoco/colliders/Body/01.stl" />
     <mesh name="Body_collision02" file="meshes/mujoco/colliders/Body/02.stl" />
     <mesh name="Body_collision03" file="meshes/mujoco/colliders/Body/03.stl" />
     <mesh name="Body_collision04" file="meshes/mujoco/colliders/Body/04.stl" />
     <mesh name="Body_collision05" file="meshes/mujoco/colliders/Body/05.stl" />
-    <mesh name="Motor_collision00" file="meshes/mujoco/colliders/Motor/00.stl" />
-    <mesh name="Motor_collision01" file="meshes/mujoco/colliders/Motor/01.stl" />
-    <mesh name="Motor_collision02" file="meshes/mujoco/colliders/Motor/02.stl" />
-    <mesh name="Motor_collision03" file="meshes/mujoco/colliders/Motor/03.stl" />
-    <mesh name="Motor_collision04" file="meshes/mujoco/colliders/Motor/04.stl" />
-    <mesh name="Motor_collision05" file="meshes/mujoco/colliders/Motor/05.stl" />
-    <mesh name="Motor_collision06" file="meshes/mujoco/colliders/Motor/06.stl" />
-    <mesh name="Motor_collision07" file="meshes/mujoco/colliders/Motor/07.stl" />
-    <mesh name="Motor_collision08" file="meshes/mujoco/colliders/Motor/08.stl" />
-    <mesh name="Motor_collision09" file="meshes/mujoco/colliders/Motor/09.stl" />
-    <mesh name="Motor_collision10" file="meshes/mujoco/colliders/Motor/10.stl" />
-    <mesh name="Motor_collision11" file="meshes/mujoco/colliders/Motor/11.stl" />
-    <mesh name="Motor_collision12" file="meshes/mujoco/colliders/Motor/12.stl" />
-    <mesh name="Motor_collision13" file="meshes/mujoco/colliders/Motor/13.stl" />
-    <mesh name="Motor_collision14" file="meshes/mujoco/colliders/Motor/14.stl" />
-    <mesh name="Motor_collision15" file="meshes/mujoco/colliders/Motor/15.stl" />
-    <mesh name="Motor_collision16" file="meshes/mujoco/colliders/Motor/16.stl" />
-    <mesh name="Motor_collision17" file="meshes/mujoco/colliders/Motor/17.stl" />
-    <mesh name="Motor_collision18" file="meshes/mujoco/colliders/Motor/18.stl" />
-    <mesh name="Motor_collision19" file="meshes/mujoco/colliders/Motor/19.stl" />
-    <mesh name="Motor_collision20" file="meshes/mujoco/colliders/Motor/20.stl" />
-    <mesh name="Motor_collision21" file="meshes/mujoco/colliders/Motor/21.stl" />
-    <mesh name="Motor_collision22" file="meshes/mujoco/colliders/Motor/22.stl" />
-    <mesh name="Motor_collision23" file="meshes/mujoco/colliders/Motor/23.stl" />
-    <mesh name="Motor_collision24" file="meshes/mujoco/colliders/Motor/24.stl" />
-    <mesh name="Motor_collision25" file="meshes/mujoco/colliders/Motor/25.stl" />
-    <mesh name="Motor_collision26" file="meshes/mujoco/colliders/Motor/26.stl" />
-    <mesh name="Motor_collision27" file="meshes/mujoco/colliders/Motor/27.stl" />
+    <mesh name="Body_collision06" file="meshes/mujoco/colliders/Body/06.stl" />
+    <mesh name="Body_collision07" file="meshes/mujoco/colliders/Body/07.stl" />
+    <mesh name="Body_collision08" file="meshes/mujoco/colliders/Body/08.stl" />
+    <mesh name="Body_collision09" file="meshes/mujoco/colliders/Body/09.stl" />
     <mesh name="Leg_Femur_collision00" file="meshes/mujoco/colliders/Leg_Femur/00.stl" />
     <mesh name="Leg_Femur_collision01" file="meshes/mujoco/colliders/Leg_Femur/01.stl" />
     <mesh name="Leg_Femur_collision02" file="meshes/mujoco/colliders/Leg_Femur/02.stl" />
@@ -79,22 +50,20 @@
     <mesh name="Leg_Femur_collision06" file="meshes/mujoco/colliders/Leg_Femur/06.stl" />
     <mesh name="Leg_Femur_collision07" file="meshes/mujoco/colliders/Leg_Femur/07.stl" />
     <mesh name="Leg_Femur_collision08" file="meshes/mujoco/colliders/Leg_Femur/08.stl" />
-    <mesh name="Leg_End_Bearing_Holder_collision00" file="meshes/mujoco/colliders/Leg_End_Bearing_Holder/00.stl" />
-    <mesh name="Leg_End_Bearing_Holder_collision01" file="meshes/mujoco/colliders/Leg_End_Bearing_Holder/01.stl" />
-    <mesh name="Leg_End_Bearing_Holder_collision02" file="meshes/mujoco/colliders/Leg_End_Bearing_Holder/02.stl" />
-    <mesh name="Leg_End_Bearing_Holder_collision03" file="meshes/mujoco/colliders/Leg_End_Bearing_Holder/03.stl" />
-    <mesh name="Leg_End_Bearing_Holder_collision04" file="meshes/mujoco/colliders/Leg_End_Bearing_Holder/04.stl" />
-    <mesh name="Leg_End_Bearing_Holder_collision05" file="meshes/mujoco/colliders/Leg_End_Bearing_Holder/05.stl" />
-    <mesh name="Leg_End_Bearing_Holder_collision06" file="meshes/mujoco/colliders/Leg_End_Bearing_Holder/06.stl" />
+    <mesh name="Leg_Femur_collision09" file="meshes/mujoco/colliders/Leg_Femur/09.stl" />
+    <mesh name="Leg_Femur_collision10" file="meshes/mujoco/colliders/Leg_Femur/10.stl" />
+    <mesh name="Leg_Femur_collision11" file="meshes/mujoco/colliders/Leg_Femur/11.stl" />
+    <mesh name="Leg_Femur_collision12" file="meshes/mujoco/colliders/Leg_Femur/12.stl" />
+    <mesh name="Leg_Femur_collision13" file="meshes/mujoco/colliders/Leg_Femur/13.stl" />
+    <mesh name="Leg_Femur_collision14" file="meshes/mujoco/colliders/Leg_Femur/14.stl" />
+    <mesh name="Leg_Femur_collision15" file="meshes/mujoco/colliders/Leg_Femur/15.stl" />
+    <mesh name="Leg_Femur_collision16" file="meshes/mujoco/colliders/Leg_Femur/16.stl" />
     <mesh name="Leg_Body_Bracket_collision00" file="meshes/mujoco/colliders/Leg_Body_Bracket/00.stl" />
     <mesh name="Leg_Body_Bracket_collision01" file="meshes/mujoco/colliders/Leg_Body_Bracket/01.stl" />
     <mesh name="Leg_Body_Bracket_collision02" file="meshes/mujoco/colliders/Leg_Body_Bracket/02.stl" />
     <mesh name="Leg_Body_Bracket_collision03" file="meshes/mujoco/colliders/Leg_Body_Bracket/03.stl" />
     <mesh name="Leg_Body_Bracket_collision04" file="meshes/mujoco/colliders/Leg_Body_Bracket/04.stl" />
     <mesh name="Leg_Body_Bracket_collision05" file="meshes/mujoco/colliders/Leg_Body_Bracket/05.stl" />
-    <mesh name="Leg_Body_Bracket_collision06" file="meshes/mujoco/colliders/Leg_Body_Bracket/06.stl" />
-    <mesh name="Leg_Body_Bracket_collision07" file="meshes/mujoco/colliders/Leg_Body_Bracket/07.stl" />
-    <mesh name="Leg_Body_Bracket_collision08" file="meshes/mujoco/colliders/Leg_Body_Bracket/08.stl" />
     <mesh name="Leg_Tibia_Leg_collision00" file="meshes/mujoco/colliders/Leg_Tibia_Leg/00.stl" />
     <mesh name="Leg_Tibia_Leg_collision01" file="meshes/mujoco/colliders/Leg_Tibia_Leg/01.stl" />
     <mesh name="Leg_Tibia_Leg_collision02" file="meshes/mujoco/colliders/Leg_Tibia_Leg/02.stl" />
@@ -107,8 +76,6 @@
     <mesh name="Leg_Tibia_BadTouch_collision01" file="meshes/mujoco/colliders/Leg_Tibia_BadTouch/01.stl" />
   </asset>
   <worldbody>
-    <geom name="floor" size="40 40 40" type="plane" contype="1" conaffinity="1" rgba="1 1 1 1" material="groundplane" />
-    <light directional="true" pos="-0.5 0.5 3" dir="0 0 -1" />
     <body name="Body" pos="0.0 0.0 0.134" quat="1 0 0 0">
       <joint name="root" type="free" pos="0 0 0" armature="0" damping="0" limited="false" margin="0.01" />
       <camera name="track" mode="targetbodycom" target="Body" pos="-0.817 -1.628 0.6" />
@@ -141,21 +108,21 @@
                   <body name="Leg1_Tibia_Foot" pos="-2.4424906541753446e-16 3.375077994860476e-16 -3.552713678800501e-16" quat="1 9.43689570931381e-16 3.03296564102136e-18 1.13191818699025e-17">
                     <geom name="Leg1_Tibia_Foot" type="mesh" mesh="Leg_Tibia_Foot" pos="0 0 0" quat="1 0 0 0" />
                     <inertial mass="0.008914076725409616" pos="0.0400000000000026 -0.12297984604109308 0.19969277665165125" fullinertia="1.5823785953685762e-07 2.0579120245570816e-07 1.6638449849355725e-07 4.021198653723188e-20 4.5355704334008996e-20 3.413978377808881e-08" />
-                    <geom mesh="Leg_Tibia_Foot_collision00" type="mesh" pos="0 0 0" class="collision" />
+                    <geom mesh="Leg_Tibia_Foot_collision00" type="mesh" class="collision" name="Leg1_Tibia_Foot_collision00" />
                   </body>
                   <body name="Leg1_Tibia_BadTouch" pos="-3.406004253778905e-05 -0.008928296405293032 0.15038254739440368" quat="0.991444861373811 -0.130526192220051 8.61968382424067e-17 4.33792815898972e-17">
                     <geom name="Leg1_Tibia_BadTouch" type="mesh" mesh="Leg_Tibia_BadTouch" pos="0 0 0" quat="1 0 0 0" />
                     <inertial mass="0.0005883837658738169" pos="0.04003406004254017 -0.11221456645803127 0.03113413156039271" fullinertia="1.2707199603673089e-08 5.112584032615922e-10 1.2588197044379517e-08 2.543209427149077e-21 -6.774791322823713e-21 -6.704321676000003e-10" />
-                    <geom mesh="Leg_Tibia_BadTouch_collision00" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_BadTouch_collision01" type="mesh" pos="0 0 0" class="collision" />
+                    <geom mesh="Leg_Tibia_BadTouch_collision00" type="mesh" class="collision" name="Leg1_Tibia_BadTouch_collision00" />
+                    <geom mesh="Leg_Tibia_BadTouch_collision01" type="mesh" class="collision" name="Leg1_Tibia_BadTouch_collision01" />
                   </body>
-                  <geom mesh="Leg_Tibia_Leg_collision00" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Leg_Tibia_Leg_collision01" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Leg_Tibia_Leg_collision02" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Leg_Tibia_Leg_collision03" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Leg_Tibia_Leg_collision04" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Leg_Tibia_Leg_collision05" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Leg_Tibia_Leg_collision06" type="mesh" pos="0 0 0" class="collision" />
+                  <geom mesh="Leg_Tibia_Leg_collision00" type="mesh" class="collision" name="Leg1_Tibia_Leg_collision00" />
+                  <geom mesh="Leg_Tibia_Leg_collision01" type="mesh" class="collision" name="Leg1_Tibia_Leg_collision01" />
+                  <geom mesh="Leg_Tibia_Leg_collision02" type="mesh" class="collision" name="Leg1_Tibia_Leg_collision02" />
+                  <geom mesh="Leg_Tibia_Leg_collision03" type="mesh" class="collision" name="Leg1_Tibia_Leg_collision03" />
+                  <geom mesh="Leg_Tibia_Leg_collision04" type="mesh" class="collision" name="Leg1_Tibia_Leg_collision04" />
+                  <geom mesh="Leg_Tibia_Leg_collision05" type="mesh" class="collision" name="Leg1_Tibia_Leg_collision05" />
+                  <geom mesh="Leg_Tibia_Leg_collision06" type="mesh" class="collision" name="Leg1_Tibia_Leg_collision06" />
                 </body>
                 <body name="Leg1_Knee_actuator_assembly_Motor" pos="0.0765000000000043 -1.4210854715202004e-16 -7.105427357601002e-17" quat="7.29823492430828e-16 4.49605604609595e-17 -0.0410037387439453 0.999158993058171">
                   <geom name="Leg1_Knee_actuator_assembly_Motor" type="mesh" mesh="Motor" pos="0 0 0" quat="1 0 0 0" />
@@ -168,124 +135,44 @@
                     <geom name="Leg1_KneeMotorPulley" type="mesh" mesh="Leg_KneeMotorPulley" pos="0 0 0" quat="1 0 0 0" />
                     <inertial mass="0.08135375942547957" pos="0.00540570472678228 0.019714907448619024 0.033041575943703744" fullinertia="1.2462648308953017e-05 7.261200035419576e-06 7.2612000358480226e-06 -2.8927109600418425e-18 -4.646447059732442e-18 -2.650819254585487e-16" />
                   </body>
-                  <geom mesh="Motor_collision00" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision01" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision02" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision03" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision04" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision05" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision06" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision07" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision08" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision09" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision10" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision11" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision12" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision13" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision14" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision15" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision16" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision17" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision18" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision19" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision20" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision21" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision22" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision23" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision24" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision25" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision26" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision27" type="mesh" pos="0 0 0" class="collision" />
+                  <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.04 0.013" pos="0.013 0 0" class="collision" mass="0.0" />
+                  <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.028 0.011" pos="0.0 0 0" class="collision" mass="0.0" />
                 </body>
-                <geom mesh="Leg_Femur_collision00" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision01" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision02" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision03" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision04" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision05" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision06" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision07" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision08" type="mesh" pos="0 0 0" class="collision" />
+                <geom mesh="Leg_Femur_collision00" type="mesh" class="collision" name="Leg1_Femur_collision00" />
+                <geom mesh="Leg_Femur_collision01" type="mesh" class="collision" name="Leg1_Femur_collision01" />
+                <geom mesh="Leg_Femur_collision02" type="mesh" class="collision" name="Leg1_Femur_collision02" />
+                <geom mesh="Leg_Femur_collision03" type="mesh" class="collision" name="Leg1_Femur_collision03" />
+                <geom mesh="Leg_Femur_collision04" type="mesh" class="collision" name="Leg1_Femur_collision04" />
+                <geom mesh="Leg_Femur_collision05" type="mesh" class="collision" name="Leg1_Femur_collision05" />
+                <geom mesh="Leg_Femur_collision06" type="mesh" class="collision" name="Leg1_Femur_collision06" />
+                <geom mesh="Leg_Femur_collision07" type="mesh" class="collision" name="Leg1_Femur_collision07" />
+                <geom mesh="Leg_Femur_collision08" type="mesh" class="collision" name="Leg1_Femur_collision08" />
+                <geom mesh="Leg_Femur_collision09" type="mesh" class="collision" name="Leg1_Femur_collision09" />
+                <geom mesh="Leg_Femur_collision10" type="mesh" class="collision" name="Leg1_Femur_collision10" />
+                <geom mesh="Leg_Femur_collision11" type="mesh" class="collision" name="Leg1_Femur_collision11" />
+                <geom mesh="Leg_Femur_collision12" type="mesh" class="collision" name="Leg1_Femur_collision12" />
+                <geom mesh="Leg_Femur_collision13" type="mesh" class="collision" name="Leg1_Femur_collision13" />
+                <geom mesh="Leg_Femur_collision14" type="mesh" class="collision" name="Leg1_Femur_collision14" />
+                <geom mesh="Leg_Femur_collision15" type="mesh" class="collision" name="Leg1_Femur_collision15" />
+                <geom mesh="Leg_Femur_collision16" type="mesh" class="collision" name="Leg1_Femur_collision16" />
               </body>
-              <geom mesh="Motor_collision00" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision01" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision02" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision03" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision04" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision05" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision06" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision07" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision08" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision09" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision10" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision11" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision12" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision13" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision14" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision15" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision16" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision17" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision18" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision19" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision20" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision21" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision22" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision23" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision24" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision25" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision26" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision27" type="mesh" pos="0 0 0" class="collision" />
+              <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.04 0.013" pos="0.013 0 0" class="collision" mass="0.0" />
+              <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.028 0.011" pos="0.0 0 0" class="collision" mass="0.0" />
             </body>
             <body name="Leg1_End_Bearing_Holder" pos="-0.0424449323699713 -0.0031217780935925443 -0.04257533261304097" quat="4.32978028117747e-17 0.707106781186548 4.32978028117747e-17 -0.707106781186547">
               <geom name="Leg1_End_Bearing_Holder" type="mesh" mesh="Leg_End_Bearing_Holder" pos="0 0 0" quat="1 0 0 0" />
               <inertial mass="0.057169625310268736" pos="-0.04109062630262364 -0.0011084672781328652 -0.12254015277022116" fullinertia="5.196194176609763e-05 5.1347634596556356e-05 0.00010281021554762746 -9.985502905466394e-07 -1.0829253630530965e-08 -1.1711751146871704e-08" />
-              <geom mesh="Leg_End_Bearing_Holder_collision00" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Leg_End_Bearing_Holder_collision01" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Leg_End_Bearing_Holder_collision02" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Leg_End_Bearing_Holder_collision03" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Leg_End_Bearing_Holder_collision04" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Leg_End_Bearing_Holder_collision05" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Leg_End_Bearing_Holder_collision06" type="mesh" pos="0 0 0" class="collision" />
             </body>
           </body>
-          <geom mesh="Motor_collision00" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision01" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision02" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision03" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision04" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision05" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision06" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision07" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision08" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision09" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision10" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision11" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision12" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision13" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision14" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision15" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision16" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision17" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision18" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision19" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision20" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision21" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision22" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision23" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision24" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision25" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision26" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision27" type="mesh" pos="0 0 0" class="collision" />
+          <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.04 0.013" pos="0.013 0 0" class="collision" mass="0.0" />
+          <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.028 0.011" pos="0.0 0 0" class="collision" mass="0.0" />
         </body>
-        <geom mesh="Leg_Body_Bracket_collision00" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision01" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision02" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision03" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision04" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision05" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision06" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision07" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision08" type="mesh" pos="0 0 0" class="collision" />
+        <geom mesh="Leg_Body_Bracket_collision00" type="mesh" class="collision" name="Leg1_Body_Bracket_collision00" />
+        <geom mesh="Leg_Body_Bracket_collision01" type="mesh" class="collision" name="Leg1_Body_Bracket_collision01" />
+        <geom mesh="Leg_Body_Bracket_collision02" type="mesh" class="collision" name="Leg1_Body_Bracket_collision02" />
+        <geom mesh="Leg_Body_Bracket_collision03" type="mesh" class="collision" name="Leg1_Body_Bracket_collision03" />
+        <geom mesh="Leg_Body_Bracket_collision04" type="mesh" class="collision" name="Leg1_Body_Bracket_collision04" />
+        <geom mesh="Leg_Body_Bracket_collision05" type="mesh" class="collision" name="Leg1_Body_Bracket_collision05" />
       </body>
       <body name="Leg2_Body_Bracket" pos="0.39247899757722804 0.17001612341601535 -0.02862177809359275" quat="0.5 -0.5 0.5 -0.5">
         <geom name="Leg2_Body_Bracket" type="mesh" mesh="Leg_Body_Bracket" pos="0 0 0" quat="1 0 0 0" />
@@ -311,21 +198,21 @@
                   <body name="Leg2_Tibia_Foot" pos="-9.903189379656396e-16 2.6645352591003756e-16 -8.171241461241152e-16" quat="1 5.55111512312578e-16 3.46222700662253e-17 -7.795836582117e-17">
                     <geom name="Leg2_Tibia_Foot" type="mesh" mesh="Leg_Tibia_Foot" pos="0 0 0" quat="1 0 0 0" />
                     <inertial mass="0.008914076725409616" pos="0.040000000000002596 -0.12297984604109302 0.1996927766516511" fullinertia="1.5823785953765997e-07 2.0579120245550413e-07 1.6638449849358227e-07 6.487339012524682e-20 1.0145967370053133e-19 3.413978377814546e-08" />
-                    <geom mesh="Leg_Tibia_Foot_collision00" type="mesh" pos="0 0 0" class="collision" />
+                    <geom mesh="Leg_Tibia_Foot_collision00" type="mesh" class="collision" name="Leg2_Tibia_Foot_collision00" />
                   </body>
                   <body name="Leg2_Tibia_BadTouch" pos="-3.4060042538479604e-05 -0.008928296405292998 0.15038254739440318" quat="0.99144486137381 -0.130526192220051 -6.22819048331426e-17 -7.24565919596746e-18">
                     <geom name="Leg2_Tibia_BadTouch" type="mesh" mesh="Leg_Tibia_BadTouch" pos="0 0 0" quat="1 0 0 0" />
                     <inertial mass="0.0005883837658738169" pos="0.04003406004254015 -0.11221456645803134 0.03113413156039285" fullinertia="1.2707199603587259e-08 5.112584031802785e-10 1.258819704436541e-08 3.0167621577351773e-21 -1.4589811644210308e-20 -6.704321676098459e-10" />
-                    <geom mesh="Leg_Tibia_BadTouch_collision00" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_BadTouch_collision01" type="mesh" pos="0 0 0" class="collision" />
+                    <geom mesh="Leg_Tibia_BadTouch_collision00" type="mesh" class="collision" name="Leg2_Tibia_BadTouch_collision00" />
+                    <geom mesh="Leg_Tibia_BadTouch_collision01" type="mesh" class="collision" name="Leg2_Tibia_BadTouch_collision01" />
                   </body>
-                  <geom mesh="Leg_Tibia_Leg_collision00" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Leg_Tibia_Leg_collision01" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Leg_Tibia_Leg_collision02" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Leg_Tibia_Leg_collision03" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Leg_Tibia_Leg_collision04" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Leg_Tibia_Leg_collision05" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Leg_Tibia_Leg_collision06" type="mesh" pos="0 0 0" class="collision" />
+                  <geom mesh="Leg_Tibia_Leg_collision00" type="mesh" class="collision" name="Leg2_Tibia_Leg_collision00" />
+                  <geom mesh="Leg_Tibia_Leg_collision01" type="mesh" class="collision" name="Leg2_Tibia_Leg_collision01" />
+                  <geom mesh="Leg_Tibia_Leg_collision02" type="mesh" class="collision" name="Leg2_Tibia_Leg_collision02" />
+                  <geom mesh="Leg_Tibia_Leg_collision03" type="mesh" class="collision" name="Leg2_Tibia_Leg_collision03" />
+                  <geom mesh="Leg_Tibia_Leg_collision04" type="mesh" class="collision" name="Leg2_Tibia_Leg_collision04" />
+                  <geom mesh="Leg_Tibia_Leg_collision05" type="mesh" class="collision" name="Leg2_Tibia_Leg_collision05" />
+                  <geom mesh="Leg_Tibia_Leg_collision06" type="mesh" class="collision" name="Leg2_Tibia_Leg_collision06" />
                 </body>
                 <body name="Leg2_Knee_actuator_assembly_Motor" pos="0.07650000000000351 -3.552713678800501e-16 2.486899575160351e-16" quat="7.31961801167677e-16 9.7065818903347e-17 -0.0410037387439449 0.999158993058171">
                   <geom name="Leg2_Knee_actuator_assembly_Motor" type="mesh" mesh="Motor" pos="0 0 0" quat="1 0 0 0" />
@@ -338,124 +225,44 @@
                     <geom name="Leg2_KneeMotorPulley" type="mesh" mesh="Leg_KneeMotorPulley" pos="0 0 0" quat="1 0 0 0" />
                     <inertial mass="0.08135375942547957" pos="0.005405704726782273 0.01971490744861899 0.03304157594370373" fullinertia="1.2462648308955394e-05 7.261200035420742e-06 7.261200035849e-06 -2.6916128650566056e-18 -4.480832430353576e-18 -2.6576632807993016e-16" />
                   </body>
-                  <geom mesh="Motor_collision00" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision01" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision02" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision03" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision04" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision05" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision06" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision07" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision08" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision09" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision10" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision11" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision12" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision13" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision14" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision15" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision16" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision17" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision18" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision19" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision20" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision21" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision22" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision23" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision24" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision25" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision26" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision27" type="mesh" pos="0 0 0" class="collision" />
+                  <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.04 0.013" pos="0.013 0 0" class="collision" mass="0.0" />
+                  <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.028 0.011" pos="0.0 0 0" class="collision" mass="0.0" />
                 </body>
-                <geom mesh="Leg_Femur_collision00" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision01" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision02" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision03" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision04" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision05" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision06" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision07" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision08" type="mesh" pos="0 0 0" class="collision" />
+                <geom mesh="Leg_Femur_collision00" type="mesh" class="collision" name="Leg2_Femur_collision00" />
+                <geom mesh="Leg_Femur_collision01" type="mesh" class="collision" name="Leg2_Femur_collision01" />
+                <geom mesh="Leg_Femur_collision02" type="mesh" class="collision" name="Leg2_Femur_collision02" />
+                <geom mesh="Leg_Femur_collision03" type="mesh" class="collision" name="Leg2_Femur_collision03" />
+                <geom mesh="Leg_Femur_collision04" type="mesh" class="collision" name="Leg2_Femur_collision04" />
+                <geom mesh="Leg_Femur_collision05" type="mesh" class="collision" name="Leg2_Femur_collision05" />
+                <geom mesh="Leg_Femur_collision06" type="mesh" class="collision" name="Leg2_Femur_collision06" />
+                <geom mesh="Leg_Femur_collision07" type="mesh" class="collision" name="Leg2_Femur_collision07" />
+                <geom mesh="Leg_Femur_collision08" type="mesh" class="collision" name="Leg2_Femur_collision08" />
+                <geom mesh="Leg_Femur_collision09" type="mesh" class="collision" name="Leg2_Femur_collision09" />
+                <geom mesh="Leg_Femur_collision10" type="mesh" class="collision" name="Leg2_Femur_collision10" />
+                <geom mesh="Leg_Femur_collision11" type="mesh" class="collision" name="Leg2_Femur_collision11" />
+                <geom mesh="Leg_Femur_collision12" type="mesh" class="collision" name="Leg2_Femur_collision12" />
+                <geom mesh="Leg_Femur_collision13" type="mesh" class="collision" name="Leg2_Femur_collision13" />
+                <geom mesh="Leg_Femur_collision14" type="mesh" class="collision" name="Leg2_Femur_collision14" />
+                <geom mesh="Leg_Femur_collision15" type="mesh" class="collision" name="Leg2_Femur_collision15" />
+                <geom mesh="Leg_Femur_collision16" type="mesh" class="collision" name="Leg2_Femur_collision16" />
               </body>
-              <geom mesh="Motor_collision00" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision01" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision02" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision03" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision04" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision05" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision06" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision07" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision08" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision09" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision10" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision11" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision12" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision13" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision14" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision15" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision16" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision17" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision18" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision19" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision20" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision21" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision22" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision23" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision24" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision25" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision26" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision27" type="mesh" pos="0 0 0" class="collision" />
+              <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.04 0.013" pos="0.013 0 0" class="collision" mass="0.0" />
+              <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.028 0.011" pos="0.0 0 0" class="collision" mass="0.0" />
             </body>
             <body name="Leg2_End_Bearing_Holder" pos="-0.0424449323699694 -0.003121778093592584 -0.042575332613041396" quat="4.32978028117747e-17 0.707106781186548 4.32978028117747e-17 -0.707106781186547">
               <geom name="Leg2_End_Bearing_Holder" type="mesh" mesh="Leg_End_Bearing_Holder" pos="0 0 0" quat="1 0 0 0" />
               <inertial mass="0.057169625310268736" pos="-0.04109062630262342 -0.0011084672781328643 -0.12254015277022065" fullinertia="5.1961941766096794e-05 5.134763459656156e-05 0.00010281021554763039 -9.985502905467515e-07 -1.082925363183493e-08 -1.1711751146907877e-08" />
-              <geom mesh="Leg_End_Bearing_Holder_collision00" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Leg_End_Bearing_Holder_collision01" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Leg_End_Bearing_Holder_collision02" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Leg_End_Bearing_Holder_collision03" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Leg_End_Bearing_Holder_collision04" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Leg_End_Bearing_Holder_collision05" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Leg_End_Bearing_Holder_collision06" type="mesh" pos="0 0 0" class="collision" />
             </body>
           </body>
-          <geom mesh="Motor_collision00" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision01" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision02" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision03" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision04" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision05" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision06" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision07" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision08" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision09" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision10" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision11" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision12" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision13" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision14" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision15" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision16" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision17" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision18" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision19" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision20" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision21" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision22" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision23" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision24" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision25" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision26" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision27" type="mesh" pos="0 0 0" class="collision" />
+          <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.04 0.013" pos="0.013 0 0" class="collision" mass="0.0" />
+          <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.028 0.011" pos="0.0 0 0" class="collision" mass="0.0" />
         </body>
-        <geom mesh="Leg_Body_Bracket_collision00" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision01" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision02" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision03" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision04" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision05" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision06" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision07" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision08" type="mesh" pos="0 0 0" class="collision" />
+        <geom mesh="Leg_Body_Bracket_collision00" type="mesh" class="collision" name="Leg2_Body_Bracket_collision00" />
+        <geom mesh="Leg_Body_Bracket_collision01" type="mesh" class="collision" name="Leg2_Body_Bracket_collision01" />
+        <geom mesh="Leg_Body_Bracket_collision02" type="mesh" class="collision" name="Leg2_Body_Bracket_collision02" />
+        <geom mesh="Leg_Body_Bracket_collision03" type="mesh" class="collision" name="Leg2_Body_Bracket_collision03" />
+        <geom mesh="Leg_Body_Bracket_collision04" type="mesh" class="collision" name="Leg2_Body_Bracket_collision04" />
+        <geom mesh="Leg_Body_Bracket_collision05" type="mesh" class="collision" name="Leg2_Body_Bracket_collision05" />
       </body>
       <body name="Leg3_Body_Bracket" pos="0.2548789975772281 0.17001612341601535 -0.02862177809359275" quat="0.5 -0.5 0.5 -0.5">
         <geom name="Leg3_Body_Bracket" type="mesh" mesh="Leg_Body_Bracket" pos="0 0 0" quat="1 0 0 0" />
@@ -481,21 +288,21 @@
                   <body name="Leg3_Tibia_Foot" pos="1.4921397450962103e-15 2.248201624865942e-17 -1.4210854715202005e-15" quat="1 1.47104550762833e-15 2.61844704926278e-17 9.07828803438673e-17">
                     <geom name="Leg3_Tibia_Foot" type="mesh" mesh="Leg_Tibia_Foot" pos="0 0 0" quat="1 0 0 0" />
                     <inertial mass="0.008914076725409616" pos="0.04000000000000261 -0.12297984604109297 0.19969277665165103" fullinertia="1.5823785953773393e-07 2.0579120245566827e-07 1.66384498493588e-07 -4.066678299169141e-21 5.981401088549415e-20 3.413978377812716e-08" />
-                    <geom mesh="Leg_Tibia_Foot_collision00" type="mesh" pos="0 0 0" class="collision" />
+                    <geom mesh="Leg_Tibia_Foot_collision00" type="mesh" class="collision" name="Leg3_Tibia_Foot_collision00" />
                   </body>
                   <body name="Leg3_Tibia_BadTouch" pos="-3.406004253612594e-05 -0.008928296405293348 0.1503825473944029" quat="0.991444861373811 -0.13052619222005 -7.34972944608031e-17 8.54449410711051e-17">
                     <geom name="Leg3_Tibia_BadTouch" type="mesh" mesh="Leg_Tibia_BadTouch" pos="0 0 0" quat="1 0 0 0" />
                     <inertial mass="0.0005883837658738169" pos="0.0400340600425402 -0.11221456645803136 0.03113413156039276" fullinertia="1.2707199603635907e-08 5.112584032378749e-10 1.2588197044376043e-08 -2.292552389592053e-23 4.3501428414163725e-21 -6.704321676003714e-10" />
-                    <geom mesh="Leg_Tibia_BadTouch_collision00" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_BadTouch_collision01" type="mesh" pos="0 0 0" class="collision" />
+                    <geom mesh="Leg_Tibia_BadTouch_collision00" type="mesh" class="collision" name="Leg3_Tibia_BadTouch_collision00" />
+                    <geom mesh="Leg_Tibia_BadTouch_collision01" type="mesh" class="collision" name="Leg3_Tibia_BadTouch_collision01" />
                   </body>
-                  <geom mesh="Leg_Tibia_Leg_collision00" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Leg_Tibia_Leg_collision01" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Leg_Tibia_Leg_collision02" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Leg_Tibia_Leg_collision03" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Leg_Tibia_Leg_collision04" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Leg_Tibia_Leg_collision05" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Leg_Tibia_Leg_collision06" type="mesh" pos="0 0 0" class="collision" />
+                  <geom mesh="Leg_Tibia_Leg_collision00" type="mesh" class="collision" name="Leg3_Tibia_Leg_collision00" />
+                  <geom mesh="Leg_Tibia_Leg_collision01" type="mesh" class="collision" name="Leg3_Tibia_Leg_collision01" />
+                  <geom mesh="Leg_Tibia_Leg_collision02" type="mesh" class="collision" name="Leg3_Tibia_Leg_collision02" />
+                  <geom mesh="Leg_Tibia_Leg_collision03" type="mesh" class="collision" name="Leg3_Tibia_Leg_collision03" />
+                  <geom mesh="Leg_Tibia_Leg_collision04" type="mesh" class="collision" name="Leg3_Tibia_Leg_collision04" />
+                  <geom mesh="Leg_Tibia_Leg_collision05" type="mesh" class="collision" name="Leg3_Tibia_Leg_collision05" />
+                  <geom mesh="Leg_Tibia_Leg_collision06" type="mesh" class="collision" name="Leg3_Tibia_Leg_collision06" />
                 </body>
                 <body name="Leg3_Knee_actuator_assembly_Motor" pos="0.07650000000000359 -1.6209256159527285e-16 8.881784197001253e-18" quat="7.28073066735878e-16 2.30704572390425e-18 -0.041003738743945 0.999158993058171">
                   <geom name="Leg3_Knee_actuator_assembly_Motor" type="mesh" mesh="Motor" pos="0 0 0" quat="1 0 0 0" />
@@ -508,124 +315,44 @@
                     <geom name="Leg3_KneeMotorPulley" type="mesh" mesh="Leg_KneeMotorPulley" pos="0 0 0" quat="1 0 0 0" />
                     <inertial mass="0.08135375942547957" pos="0.005405704726782301 0.01971490744861897 0.03304157594370368" fullinertia="1.2462648308958054e-05 7.261200035421787e-06 7.261200035850074e-06 -2.7115661820425036e-18 -4.410779403613814e-18 -2.6688949376798936e-16" />
                   </body>
-                  <geom mesh="Motor_collision00" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision01" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision02" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision03" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision04" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision05" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision06" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision07" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision08" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision09" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision10" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision11" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision12" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision13" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision14" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision15" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision16" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision17" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision18" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision19" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision20" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision21" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision22" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision23" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision24" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision25" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision26" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision27" type="mesh" pos="0 0 0" class="collision" />
+                  <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.04 0.013" pos="0.013 0 0" class="collision" mass="0.0" />
+                  <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.028 0.011" pos="0.0 0 0" class="collision" mass="0.0" />
                 </body>
-                <geom mesh="Leg_Femur_collision00" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision01" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision02" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision03" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision04" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision05" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision06" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision07" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision08" type="mesh" pos="0 0 0" class="collision" />
+                <geom mesh="Leg_Femur_collision00" type="mesh" class="collision" name="Leg3_Femur_collision00" />
+                <geom mesh="Leg_Femur_collision01" type="mesh" class="collision" name="Leg3_Femur_collision01" />
+                <geom mesh="Leg_Femur_collision02" type="mesh" class="collision" name="Leg3_Femur_collision02" />
+                <geom mesh="Leg_Femur_collision03" type="mesh" class="collision" name="Leg3_Femur_collision03" />
+                <geom mesh="Leg_Femur_collision04" type="mesh" class="collision" name="Leg3_Femur_collision04" />
+                <geom mesh="Leg_Femur_collision05" type="mesh" class="collision" name="Leg3_Femur_collision05" />
+                <geom mesh="Leg_Femur_collision06" type="mesh" class="collision" name="Leg3_Femur_collision06" />
+                <geom mesh="Leg_Femur_collision07" type="mesh" class="collision" name="Leg3_Femur_collision07" />
+                <geom mesh="Leg_Femur_collision08" type="mesh" class="collision" name="Leg3_Femur_collision08" />
+                <geom mesh="Leg_Femur_collision09" type="mesh" class="collision" name="Leg3_Femur_collision09" />
+                <geom mesh="Leg_Femur_collision10" type="mesh" class="collision" name="Leg3_Femur_collision10" />
+                <geom mesh="Leg_Femur_collision11" type="mesh" class="collision" name="Leg3_Femur_collision11" />
+                <geom mesh="Leg_Femur_collision12" type="mesh" class="collision" name="Leg3_Femur_collision12" />
+                <geom mesh="Leg_Femur_collision13" type="mesh" class="collision" name="Leg3_Femur_collision13" />
+                <geom mesh="Leg_Femur_collision14" type="mesh" class="collision" name="Leg3_Femur_collision14" />
+                <geom mesh="Leg_Femur_collision15" type="mesh" class="collision" name="Leg3_Femur_collision15" />
+                <geom mesh="Leg_Femur_collision16" type="mesh" class="collision" name="Leg3_Femur_collision16" />
               </body>
-              <geom mesh="Motor_collision00" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision01" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision02" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision03" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision04" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision05" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision06" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision07" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision08" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision09" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision10" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision11" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision12" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision13" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision14" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision15" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision16" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision17" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision18" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision19" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision20" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision21" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision22" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision23" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision24" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision25" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision26" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision27" type="mesh" pos="0 0 0" class="collision" />
+              <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.04 0.013" pos="0.013 0 0" class="collision" mass="0.0" />
+              <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.028 0.011" pos="0.0 0 0" class="collision" mass="0.0" />
             </body>
             <body name="Leg3_End_Bearing_Holder" pos="-0.042444932369969664 -0.003121778093592438 -0.04257533261304154" quat="4.32978028117747e-17 -0.707106781186548 4.32978028117747e-17 0.707106781186547">
               <geom name="Leg3_End_Bearing_Holder" type="mesh" mesh="Leg_End_Bearing_Holder" pos="0 0 0" quat="1 0 0 0" />
               <inertial mass="0.057169625310268736" pos="-0.04109062630262355 -0.0011084672781328643 -0.12254015277022094" fullinertia="5.196194176609738e-05 5.134763459656004e-05 0.0001028102155476319 -9.985502905468753e-07 -1.0829253630306826e-08 -1.1711751146930852e-08" />
-              <geom mesh="Leg_End_Bearing_Holder_collision00" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Leg_End_Bearing_Holder_collision01" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Leg_End_Bearing_Holder_collision02" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Leg_End_Bearing_Holder_collision03" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Leg_End_Bearing_Holder_collision04" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Leg_End_Bearing_Holder_collision05" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Leg_End_Bearing_Holder_collision06" type="mesh" pos="0 0 0" class="collision" />
             </body>
           </body>
-          <geom mesh="Motor_collision00" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision01" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision02" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision03" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision04" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision05" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision06" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision07" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision08" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision09" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision10" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision11" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision12" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision13" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision14" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision15" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision16" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision17" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision18" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision19" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision20" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision21" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision22" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision23" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision24" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision25" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision26" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision27" type="mesh" pos="0 0 0" class="collision" />
+          <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.04 0.013" pos="0.013 0 0" class="collision" mass="0.0" />
+          <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.028 0.011" pos="0.0 0 0" class="collision" mass="0.0" />
         </body>
-        <geom mesh="Leg_Body_Bracket_collision00" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision01" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision02" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision03" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision04" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision05" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision06" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision07" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision08" type="mesh" pos="0 0 0" class="collision" />
+        <geom mesh="Leg_Body_Bracket_collision00" type="mesh" class="collision" name="Leg3_Body_Bracket_collision00" />
+        <geom mesh="Leg_Body_Bracket_collision01" type="mesh" class="collision" name="Leg3_Body_Bracket_collision01" />
+        <geom mesh="Leg_Body_Bracket_collision02" type="mesh" class="collision" name="Leg3_Body_Bracket_collision02" />
+        <geom mesh="Leg_Body_Bracket_collision03" type="mesh" class="collision" name="Leg3_Body_Bracket_collision03" />
+        <geom mesh="Leg_Body_Bracket_collision04" type="mesh" class="collision" name="Leg3_Body_Bracket_collision04" />
+        <geom mesh="Leg_Body_Bracket_collision05" type="mesh" class="collision" name="Leg3_Body_Bracket_collision05" />
       </body>
       <body name="Leg4_Body_Bracket" pos="0.1172789975772281 0.10561612341601537 -0.02862177809359275" quat="0.5 -0.5 0.5 -0.5">
         <geom name="Leg4_Body_Bracket" type="mesh" mesh="Leg_Body_Bracket" pos="0 0 0" quat="1 0 0 0" />
@@ -651,21 +378,21 @@
                   <body name="Leg4_Tibia_Foot" pos="1.616484723854228e-15 2.353672812205332e-16 -7.815970093361102e-16" quat="1 1.30451205393456e-15 -4.75280886849775e-18 -1.77377241758975e-17">
                     <geom name="Leg4_Tibia_Foot" type="mesh" mesh="Leg_Tibia_Foot" pos="0 0 0" quat="1 0 0 0" />
                     <inertial mass="0.008914076725409616" pos="0.0400000000000026 -0.12297984604109304 0.19969277665165108" fullinertia="1.582378595373455e-07 2.0579120245588283e-07 1.6638449849343663e-07 3.1932486238063035e-20 4.057822063631286e-20 3.413978377801918e-08" />
-                    <geom mesh="Leg_Tibia_Foot_collision00" type="mesh" pos="0 0 0" class="collision" />
+                    <geom mesh="Leg_Tibia_Foot_collision00" type="mesh" class="collision" name="Leg4_Tibia_Foot_collision00" />
                   </body>
                   <body name="Leg4_Tibia_BadTouch" pos="-3.4060042535983825e-05 -0.008928296405293258 0.15038254739440343" quat="0.991444861373811 -0.13052619222005 -1.86162404150118e-16 -3.85047562220835e-17">
                     <geom name="Leg4_Tibia_BadTouch" type="mesh" mesh="Leg_Tibia_BadTouch" pos="0 0 0" quat="1 0 0 0" />
                     <inertial mass="0.0005883837658738169" pos="0.04003406004254016 -0.1122145664580314 0.03113413156039282" fullinertia="1.2707199603632431e-08 5.112584032294048e-10 1.2588197044374448e-08 2.115857345062954e-21 1.0941485611108601e-24 -6.70432167603381e-10" />
-                    <geom mesh="Leg_Tibia_BadTouch_collision00" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_BadTouch_collision01" type="mesh" pos="0 0 0" class="collision" />
+                    <geom mesh="Leg_Tibia_BadTouch_collision00" type="mesh" class="collision" name="Leg4_Tibia_BadTouch_collision00" />
+                    <geom mesh="Leg_Tibia_BadTouch_collision01" type="mesh" class="collision" name="Leg4_Tibia_BadTouch_collision01" />
                   </body>
-                  <geom mesh="Leg_Tibia_Leg_collision00" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Leg_Tibia_Leg_collision01" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Leg_Tibia_Leg_collision02" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Leg_Tibia_Leg_collision03" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Leg_Tibia_Leg_collision04" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Leg_Tibia_Leg_collision05" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Leg_Tibia_Leg_collision06" type="mesh" pos="0 0 0" class="collision" />
+                  <geom mesh="Leg_Tibia_Leg_collision00" type="mesh" class="collision" name="Leg4_Tibia_Leg_collision00" />
+                  <geom mesh="Leg_Tibia_Leg_collision01" type="mesh" class="collision" name="Leg4_Tibia_Leg_collision01" />
+                  <geom mesh="Leg_Tibia_Leg_collision02" type="mesh" class="collision" name="Leg4_Tibia_Leg_collision02" />
+                  <geom mesh="Leg_Tibia_Leg_collision03" type="mesh" class="collision" name="Leg4_Tibia_Leg_collision03" />
+                  <geom mesh="Leg_Tibia_Leg_collision04" type="mesh" class="collision" name="Leg4_Tibia_Leg_collision04" />
+                  <geom mesh="Leg_Tibia_Leg_collision05" type="mesh" class="collision" name="Leg4_Tibia_Leg_collision05" />
+                  <geom mesh="Leg_Tibia_Leg_collision06" type="mesh" class="collision" name="Leg4_Tibia_Leg_collision06" />
                 </body>
                 <body name="Leg4_Knee_actuator_assembly_Motor" pos="0.07650000000000363 -2.6645352591003756e-16 1.4654943925052067e-16" quat="7.28071862333619e-16 2.2776974404079e-18 -0.0410037387439449 0.999158993058171">
                   <geom name="Leg4_Knee_actuator_assembly_Motor" type="mesh" mesh="Motor" pos="0 0 0" quat="1 0 0 0" />
@@ -678,124 +405,44 @@
                     <geom name="Leg4_KneeMotorPulley" type="mesh" mesh="Leg_KneeMotorPulley" pos="0 0 0" quat="1 0 0 0" />
                     <inertial mass="0.08135375942547957" pos="0.005405704726782277 0.019714907448619028 0.033041575943703744" fullinertia="1.246264830895789e-05 7.261200035421384e-06 7.261200035849745e-06 -2.653015229163979e-18 -4.424557955589256e-18 -2.6681580190157823e-16" />
                   </body>
-                  <geom mesh="Motor_collision00" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision01" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision02" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision03" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision04" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision05" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision06" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision07" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision08" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision09" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision10" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision11" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision12" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision13" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision14" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision15" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision16" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision17" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision18" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision19" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision20" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision21" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision22" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision23" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision24" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision25" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision26" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision27" type="mesh" pos="0 0 0" class="collision" />
+                  <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.04 0.013" pos="0.013 0 0" class="collision" mass="0.0" />
+                  <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.028 0.011" pos="0.0 0 0" class="collision" mass="0.0" />
                 </body>
-                <geom mesh="Leg_Femur_collision00" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision01" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision02" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision03" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision04" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision05" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision06" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision07" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision08" type="mesh" pos="0 0 0" class="collision" />
+                <geom mesh="Leg_Femur_collision00" type="mesh" class="collision" name="Leg4_Femur_collision00" />
+                <geom mesh="Leg_Femur_collision01" type="mesh" class="collision" name="Leg4_Femur_collision01" />
+                <geom mesh="Leg_Femur_collision02" type="mesh" class="collision" name="Leg4_Femur_collision02" />
+                <geom mesh="Leg_Femur_collision03" type="mesh" class="collision" name="Leg4_Femur_collision03" />
+                <geom mesh="Leg_Femur_collision04" type="mesh" class="collision" name="Leg4_Femur_collision04" />
+                <geom mesh="Leg_Femur_collision05" type="mesh" class="collision" name="Leg4_Femur_collision05" />
+                <geom mesh="Leg_Femur_collision06" type="mesh" class="collision" name="Leg4_Femur_collision06" />
+                <geom mesh="Leg_Femur_collision07" type="mesh" class="collision" name="Leg4_Femur_collision07" />
+                <geom mesh="Leg_Femur_collision08" type="mesh" class="collision" name="Leg4_Femur_collision08" />
+                <geom mesh="Leg_Femur_collision09" type="mesh" class="collision" name="Leg4_Femur_collision09" />
+                <geom mesh="Leg_Femur_collision10" type="mesh" class="collision" name="Leg4_Femur_collision10" />
+                <geom mesh="Leg_Femur_collision11" type="mesh" class="collision" name="Leg4_Femur_collision11" />
+                <geom mesh="Leg_Femur_collision12" type="mesh" class="collision" name="Leg4_Femur_collision12" />
+                <geom mesh="Leg_Femur_collision13" type="mesh" class="collision" name="Leg4_Femur_collision13" />
+                <geom mesh="Leg_Femur_collision14" type="mesh" class="collision" name="Leg4_Femur_collision14" />
+                <geom mesh="Leg_Femur_collision15" type="mesh" class="collision" name="Leg4_Femur_collision15" />
+                <geom mesh="Leg_Femur_collision16" type="mesh" class="collision" name="Leg4_Femur_collision16" />
               </body>
-              <geom mesh="Motor_collision00" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision01" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision02" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision03" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision04" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision05" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision06" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision07" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision08" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision09" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision10" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision11" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision12" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision13" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision14" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision15" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision16" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision17" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision18" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision19" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision20" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision21" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision22" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision23" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision24" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision25" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision26" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision27" type="mesh" pos="0 0 0" class="collision" />
+              <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.04 0.013" pos="0.013 0 0" class="collision" mass="0.0" />
+              <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.028 0.011" pos="0.0 0 0" class="collision" mass="0.0" />
             </body>
             <body name="Leg4_End_Bearing_Holder" pos="-0.042444932369969345 -0.0031217780935925356 -0.04257533261304139" quat="4.32978028117747e-17 -0.707106781186548 4.32978028117747e-17 0.707106781186547">
               <geom name="Leg4_End_Bearing_Holder" type="mesh" mesh="Leg_End_Bearing_Holder" pos="0 0 0" quat="1 0 0 0" />
               <inertial mass="0.057169625310268736" pos="-0.041090626302623494 -0.001108467278132861 -0.1225401527702208" fullinertia="5.196194176609737e-05 5.1347634596560937e-05 0.00010281021554763185 -9.985502905468952e-07 -1.0829253630411789e-08 -1.1711751146878538e-08" />
-              <geom mesh="Leg_End_Bearing_Holder_collision00" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Leg_End_Bearing_Holder_collision01" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Leg_End_Bearing_Holder_collision02" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Leg_End_Bearing_Holder_collision03" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Leg_End_Bearing_Holder_collision04" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Leg_End_Bearing_Holder_collision05" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Leg_End_Bearing_Holder_collision06" type="mesh" pos="0 0 0" class="collision" />
             </body>
           </body>
-          <geom mesh="Motor_collision00" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision01" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision02" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision03" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision04" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision05" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision06" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision07" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision08" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision09" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision10" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision11" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision12" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision13" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision14" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision15" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision16" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision17" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision18" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision19" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision20" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision21" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision22" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision23" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision24" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision25" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision26" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision27" type="mesh" pos="0 0 0" class="collision" />
+          <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.04 0.013" pos="0.013 0 0" class="collision" mass="0.0" />
+          <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.028 0.011" pos="0.0 0 0" class="collision" mass="0.0" />
         </body>
-        <geom mesh="Leg_Body_Bracket_collision00" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision01" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision02" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision03" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision04" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision05" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision06" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision07" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision08" type="mesh" pos="0 0 0" class="collision" />
+        <geom mesh="Leg_Body_Bracket_collision00" type="mesh" class="collision" name="Leg4_Body_Bracket_collision00" />
+        <geom mesh="Leg_Body_Bracket_collision01" type="mesh" class="collision" name="Leg4_Body_Bracket_collision01" />
+        <geom mesh="Leg_Body_Bracket_collision02" type="mesh" class="collision" name="Leg4_Body_Bracket_collision02" />
+        <geom mesh="Leg_Body_Bracket_collision03" type="mesh" class="collision" name="Leg4_Body_Bracket_collision03" />
+        <geom mesh="Leg_Body_Bracket_collision04" type="mesh" class="collision" name="Leg4_Body_Bracket_collision04" />
+        <geom mesh="Leg_Body_Bracket_collision05" type="mesh" class="collision" name="Leg4_Body_Bracket_collision05" />
       </body>
       <body name="Leg5_Body_Bracket" pos="0.36512101275220393 -0.1056161234160153 -0.028621778093592735" quat="0.5 -0.5 -0.5 0.5">
         <geom name="Leg5_Body_Bracket" type="mesh" mesh="Leg_Body_Bracket" pos="0 0 0" quat="1 0 0 0" />
@@ -821,21 +468,21 @@
                   <body name="Leg5_Tibia_Foot" pos="-1.8829382497642656e-15 3.1974423109204507e-16 -6.394884621840901e-16" quat="1 1.41553435639707e-15 3.08095575921208e-20 1.14982834292646e-19">
                     <geom name="Leg5_Tibia_Foot" type="mesh" mesh="Leg_Tibia_Foot" pos="0 0 0" quat="1 0 0 0" />
                     <inertial mass="0.008914076725409616" pos="0.040000000000002554 -0.12297984604109301 0.19969277665165108" fullinertia="1.582378595385925e-07 2.0579120245617424e-07 1.6638449849363314e-07 -1.5903711521879917e-20 -1.6414966124358037e-19 3.4139783778101353e-08" />
-                    <geom mesh="Leg_Tibia_Foot_collision00" type="mesh" pos="0 0 0" class="collision" />
+                    <geom mesh="Leg_Tibia_Foot_collision00" type="mesh" class="collision" name="Leg5_Tibia_Foot_collision00" />
                   </body>
                   <body name="Leg5_Tibia_BadTouch" pos="-3.406004253927009e-05 -0.008928296405293246 0.15038254739440376" quat="0.991444861373811 -0.13052619222005 -1.5513219403143e-16 -2.16040150534418e-18">
                     <geom name="Leg5_Tibia_BadTouch" type="mesh" mesh="Leg_Tibia_BadTouch" pos="0 0 0" quat="1 0 0 0" />
                     <inertial mass="0.0005883837658738169" pos="0.04003406004254023 -0.11221456645803138 0.031134131560392804" fullinertia="1.2707199603646007e-08 5.112584032073815e-10 1.258819704437954e-08 1.6916196661514335e-21 -3.393761875178142e-21 -6.704321676067671e-10" />
-                    <geom mesh="Leg_Tibia_BadTouch_collision00" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_BadTouch_collision01" type="mesh" pos="0 0 0" class="collision" />
+                    <geom mesh="Leg_Tibia_BadTouch_collision00" type="mesh" class="collision" name="Leg5_Tibia_BadTouch_collision00" />
+                    <geom mesh="Leg_Tibia_BadTouch_collision01" type="mesh" class="collision" name="Leg5_Tibia_BadTouch_collision01" />
                   </body>
-                  <geom mesh="Leg_Tibia_Leg_collision00" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Leg_Tibia_Leg_collision01" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Leg_Tibia_Leg_collision02" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Leg_Tibia_Leg_collision03" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Leg_Tibia_Leg_collision04" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Leg_Tibia_Leg_collision05" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Leg_Tibia_Leg_collision06" type="mesh" pos="0 0 0" class="collision" />
+                  <geom mesh="Leg_Tibia_Leg_collision00" type="mesh" class="collision" name="Leg5_Tibia_Leg_collision00" />
+                  <geom mesh="Leg_Tibia_Leg_collision01" type="mesh" class="collision" name="Leg5_Tibia_Leg_collision01" />
+                  <geom mesh="Leg_Tibia_Leg_collision02" type="mesh" class="collision" name="Leg5_Tibia_Leg_collision02" />
+                  <geom mesh="Leg_Tibia_Leg_collision03" type="mesh" class="collision" name="Leg5_Tibia_Leg_collision03" />
+                  <geom mesh="Leg_Tibia_Leg_collision04" type="mesh" class="collision" name="Leg5_Tibia_Leg_collision04" />
+                  <geom mesh="Leg_Tibia_Leg_collision05" type="mesh" class="collision" name="Leg5_Tibia_Leg_collision05" />
+                  <geom mesh="Leg_Tibia_Leg_collision06" type="mesh" class="collision" name="Leg5_Tibia_Leg_collision06" />
                 </body>
                 <body name="Leg5_Knee_actuator_assembly_Motor" pos="0.07650000000000419 -7.105427357601002e-17 -7.105427357601002e-17" quat="7.3093927096849e-16 7.21493045686181e-17 -0.0410037387439452 0.999158993058171">
                   <geom name="Leg5_Knee_actuator_assembly_Motor" type="mesh" mesh="Motor" pos="0 0 0" quat="1 0 0 0" />
@@ -848,124 +495,44 @@
                     <geom name="Leg5_KneeMotorPulley" type="mesh" mesh="Leg_KneeMotorPulley" pos="0 0 0" quat="1 0 0 0" />
                     <inertial mass="0.08135375942547957" pos="0.005405704726782272 0.0197149074486189 0.03304157594370365" fullinertia="1.2462648308963419e-05 7.261200035422719e-06 7.261200035851867e-06 -2.5645376211616386e-18 -4.3669026988547356e-18 -2.685136794443495e-16" />
                   </body>
-                  <geom mesh="Motor_collision00" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision01" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision02" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision03" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision04" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision05" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision06" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision07" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision08" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision09" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision10" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision11" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision12" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision13" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision14" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision15" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision16" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision17" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision18" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision19" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision20" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision21" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision22" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision23" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision24" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision25" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision26" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision27" type="mesh" pos="0 0 0" class="collision" />
+                  <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.04 0.013" pos="0.013 0 0" class="collision" mass="0.0" />
+                  <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.028 0.011" pos="0.0 0 0" class="collision" mass="0.0" />
                 </body>
-                <geom mesh="Leg_Femur_collision00" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision01" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision02" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision03" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision04" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision05" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision06" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision07" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision08" type="mesh" pos="0 0 0" class="collision" />
+                <geom mesh="Leg_Femur_collision00" type="mesh" class="collision" name="Leg5_Femur_collision00" />
+                <geom mesh="Leg_Femur_collision01" type="mesh" class="collision" name="Leg5_Femur_collision01" />
+                <geom mesh="Leg_Femur_collision02" type="mesh" class="collision" name="Leg5_Femur_collision02" />
+                <geom mesh="Leg_Femur_collision03" type="mesh" class="collision" name="Leg5_Femur_collision03" />
+                <geom mesh="Leg_Femur_collision04" type="mesh" class="collision" name="Leg5_Femur_collision04" />
+                <geom mesh="Leg_Femur_collision05" type="mesh" class="collision" name="Leg5_Femur_collision05" />
+                <geom mesh="Leg_Femur_collision06" type="mesh" class="collision" name="Leg5_Femur_collision06" />
+                <geom mesh="Leg_Femur_collision07" type="mesh" class="collision" name="Leg5_Femur_collision07" />
+                <geom mesh="Leg_Femur_collision08" type="mesh" class="collision" name="Leg5_Femur_collision08" />
+                <geom mesh="Leg_Femur_collision09" type="mesh" class="collision" name="Leg5_Femur_collision09" />
+                <geom mesh="Leg_Femur_collision10" type="mesh" class="collision" name="Leg5_Femur_collision10" />
+                <geom mesh="Leg_Femur_collision11" type="mesh" class="collision" name="Leg5_Femur_collision11" />
+                <geom mesh="Leg_Femur_collision12" type="mesh" class="collision" name="Leg5_Femur_collision12" />
+                <geom mesh="Leg_Femur_collision13" type="mesh" class="collision" name="Leg5_Femur_collision13" />
+                <geom mesh="Leg_Femur_collision14" type="mesh" class="collision" name="Leg5_Femur_collision14" />
+                <geom mesh="Leg_Femur_collision15" type="mesh" class="collision" name="Leg5_Femur_collision15" />
+                <geom mesh="Leg_Femur_collision16" type="mesh" class="collision" name="Leg5_Femur_collision16" />
               </body>
-              <geom mesh="Motor_collision00" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision01" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision02" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision03" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision04" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision05" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision06" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision07" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision08" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision09" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision10" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision11" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision12" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision13" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision14" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision15" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision16" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision17" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision18" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision19" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision20" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision21" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision22" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision23" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision24" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision25" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision26" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision27" type="mesh" pos="0 0 0" class="collision" />
+              <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.04 0.013" pos="0.013 0 0" class="collision" mass="0.0" />
+              <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.028 0.011" pos="0.0 0 0" class="collision" mass="0.0" />
             </body>
             <body name="Leg5_End_Bearing_Holder" pos="-0.04244493236996915 -0.0031217780935925443 -0.04257533261304126" quat="4.32978028117747e-17 -0.707106781186548 4.32978028117747e-17 0.707106781186547">
               <geom name="Leg5_End_Bearing_Holder" type="mesh" mesh="Leg_End_Bearing_Holder" pos="0 0 0" quat="1 0 0 0" />
               <inertial mass="0.057169625310268736" pos="-0.04109062630262351 -0.0011084672781328617 -0.12254015277022094" fullinertia="5.196194176609675e-05 5.1347634596559825e-05 0.00010281021554763074 -9.985502905469634e-07 -1.0829253631082945e-08 -1.1711751146875011e-08" />
-              <geom mesh="Leg_End_Bearing_Holder_collision00" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Leg_End_Bearing_Holder_collision01" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Leg_End_Bearing_Holder_collision02" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Leg_End_Bearing_Holder_collision03" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Leg_End_Bearing_Holder_collision04" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Leg_End_Bearing_Holder_collision05" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Leg_End_Bearing_Holder_collision06" type="mesh" pos="0 0 0" class="collision" />
             </body>
           </body>
-          <geom mesh="Motor_collision00" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision01" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision02" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision03" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision04" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision05" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision06" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision07" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision08" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision09" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision10" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision11" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision12" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision13" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision14" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision15" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision16" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision17" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision18" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision19" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision20" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision21" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision22" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision23" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision24" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision25" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision26" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision27" type="mesh" pos="0 0 0" class="collision" />
+          <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.04 0.013" pos="0.013 0 0" class="collision" mass="0.0" />
+          <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.028 0.011" pos="0.0 0 0" class="collision" mass="0.0" />
         </body>
-        <geom mesh="Leg_Body_Bracket_collision00" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision01" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision02" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision03" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision04" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision05" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision06" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision07" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision08" type="mesh" pos="0 0 0" class="collision" />
+        <geom mesh="Leg_Body_Bracket_collision00" type="mesh" class="collision" name="Leg5_Body_Bracket_collision00" />
+        <geom mesh="Leg_Body_Bracket_collision01" type="mesh" class="collision" name="Leg5_Body_Bracket_collision01" />
+        <geom mesh="Leg_Body_Bracket_collision02" type="mesh" class="collision" name="Leg5_Body_Bracket_collision02" />
+        <geom mesh="Leg_Body_Bracket_collision03" type="mesh" class="collision" name="Leg5_Body_Bracket_collision03" />
+        <geom mesh="Leg_Body_Bracket_collision04" type="mesh" class="collision" name="Leg5_Body_Bracket_collision04" />
+        <geom mesh="Leg_Body_Bracket_collision05" type="mesh" class="collision" name="Leg5_Body_Bracket_collision05" />
       </body>
       <body name="Leg6_Body_Bracket" pos="0.22752101275220393 -0.1700161234160153 -0.028621778093592735" quat="0.5 -0.5 -0.5 0.5">
         <geom name="Leg6_Body_Bracket" type="mesh" mesh="Leg_Body_Bracket" pos="0 0 0" quat="1 0 0 0" />
@@ -991,21 +558,21 @@
                   <body name="Leg6_Tibia_Foot" pos="-2.0872192862952944e-15 6.572520305780927e-16 -3.907985046680551e-16" quat="1 2.33146835171283e-15 2.64218446825805e-17 9.86076667850834e-17">
                     <geom name="Leg6_Tibia_Foot" type="mesh" mesh="Leg_Tibia_Foot" pos="0 0 0" quat="1 0 0 0" />
                     <inertial mass="0.008914076725409616" pos="0.040000000000002575 -0.12297984604109304 0.1996927766516511" fullinertia="1.582378595381454e-07 2.0579120245592714e-07 1.6638449849370405e-07 -5.727760325942112e-20 -2.462993389876311e-19 3.413978377808319e-08" />
-                    <geom mesh="Leg_Tibia_Foot_collision00" type="mesh" pos="0 0 0" class="collision" />
+                    <geom mesh="Leg_Tibia_Foot_collision00" type="mesh" class="collision" name="Leg6_Tibia_Foot_collision00" />
                   </body>
                   <body name="Leg6_Tibia_BadTouch" pos="-3.406004253981187e-05 -0.008928296405293334 0.15038254739440313" quat="0.991444861373811 -0.130526192220049 -6.44402204658437e-17 1.81758370936162e-16">
                     <geom name="Leg6_Tibia_BadTouch" type="mesh" mesh="Leg_Tibia_BadTouch" pos="0 0 0" quat="1 0 0 0" />
                     <inertial mass="0.0005883837658738169" pos="0.04003406004254025 -0.11221456645803142 0.03113413156039279" fullinertia="1.270719960363102e-08 5.112584032344841e-10 1.2588197044386052e-08 5.6021115792485895e-22 -3.8116482626443545e-21 -6.704321676090565e-10" />
-                    <geom mesh="Leg_Tibia_BadTouch_collision00" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_BadTouch_collision01" type="mesh" pos="0 0 0" class="collision" />
+                    <geom mesh="Leg_Tibia_BadTouch_collision00" type="mesh" class="collision" name="Leg6_Tibia_BadTouch_collision00" />
+                    <geom mesh="Leg_Tibia_BadTouch_collision01" type="mesh" class="collision" name="Leg6_Tibia_BadTouch_collision01" />
                   </body>
-                  <geom mesh="Leg_Tibia_Leg_collision00" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Leg_Tibia_Leg_collision01" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Leg_Tibia_Leg_collision02" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Leg_Tibia_Leg_collision03" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Leg_Tibia_Leg_collision04" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Leg_Tibia_Leg_collision05" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Leg_Tibia_Leg_collision06" type="mesh" pos="0 0 0" class="collision" />
+                  <geom mesh="Leg_Tibia_Leg_collision00" type="mesh" class="collision" name="Leg6_Tibia_Leg_collision00" />
+                  <geom mesh="Leg_Tibia_Leg_collision01" type="mesh" class="collision" name="Leg6_Tibia_Leg_collision01" />
+                  <geom mesh="Leg_Tibia_Leg_collision02" type="mesh" class="collision" name="Leg6_Tibia_Leg_collision02" />
+                  <geom mesh="Leg_Tibia_Leg_collision03" type="mesh" class="collision" name="Leg6_Tibia_Leg_collision03" />
+                  <geom mesh="Leg_Tibia_Leg_collision04" type="mesh" class="collision" name="Leg6_Tibia_Leg_collision04" />
+                  <geom mesh="Leg_Tibia_Leg_collision05" type="mesh" class="collision" name="Leg6_Tibia_Leg_collision05" />
+                  <geom mesh="Leg_Tibia_Leg_collision06" type="mesh" class="collision" name="Leg6_Tibia_Leg_collision06" />
                 </body>
                 <body name="Leg6_Knee_actuator_assembly_Motor" pos="0.07650000000000291 0.0 -1.4210854715202004e-16" quat="7.30109599700188e-16 5.19322820628652e-17 -0.0410037387439454 0.999158993058171">
                   <geom name="Leg6_Knee_actuator_assembly_Motor" type="mesh" mesh="Motor" pos="0 0 0" quat="1 0 0 0" />
@@ -1018,124 +585,44 @@
                     <geom name="Leg6_KneeMotorPulley" type="mesh" mesh="Leg_KneeMotorPulley" pos="0 0 0" quat="1 0 0 0" />
                     <inertial mass="0.08135375942547957" pos="0.00540570472678227 0.019714907448619007 0.03304157594370373" fullinertia="1.2462648308957812e-05 7.261200035422024e-06 7.261200035850967e-06 -2.416335134431386e-18 -4.297574347130965e-18 -2.675823667188434e-16" />
                   </body>
-                  <geom mesh="Motor_collision00" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision01" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision02" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision03" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision04" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision05" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision06" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision07" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision08" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision09" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision10" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision11" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision12" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision13" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision14" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision15" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision16" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision17" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision18" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision19" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision20" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision21" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision22" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision23" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision24" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision25" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision26" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision27" type="mesh" pos="0 0 0" class="collision" />
+                  <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.04 0.013" pos="0.013 0 0" class="collision" mass="0.0" />
+                  <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.028 0.011" pos="0.0 0 0" class="collision" mass="0.0" />
                 </body>
-                <geom mesh="Leg_Femur_collision00" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision01" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision02" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision03" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision04" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision05" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision06" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision07" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision08" type="mesh" pos="0 0 0" class="collision" />
+                <geom mesh="Leg_Femur_collision00" type="mesh" class="collision" name="Leg6_Femur_collision00" />
+                <geom mesh="Leg_Femur_collision01" type="mesh" class="collision" name="Leg6_Femur_collision01" />
+                <geom mesh="Leg_Femur_collision02" type="mesh" class="collision" name="Leg6_Femur_collision02" />
+                <geom mesh="Leg_Femur_collision03" type="mesh" class="collision" name="Leg6_Femur_collision03" />
+                <geom mesh="Leg_Femur_collision04" type="mesh" class="collision" name="Leg6_Femur_collision04" />
+                <geom mesh="Leg_Femur_collision05" type="mesh" class="collision" name="Leg6_Femur_collision05" />
+                <geom mesh="Leg_Femur_collision06" type="mesh" class="collision" name="Leg6_Femur_collision06" />
+                <geom mesh="Leg_Femur_collision07" type="mesh" class="collision" name="Leg6_Femur_collision07" />
+                <geom mesh="Leg_Femur_collision08" type="mesh" class="collision" name="Leg6_Femur_collision08" />
+                <geom mesh="Leg_Femur_collision09" type="mesh" class="collision" name="Leg6_Femur_collision09" />
+                <geom mesh="Leg_Femur_collision10" type="mesh" class="collision" name="Leg6_Femur_collision10" />
+                <geom mesh="Leg_Femur_collision11" type="mesh" class="collision" name="Leg6_Femur_collision11" />
+                <geom mesh="Leg_Femur_collision12" type="mesh" class="collision" name="Leg6_Femur_collision12" />
+                <geom mesh="Leg_Femur_collision13" type="mesh" class="collision" name="Leg6_Femur_collision13" />
+                <geom mesh="Leg_Femur_collision14" type="mesh" class="collision" name="Leg6_Femur_collision14" />
+                <geom mesh="Leg_Femur_collision15" type="mesh" class="collision" name="Leg6_Femur_collision15" />
+                <geom mesh="Leg_Femur_collision16" type="mesh" class="collision" name="Leg6_Femur_collision16" />
               </body>
-              <geom mesh="Motor_collision00" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision01" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision02" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision03" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision04" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision05" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision06" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision07" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision08" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision09" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision10" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision11" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision12" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision13" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision14" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision15" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision16" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision17" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision18" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision19" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision20" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision21" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision22" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision23" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision24" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision25" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision26" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision27" type="mesh" pos="0 0 0" class="collision" />
+              <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.04 0.013" pos="0.013 0 0" class="collision" mass="0.0" />
+              <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.028 0.011" pos="0.0 0 0" class="collision" mass="0.0" />
             </body>
             <body name="Leg6_End_Bearing_Holder" pos="-0.042444932369968866 -0.003121778093592407 -0.04257533261304104" quat="2.00307048680152e-16 -0.707106781186548 2.00307048680152e-16 0.707106781186547">
               <geom name="Leg6_End_Bearing_Holder" type="mesh" mesh="Leg_End_Bearing_Holder" pos="0 0 0" quat="1 0 0 0" />
               <inertial mass="0.057169625310268736" pos="-0.04109062630262359 -0.0011084672781328628 -0.12254015277022152" fullinertia="5.196194176609726e-05 5.1347634596556356e-05 0.0001028102155476356 -9.98550290546947e-07 -1.0829253632088795e-08 -1.1711751146887242e-08" />
-              <geom mesh="Leg_End_Bearing_Holder_collision00" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Leg_End_Bearing_Holder_collision01" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Leg_End_Bearing_Holder_collision02" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Leg_End_Bearing_Holder_collision03" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Leg_End_Bearing_Holder_collision04" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Leg_End_Bearing_Holder_collision05" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Leg_End_Bearing_Holder_collision06" type="mesh" pos="0 0 0" class="collision" />
             </body>
           </body>
-          <geom mesh="Motor_collision00" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision01" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision02" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision03" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision04" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision05" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision06" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision07" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision08" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision09" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision10" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision11" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision12" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision13" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision14" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision15" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision16" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision17" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision18" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision19" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision20" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision21" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision22" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision23" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision24" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision25" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision26" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision27" type="mesh" pos="0 0 0" class="collision" />
+          <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.04 0.013" pos="0.013 0 0" class="collision" mass="0.0" />
+          <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.028 0.011" pos="0.0 0 0" class="collision" mass="0.0" />
         </body>
-        <geom mesh="Leg_Body_Bracket_collision00" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision01" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision02" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision03" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision04" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision05" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision06" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision07" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision08" type="mesh" pos="0 0 0" class="collision" />
+        <geom mesh="Leg_Body_Bracket_collision00" type="mesh" class="collision" name="Leg6_Body_Bracket_collision00" />
+        <geom mesh="Leg_Body_Bracket_collision01" type="mesh" class="collision" name="Leg6_Body_Bracket_collision01" />
+        <geom mesh="Leg_Body_Bracket_collision02" type="mesh" class="collision" name="Leg6_Body_Bracket_collision02" />
+        <geom mesh="Leg_Body_Bracket_collision03" type="mesh" class="collision" name="Leg6_Body_Bracket_collision03" />
+        <geom mesh="Leg_Body_Bracket_collision04" type="mesh" class="collision" name="Leg6_Body_Bracket_collision04" />
+        <geom mesh="Leg_Body_Bracket_collision05" type="mesh" class="collision" name="Leg6_Body_Bracket_collision05" />
       </body>
       <body name="Leg7_Body_Bracket" pos="0.08992101275220396 -0.1700161234160153 -0.028621778093592735" quat="0.5 -0.5 -0.5 0.5">
         <geom name="Leg7_Body_Bracket" type="mesh" mesh="Leg_Body_Bracket" pos="0 0 0" quat="1 0 0 0" />
@@ -1161,21 +648,21 @@
                   <body name="Leg7_Tibia_Foot" pos="6.217248937900877e-16 3.327893516313907e-16 -5.329070518200751e-16" quat="1 1.47104550762833e-15 -8.2766093349283e-17 -8.09001470300962e-17">
                     <geom name="Leg7_Tibia_Foot" type="mesh" mesh="Leg_Tibia_Foot" pos="0 0 0" quat="1 0 0 0" />
                     <inertial mass="0.008914076725409616" pos="0.04000000000000261 -0.1229798460410931 0.19969277665165114" fullinertia="1.582378595378381e-07 2.0579120245601407e-07 1.6638449849351792e-07 -4.761910213186719e-20 -1.5726801686302346e-19 3.413978377811203e-08" />
-                    <geom mesh="Leg_Tibia_Foot_collision00" type="mesh" pos="0 0 0" class="collision" />
+                    <geom mesh="Leg_Tibia_Foot_collision00" type="mesh" class="collision" name="Leg7_Tibia_Foot_collision00" />
                   </body>
                   <body name="Leg7_Tibia_BadTouch" pos="-3.406004253692529e-05 -0.008928296405293317 0.15038254739440382" quat="0.991444861373811 -0.13052619222005 1.0554395427687e-16 -6.11835193591808e-17">
                     <geom name="Leg7_Tibia_BadTouch" type="mesh" mesh="Leg_Tibia_BadTouch" pos="0 0 0" quat="1 0 0 0" />
                     <inertial mass="0.0005883837658738169" pos="0.040034060042540204 -0.11221456645803136 0.031134131560392804" fullinertia="1.270719960364939e-08 5.112584032310978e-10 1.2588197044377843e-08 2.0016977012226952e-21 -2.0356914874930086e-21 -6.704321676020788e-10" />
-                    <geom mesh="Leg_Tibia_BadTouch_collision00" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_BadTouch_collision01" type="mesh" pos="0 0 0" class="collision" />
+                    <geom mesh="Leg_Tibia_BadTouch_collision00" type="mesh" class="collision" name="Leg7_Tibia_BadTouch_collision00" />
+                    <geom mesh="Leg_Tibia_BadTouch_collision01" type="mesh" class="collision" name="Leg7_Tibia_BadTouch_collision01" />
                   </body>
-                  <geom mesh="Leg_Tibia_Leg_collision00" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Leg_Tibia_Leg_collision01" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Leg_Tibia_Leg_collision02" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Leg_Tibia_Leg_collision03" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Leg_Tibia_Leg_collision04" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Leg_Tibia_Leg_collision05" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Leg_Tibia_Leg_collision06" type="mesh" pos="0 0 0" class="collision" />
+                  <geom mesh="Leg_Tibia_Leg_collision00" type="mesh" class="collision" name="Leg7_Tibia_Leg_collision00" />
+                  <geom mesh="Leg_Tibia_Leg_collision01" type="mesh" class="collision" name="Leg7_Tibia_Leg_collision01" />
+                  <geom mesh="Leg_Tibia_Leg_collision02" type="mesh" class="collision" name="Leg7_Tibia_Leg_collision02" />
+                  <geom mesh="Leg_Tibia_Leg_collision03" type="mesh" class="collision" name="Leg7_Tibia_Leg_collision03" />
+                  <geom mesh="Leg_Tibia_Leg_collision04" type="mesh" class="collision" name="Leg7_Tibia_Leg_collision04" />
+                  <geom mesh="Leg_Tibia_Leg_collision05" type="mesh" class="collision" name="Leg7_Tibia_Leg_collision05" />
+                  <geom mesh="Leg_Tibia_Leg_collision06" type="mesh" class="collision" name="Leg7_Tibia_Leg_collision06" />
                 </body>
                 <body name="Leg7_Knee_actuator_assembly_Motor" pos="0.07650000000000373 -6.196432256189155e-17 4.884981308350689e-17" quat="7.31578238306224e-16 8.77193472360277e-17 -0.041003738743945 0.999158993058171">
                   <geom name="Leg7_Knee_actuator_assembly_Motor" type="mesh" mesh="Motor" pos="0 0 0" quat="1 0 0 0" />
@@ -1188,124 +675,44 @@
                     <geom name="Leg7_KneeMotorPulley" type="mesh" mesh="Leg_KneeMotorPulley" pos="0 0 0" quat="1 0 0 0" />
                     <inertial mass="0.08135375942547957" pos="0.0054057047267822705 0.01971490744861898 0.03304157594370369" fullinertia="1.2462648308958238e-05 7.261200035421726e-06 7.261200035850174e-06 -2.5474726340420826e-18 -4.2843186526051905e-18 -2.672956460661978e-16" />
                   </body>
-                  <geom mesh="Motor_collision00" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision01" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision02" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision03" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision04" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision05" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision06" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision07" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision08" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision09" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision10" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision11" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision12" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision13" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision14" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision15" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision16" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision17" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision18" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision19" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision20" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision21" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision22" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision23" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision24" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision25" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision26" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision27" type="mesh" pos="0 0 0" class="collision" />
+                  <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.04 0.013" pos="0.013 0 0" class="collision" mass="0.0" />
+                  <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.028 0.011" pos="0.0 0 0" class="collision" mass="0.0" />
                 </body>
-                <geom mesh="Leg_Femur_collision00" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision01" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision02" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision03" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision04" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision05" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision06" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision07" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision08" type="mesh" pos="0 0 0" class="collision" />
+                <geom mesh="Leg_Femur_collision00" type="mesh" class="collision" name="Leg7_Femur_collision00" />
+                <geom mesh="Leg_Femur_collision01" type="mesh" class="collision" name="Leg7_Femur_collision01" />
+                <geom mesh="Leg_Femur_collision02" type="mesh" class="collision" name="Leg7_Femur_collision02" />
+                <geom mesh="Leg_Femur_collision03" type="mesh" class="collision" name="Leg7_Femur_collision03" />
+                <geom mesh="Leg_Femur_collision04" type="mesh" class="collision" name="Leg7_Femur_collision04" />
+                <geom mesh="Leg_Femur_collision05" type="mesh" class="collision" name="Leg7_Femur_collision05" />
+                <geom mesh="Leg_Femur_collision06" type="mesh" class="collision" name="Leg7_Femur_collision06" />
+                <geom mesh="Leg_Femur_collision07" type="mesh" class="collision" name="Leg7_Femur_collision07" />
+                <geom mesh="Leg_Femur_collision08" type="mesh" class="collision" name="Leg7_Femur_collision08" />
+                <geom mesh="Leg_Femur_collision09" type="mesh" class="collision" name="Leg7_Femur_collision09" />
+                <geom mesh="Leg_Femur_collision10" type="mesh" class="collision" name="Leg7_Femur_collision10" />
+                <geom mesh="Leg_Femur_collision11" type="mesh" class="collision" name="Leg7_Femur_collision11" />
+                <geom mesh="Leg_Femur_collision12" type="mesh" class="collision" name="Leg7_Femur_collision12" />
+                <geom mesh="Leg_Femur_collision13" type="mesh" class="collision" name="Leg7_Femur_collision13" />
+                <geom mesh="Leg_Femur_collision14" type="mesh" class="collision" name="Leg7_Femur_collision14" />
+                <geom mesh="Leg_Femur_collision15" type="mesh" class="collision" name="Leg7_Femur_collision15" />
+                <geom mesh="Leg_Femur_collision16" type="mesh" class="collision" name="Leg7_Femur_collision16" />
               </body>
-              <geom mesh="Motor_collision00" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision01" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision02" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision03" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision04" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision05" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision06" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision07" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision08" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision09" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision10" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision11" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision12" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision13" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision14" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision15" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision16" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision17" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision18" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision19" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision20" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision21" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision22" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision23" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision24" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision25" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision26" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision27" type="mesh" pos="0 0 0" class="collision" />
+              <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.04 0.013" pos="0.013 0 0" class="collision" mass="0.0" />
+              <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.028 0.011" pos="0.0 0 0" class="collision" mass="0.0" />
             </body>
             <body name="Leg7_End_Bearing_Holder" pos="-0.0424449323699694 -0.0031217780935925443 -0.04257533261304136" quat="4.32978028117747e-17 0.707106781186548 4.32978028117747e-17 -0.707106781186547">
               <geom name="Leg7_End_Bearing_Holder" type="mesh" mesh="Leg_End_Bearing_Holder" pos="0 0 0" quat="1 0 0 0" />
               <inertial mass="0.057169625310268736" pos="-0.041090626302623424 -0.0011084672781328639 -0.12254015277022073" fullinertia="5.196194176609669e-05 5.134763459656156e-05 0.00010281021554763172 -9.985502905469041e-07 -1.0829253630415274e-08 -1.1711751146851109e-08" />
-              <geom mesh="Leg_End_Bearing_Holder_collision00" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Leg_End_Bearing_Holder_collision01" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Leg_End_Bearing_Holder_collision02" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Leg_End_Bearing_Holder_collision03" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Leg_End_Bearing_Holder_collision04" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Leg_End_Bearing_Holder_collision05" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Leg_End_Bearing_Holder_collision06" type="mesh" pos="0 0 0" class="collision" />
             </body>
           </body>
-          <geom mesh="Motor_collision00" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision01" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision02" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision03" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision04" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision05" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision06" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision07" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision08" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision09" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision10" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision11" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision12" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision13" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision14" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision15" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision16" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision17" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision18" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision19" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision20" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision21" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision22" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision23" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision24" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision25" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision26" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision27" type="mesh" pos="0 0 0" class="collision" />
+          <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.04 0.013" pos="0.013 0 0" class="collision" mass="0.0" />
+          <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.028 0.011" pos="0.0 0 0" class="collision" mass="0.0" />
         </body>
-        <geom mesh="Leg_Body_Bracket_collision00" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision01" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision02" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision03" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision04" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision05" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision06" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision07" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision08" type="mesh" pos="0 0 0" class="collision" />
+        <geom mesh="Leg_Body_Bracket_collision00" type="mesh" class="collision" name="Leg7_Body_Bracket_collision00" />
+        <geom mesh="Leg_Body_Bracket_collision01" type="mesh" class="collision" name="Leg7_Body_Bracket_collision01" />
+        <geom mesh="Leg_Body_Bracket_collision02" type="mesh" class="collision" name="Leg7_Body_Bracket_collision02" />
+        <geom mesh="Leg_Body_Bracket_collision03" type="mesh" class="collision" name="Leg7_Body_Bracket_collision03" />
+        <geom mesh="Leg_Body_Bracket_collision04" type="mesh" class="collision" name="Leg7_Body_Bracket_collision04" />
+        <geom mesh="Leg_Body_Bracket_collision05" type="mesh" class="collision" name="Leg7_Body_Bracket_collision05" />
       </body>
       <body name="Leg8_Body_Bracket" pos="-0.04767898724779603 -0.10561612341601528 -0.028621778093592735" quat="0.5 -0.5 -0.5 0.5">
         <geom name="Leg8_Body_Bracket" type="mesh" mesh="Leg_Body_Bracket" pos="0 0 0" quat="1 0 0 0" />
@@ -1331,21 +738,21 @@
                   <body name="Leg8_Tibia_Foot" pos="1.1635137298071641e-15 3.419486915845482e-16 -8.260059303211165e-16" quat="1 1.19348975147204e-15 -4.46802762171096e-18 -1.66749060938465e-17">
                     <geom name="Leg8_Tibia_Foot" type="mesh" mesh="Leg_Tibia_Foot" pos="0 0 0" quat="1 0 0 0" />
                     <inertial mass="0.008914076725409616" pos="0.040000000000002554 -0.12297984604109297 0.19969277665165097" fullinertia="1.5823785953826724e-07 2.057912024558963e-07 1.6638449849359916e-07 -3.602941612157937e-20 -1.8683795146791866e-19 3.4139783778093505e-08" />
-                    <geom mesh="Leg_Tibia_Foot_collision00" type="mesh" pos="0 0 0" class="collision" />
+                    <geom mesh="Leg_Tibia_Foot_collision00" type="mesh" class="collision" name="Leg8_Tibia_Foot_collision00" />
                   </body>
                   <body name="Leg8_Tibia_BadTouch" pos="-3.406004253645234e-05 -0.008928296405293117 0.15038254739440396" quat="0.991444861373811 -0.13052619222005 -3.47777411771044e-17 8.28660101776672e-18">
                     <geom name="Leg8_Tibia_BadTouch" type="mesh" mesh="Leg_Tibia_BadTouch" pos="0 0 0" quat="1 0 0 0" />
                     <inertial mass="0.0005883837658738169" pos="0.04003406004254018 -0.11221456645803134 0.031134131560392825" fullinertia="1.2707199603652777e-08 5.112584032294052e-10 1.2588197044384619e-08 2.9692713632778963e-21 -2.968374118859016e-21 -6.704321676033874e-10" />
-                    <geom mesh="Leg_Tibia_BadTouch_collision00" type="mesh" pos="0 0 0" class="collision" />
-                    <geom mesh="Leg_Tibia_BadTouch_collision01" type="mesh" pos="0 0 0" class="collision" />
+                    <geom mesh="Leg_Tibia_BadTouch_collision00" type="mesh" class="collision" name="Leg8_Tibia_BadTouch_collision00" />
+                    <geom mesh="Leg_Tibia_BadTouch_collision01" type="mesh" class="collision" name="Leg8_Tibia_BadTouch_collision01" />
                   </body>
-                  <geom mesh="Leg_Tibia_Leg_collision00" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Leg_Tibia_Leg_collision01" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Leg_Tibia_Leg_collision02" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Leg_Tibia_Leg_collision03" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Leg_Tibia_Leg_collision04" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Leg_Tibia_Leg_collision05" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Leg_Tibia_Leg_collision06" type="mesh" pos="0 0 0" class="collision" />
+                  <geom mesh="Leg_Tibia_Leg_collision00" type="mesh" class="collision" name="Leg8_Tibia_Leg_collision00" />
+                  <geom mesh="Leg_Tibia_Leg_collision01" type="mesh" class="collision" name="Leg8_Tibia_Leg_collision01" />
+                  <geom mesh="Leg_Tibia_Leg_collision02" type="mesh" class="collision" name="Leg8_Tibia_Leg_collision02" />
+                  <geom mesh="Leg_Tibia_Leg_collision03" type="mesh" class="collision" name="Leg8_Tibia_Leg_collision03" />
+                  <geom mesh="Leg_Tibia_Leg_collision04" type="mesh" class="collision" name="Leg8_Tibia_Leg_collision04" />
+                  <geom mesh="Leg_Tibia_Leg_collision05" type="mesh" class="collision" name="Leg8_Tibia_Leg_collision05" />
+                  <geom mesh="Leg_Tibia_Leg_collision06" type="mesh" class="collision" name="Leg8_Tibia_Leg_collision06" />
                 </body>
                 <body name="Leg8_Knee_actuator_assembly_Motor" pos="0.0765000000000037 -1.0658141036401502e-16 0.0" quat="7.28730331460258e-16 1.83229501340949e-17 -0.041003738743945 0.999158993058171">
                   <geom name="Leg8_Knee_actuator_assembly_Motor" type="mesh" mesh="Motor" pos="0 0 0" quat="1 0 0 0" />
@@ -1358,131 +765,55 @@
                     <geom name="Leg8_KneeMotorPulley" type="mesh" mesh="Leg_KneeMotorPulley" pos="0 0 0" quat="1 0 0 0" />
                     <inertial mass="0.08135375942547957" pos="0.005405704726782258 0.01971490744861893 0.03304157594370365" fullinertia="1.246264830895814e-05 7.2612000354215194e-06 7.261200035849963e-06 -2.7307425157242867e-18 -4.508992001567143e-18 -2.6706737068691276e-16" />
                   </body>
-                  <geom mesh="Motor_collision00" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision01" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision02" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision03" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision04" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision05" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision06" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision07" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision08" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision09" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision10" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision11" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision12" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision13" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision14" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision15" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision16" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision17" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision18" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision19" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision20" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision21" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision22" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision23" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision24" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision25" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision26" type="mesh" pos="0 0 0" class="collision" />
-                  <geom mesh="Motor_collision27" type="mesh" pos="0 0 0" class="collision" />
+                  <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.04 0.013" pos="0.013 0 0" class="collision" mass="0.0" />
+                  <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.028 0.011" pos="0.0 0 0" class="collision" mass="0.0" />
                 </body>
-                <geom mesh="Leg_Femur_collision00" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision01" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision02" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision03" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision04" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision05" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision06" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision07" type="mesh" pos="0 0 0" class="collision" />
-                <geom mesh="Leg_Femur_collision08" type="mesh" pos="0 0 0" class="collision" />
+                <geom mesh="Leg_Femur_collision00" type="mesh" class="collision" name="Leg8_Femur_collision00" />
+                <geom mesh="Leg_Femur_collision01" type="mesh" class="collision" name="Leg8_Femur_collision01" />
+                <geom mesh="Leg_Femur_collision02" type="mesh" class="collision" name="Leg8_Femur_collision02" />
+                <geom mesh="Leg_Femur_collision03" type="mesh" class="collision" name="Leg8_Femur_collision03" />
+                <geom mesh="Leg_Femur_collision04" type="mesh" class="collision" name="Leg8_Femur_collision04" />
+                <geom mesh="Leg_Femur_collision05" type="mesh" class="collision" name="Leg8_Femur_collision05" />
+                <geom mesh="Leg_Femur_collision06" type="mesh" class="collision" name="Leg8_Femur_collision06" />
+                <geom mesh="Leg_Femur_collision07" type="mesh" class="collision" name="Leg8_Femur_collision07" />
+                <geom mesh="Leg_Femur_collision08" type="mesh" class="collision" name="Leg8_Femur_collision08" />
+                <geom mesh="Leg_Femur_collision09" type="mesh" class="collision" name="Leg8_Femur_collision09" />
+                <geom mesh="Leg_Femur_collision10" type="mesh" class="collision" name="Leg8_Femur_collision10" />
+                <geom mesh="Leg_Femur_collision11" type="mesh" class="collision" name="Leg8_Femur_collision11" />
+                <geom mesh="Leg_Femur_collision12" type="mesh" class="collision" name="Leg8_Femur_collision12" />
+                <geom mesh="Leg_Femur_collision13" type="mesh" class="collision" name="Leg8_Femur_collision13" />
+                <geom mesh="Leg_Femur_collision14" type="mesh" class="collision" name="Leg8_Femur_collision14" />
+                <geom mesh="Leg_Femur_collision15" type="mesh" class="collision" name="Leg8_Femur_collision15" />
+                <geom mesh="Leg_Femur_collision16" type="mesh" class="collision" name="Leg8_Femur_collision16" />
               </body>
-              <geom mesh="Motor_collision00" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision01" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision02" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision03" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision04" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision05" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision06" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision07" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision08" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision09" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision10" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision11" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision12" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision13" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision14" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision15" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision16" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision17" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision18" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision19" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision20" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision21" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision22" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision23" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision24" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision25" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision26" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Motor_collision27" type="mesh" pos="0 0 0" class="collision" />
+              <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.04 0.013" pos="0.013 0 0" class="collision" mass="0.0" />
+              <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.028 0.011" pos="0.0 0 0" class="collision" mass="0.0" />
             </body>
             <body name="Leg8_End_Bearing_Holder" pos="-0.042444932369969365 -0.0031217780935925443 -0.04257533261304133" quat="4.32978028117747e-17 0.707106781186548 4.32978028117747e-17 -0.707106781186547">
               <geom name="Leg8_End_Bearing_Holder" type="mesh" mesh="Leg_End_Bearing_Holder" pos="0 0 0" quat="1 0 0 0" />
               <inertial mass="0.057169625310268736" pos="-0.041090626302623424 -0.0011084672781328643 -0.12254015277022087" fullinertia="5.1961941766096815e-05 5.134763459656037e-05 0.00010281021554763237 -9.98550290546882e-07 -1.0829253631085128e-08 -1.1711751146874048e-08" />
-              <geom mesh="Leg_End_Bearing_Holder_collision00" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Leg_End_Bearing_Holder_collision01" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Leg_End_Bearing_Holder_collision02" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Leg_End_Bearing_Holder_collision03" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Leg_End_Bearing_Holder_collision04" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Leg_End_Bearing_Holder_collision05" type="mesh" pos="0 0 0" class="collision" />
-              <geom mesh="Leg_End_Bearing_Holder_collision06" type="mesh" pos="0 0 0" class="collision" />
             </body>
           </body>
-          <geom mesh="Motor_collision00" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision01" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision02" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision03" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision04" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision05" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision06" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision07" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision08" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision09" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision10" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision11" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision12" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision13" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision14" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision15" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision16" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision17" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision18" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision19" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision20" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision21" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision22" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision23" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision24" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision25" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision26" type="mesh" pos="0 0 0" class="collision" />
-          <geom mesh="Motor_collision27" type="mesh" pos="0 0 0" class="collision" />
+          <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.04 0.013" pos="0.013 0 0" class="collision" mass="0.0" />
+          <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.028 0.011" pos="0.0 0 0" class="collision" mass="0.0" />
         </body>
-        <geom mesh="Leg_Body_Bracket_collision00" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision01" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision02" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision03" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision04" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision05" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision06" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision07" type="mesh" pos="0 0 0" class="collision" />
-        <geom mesh="Leg_Body_Bracket_collision08" type="mesh" pos="0 0 0" class="collision" />
+        <geom mesh="Leg_Body_Bracket_collision00" type="mesh" class="collision" name="Leg8_Body_Bracket_collision00" />
+        <geom mesh="Leg_Body_Bracket_collision01" type="mesh" class="collision" name="Leg8_Body_Bracket_collision01" />
+        <geom mesh="Leg_Body_Bracket_collision02" type="mesh" class="collision" name="Leg8_Body_Bracket_collision02" />
+        <geom mesh="Leg_Body_Bracket_collision03" type="mesh" class="collision" name="Leg8_Body_Bracket_collision03" />
+        <geom mesh="Leg_Body_Bracket_collision04" type="mesh" class="collision" name="Leg8_Body_Bracket_collision04" />
+        <geom mesh="Leg_Body_Bracket_collision05" type="mesh" class="collision" name="Leg8_Body_Bracket_collision05" />
       </body>
-      <geom mesh="Body_collision00" type="mesh" pos="0 0 0" class="collision" />
-      <geom mesh="Body_collision01" type="mesh" pos="0 0 0" class="collision" />
-      <geom mesh="Body_collision02" type="mesh" pos="0 0 0" class="collision" />
-      <geom mesh="Body_collision03" type="mesh" pos="0 0 0" class="collision" />
-      <geom mesh="Body_collision04" type="mesh" pos="0 0 0" class="collision" />
-      <geom mesh="Body_collision05" type="mesh" pos="0 0 0" class="collision" />
+      <geom mesh="Body_collision00" type="mesh" class="collision" name="Body_collision00" />
+      <geom mesh="Body_collision01" type="mesh" class="collision" name="Body_collision01" />
+      <geom mesh="Body_collision02" type="mesh" class="collision" name="Body_collision02" />
+      <geom mesh="Body_collision03" type="mesh" class="collision" name="Body_collision03" />
+      <geom mesh="Body_collision04" type="mesh" class="collision" name="Body_collision04" />
+      <geom mesh="Body_collision05" type="mesh" class="collision" name="Body_collision05" />
+      <geom mesh="Body_collision06" type="mesh" class="collision" name="Body_collision06" />
+      <geom mesh="Body_collision07" type="mesh" class="collision" name="Body_collision07" />
+      <geom mesh="Body_collision08" type="mesh" class="collision" name="Body_collision08" />
+      <geom mesh="Body_collision09" type="mesh" class="collision" name="Body_collision09" />
     </body>
   </worldbody>
   <actuator>
