@@ -55,6 +55,7 @@ SKIP_COLLIDERS = [
 DEFAULT_COLLISION_THRESHOLD = 0.1
 COLLISION_THRESHOLDS = {
     "Leg_Tibia_Leg": 0.04,
+    "Leg_Femur": 0.05,
     "Leg_Body_Bracket": 0.2,
 }
 
