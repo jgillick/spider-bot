@@ -54,6 +54,10 @@
     <mesh name="Leg_Femur_collision10" file="meshes/mujoco/colliders/Leg_Femur/10.stl" />
     <mesh name="Leg_Femur_collision11" file="meshes/mujoco/colliders/Leg_Femur/11.stl" />
     <mesh name="Leg_Femur_collision12" file="meshes/mujoco/colliders/Leg_Femur/12.stl" />
+    <mesh name="Leg_Femur_collision13" file="meshes/mujoco/colliders/Leg_Femur/13.stl" />
+    <mesh name="Leg_Femur_collision14" file="meshes/mujoco/colliders/Leg_Femur/14.stl" />
+    <mesh name="Leg_Femur_collision15" file="meshes/mujoco/colliders/Leg_Femur/15.stl" />
+    <mesh name="Leg_Femur_collision16" file="meshes/mujoco/colliders/Leg_Femur/16.stl" />
     <mesh name="Leg_Body_Bracket_collision00" file="meshes/mujoco/colliders/Leg_Body_Bracket/00.stl" />
     <mesh name="Leg_Body_Bracket_collision01" file="meshes/mujoco/colliders/Leg_Body_Bracket/01.stl" />
     <mesh name="Leg_Body_Bracket_collision02" file="meshes/mujoco/colliders/Leg_Body_Bracket/02.stl" />
@@ -147,6 +151,10 @@
                 <geom mesh="Leg_Femur_collision10" type="mesh" class="collision" name="Leg1_Femur_collision10" />
                 <geom mesh="Leg_Femur_collision11" type="mesh" class="collision" name="Leg1_Femur_collision11" />
                 <geom mesh="Leg_Femur_collision12" type="mesh" class="collision" name="Leg1_Femur_collision12" />
+                <geom mesh="Leg_Femur_collision13" type="mesh" class="collision" name="Leg1_Femur_collision13" />
+                <geom mesh="Leg_Femur_collision14" type="mesh" class="collision" name="Leg1_Femur_collision14" />
+                <geom mesh="Leg_Femur_collision15" type="mesh" class="collision" name="Leg1_Femur_collision15" />
+                <geom mesh="Leg_Femur_collision16" type="mesh" class="collision" name="Leg1_Femur_collision16" />
               </body>
               <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.04 0.013" pos="0.013 0 0" class="collision" mass="0.0" />
               <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.028 0.011" pos="0.0 0 0" class="collision" mass="0.0" />
@@ -233,6 +241,10 @@
                 <geom mesh="Leg_Femur_collision10" type="mesh" class="collision" name="Leg2_Femur_collision10" />
                 <geom mesh="Leg_Femur_collision11" type="mesh" class="collision" name="Leg2_Femur_collision11" />
                 <geom mesh="Leg_Femur_collision12" type="mesh" class="collision" name="Leg2_Femur_collision12" />
+                <geom mesh="Leg_Femur_collision13" type="mesh" class="collision" name="Leg2_Femur_collision13" />
+                <geom mesh="Leg_Femur_collision14" type="mesh" class="collision" name="Leg2_Femur_collision14" />
+                <geom mesh="Leg_Femur_collision15" type="mesh" class="collision" name="Leg2_Femur_collision15" />
+                <geom mesh="Leg_Femur_collision16" type="mesh" class="collision" name="Leg2_Femur_collision16" />
               </body>
               <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.04 0.013" pos="0.013 0 0" class="collision" mass="0.0" />
               <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.028 0.011" pos="0.0 0 0" class="collision" mass="0.0" />
@@ -319,6 +331,10 @@
                 <geom mesh="Leg_Femur_collision10" type="mesh" class="collision" name="Leg3_Femur_collision10" />
                 <geom mesh="Leg_Femur_collision11" type="mesh" class="collision" name="Leg3_Femur_collision11" />
                 <geom mesh="Leg_Femur_collision12" type="mesh" class="collision" name="Leg3_Femur_collision12" />
+                <geom mesh="Leg_Femur_collision13" type="mesh" class="collision" name="Leg3_Femur_collision13" />
+                <geom mesh="Leg_Femur_collision14" type="mesh" class="collision" name="Leg3_Femur_collision14" />
+                <geom mesh="Leg_Femur_collision15" type="mesh" class="collision" name="Leg3_Femur_collision15" />
+                <geom mesh="Leg_Femur_collision16" type="mesh" class="collision" name="Leg3_Femur_collision16" />
               </body>
               <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.04 0.013" pos="0.013 0 0" class="collision" mass="0.0" />
               <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.028 0.011" pos="0.0 0 0" class="collision" mass="0.0" />
@@ -405,6 +421,10 @@
                 <geom mesh="Leg_Femur_collision10" type="mesh" class="collision" name="Leg4_Femur_collision10" />
                 <geom mesh="Leg_Femur_collision11" type="mesh" class="collision" name="Leg4_Femur_collision11" />
                 <geom mesh="Leg_Femur_collision12" type="mesh" class="collision" name="Leg4_Femur_collision12" />
+                <geom mesh="Leg_Femur_collision13" type="mesh" class="collision" name="Leg4_Femur_collision13" />
+                <geom mesh="Leg_Femur_collision14" type="mesh" class="collision" name="Leg4_Femur_collision14" />
+                <geom mesh="Leg_Femur_collision15" type="mesh" class="collision" name="Leg4_Femur_collision15" />
+                <geom mesh="Leg_Femur_collision16" type="mesh" class="collision" name="Leg4_Femur_collision16" />
               </body>
               <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.04 0.013" pos="0.013 0 0" class="collision" mass="0.0" />
               <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.028 0.011" pos="0.0 0 0" class="collision" mass="0.0" />
@@ -491,6 +511,10 @@
                 <geom mesh="Leg_Femur_collision10" type="mesh" class="collision" name="Leg5_Femur_collision10" />
                 <geom mesh="Leg_Femur_collision11" type="mesh" class="collision" name="Leg5_Femur_collision11" />
                 <geom mesh="Leg_Femur_collision12" type="mesh" class="collision" name="Leg5_Femur_collision12" />
+                <geom mesh="Leg_Femur_collision13" type="mesh" class="collision" name="Leg5_Femur_collision13" />
+                <geom mesh="Leg_Femur_collision14" type="mesh" class="collision" name="Leg5_Femur_collision14" />
+                <geom mesh="Leg_Femur_collision15" type="mesh" class="collision" name="Leg5_Femur_collision15" />
+                <geom mesh="Leg_Femur_collision16" type="mesh" class="collision" name="Leg5_Femur_collision16" />
               </body>
               <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.04 0.013" pos="0.013 0 0" class="collision" mass="0.0" />
               <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.028 0.011" pos="0.0 0 0" class="collision" mass="0.0" />
@@ -577,6 +601,10 @@
                 <geom mesh="Leg_Femur_collision10" type="mesh" class="collision" name="Leg6_Femur_collision10" />
                 <geom mesh="Leg_Femur_collision11" type="mesh" class="collision" name="Leg6_Femur_collision11" />
                 <geom mesh="Leg_Femur_collision12" type="mesh" class="collision" name="Leg6_Femur_collision12" />
+                <geom mesh="Leg_Femur_collision13" type="mesh" class="collision" name="Leg6_Femur_collision13" />
+                <geom mesh="Leg_Femur_collision14" type="mesh" class="collision" name="Leg6_Femur_collision14" />
+                <geom mesh="Leg_Femur_collision15" type="mesh" class="collision" name="Leg6_Femur_collision15" />
+                <geom mesh="Leg_Femur_collision16" type="mesh" class="collision" name="Leg6_Femur_collision16" />
               </body>
               <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.04 0.013" pos="0.013 0 0" class="collision" mass="0.0" />
               <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.028 0.011" pos="0.0 0 0" class="collision" mass="0.0" />
@@ -663,6 +691,10 @@
                 <geom mesh="Leg_Femur_collision10" type="mesh" class="collision" name="Leg7_Femur_collision10" />
                 <geom mesh="Leg_Femur_collision11" type="mesh" class="collision" name="Leg7_Femur_collision11" />
                 <geom mesh="Leg_Femur_collision12" type="mesh" class="collision" name="Leg7_Femur_collision12" />
+                <geom mesh="Leg_Femur_collision13" type="mesh" class="collision" name="Leg7_Femur_collision13" />
+                <geom mesh="Leg_Femur_collision14" type="mesh" class="collision" name="Leg7_Femur_collision14" />
+                <geom mesh="Leg_Femur_collision15" type="mesh" class="collision" name="Leg7_Femur_collision15" />
+                <geom mesh="Leg_Femur_collision16" type="mesh" class="collision" name="Leg7_Femur_collision16" />
               </body>
               <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.04 0.013" pos="0.013 0 0" class="collision" mass="0.0" />
               <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.028 0.011" pos="0.0 0 0" class="collision" mass="0.0" />
@@ -749,6 +781,10 @@
                 <geom mesh="Leg_Femur_collision10" type="mesh" class="collision" name="Leg8_Femur_collision10" />
                 <geom mesh="Leg_Femur_collision11" type="mesh" class="collision" name="Leg8_Femur_collision11" />
                 <geom mesh="Leg_Femur_collision12" type="mesh" class="collision" name="Leg8_Femur_collision12" />
+                <geom mesh="Leg_Femur_collision13" type="mesh" class="collision" name="Leg8_Femur_collision13" />
+                <geom mesh="Leg_Femur_collision14" type="mesh" class="collision" name="Leg8_Femur_collision14" />
+                <geom mesh="Leg_Femur_collision15" type="mesh" class="collision" name="Leg8_Femur_collision15" />
+                <geom mesh="Leg_Femur_collision16" type="mesh" class="collision" name="Leg8_Femur_collision16" />
               </body>
               <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.04 0.013" pos="0.013 0 0" class="collision" mass="0.0" />
               <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.028 0.011" pos="0.0 0 0" class="collision" mass="0.0" />
