@@ -5,8 +5,7 @@ EXPORT_DIR="./export"
 
 echo "Processing XML..."
 
-# Create two versions of the XML: one with the ground plane and one without
-python update_mujoco.py --imu SpiderBotNoEnv.xml
+# Mujoco
 python update_mujoco.py --ground --light --head --imu SpiderBot.xml
 
 # URDF
