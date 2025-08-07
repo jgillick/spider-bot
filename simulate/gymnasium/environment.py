@@ -7,8 +7,8 @@ import numpy as np
 from gymnasium import spaces
 from gymnasium.envs.mujoco.mujoco_env import MujocoEnv
 
-FEMUR_INIT_POSITION = 1.0
-TIBIA_INIT_POSITION = 1.25
+FEMUR_INIT_POSITION = 0.5
+TIBIA_INIT_POSITION = -0.5
 
 INITIAL_JOINT_POSITIONS = (
     -1.0,  # Leg 1 - Hip
@@ -184,7 +184,6 @@ class SpiderRobotEnv(MujocoEnv):
         self.episode_length = 0
         self.total_distance = 0.0
         self.initial_x_position = self.data.qpos[0]
-        self.target_height = self.data.qpos[2]
         self.last_xy_body_position = self.get_body_com("Body")[:2].copy()
         self.previous_action = np.zeros(24)  # 24 actuators
         self.feet_contact_count = 0
@@ -238,95 +237,42 @@ class SpiderRobotEnv(MujocoEnv):
 
     def _calculate_rewards(self, action, torques):
         """Compute reward based on curriculum stage."""
-        foot_contacts = self._get_foot_contacts()
 
-        # Forward velocity reward (moderate scale)
-        # Base reward: -4 to +4
-        forward_velocity = self._get_forward_velocity()
-        forward_reward = 2.0 * forward_velocity
-
-        # Progress reward
-        # Encourages movement (distance) in any direction
-        # Base reward: 0 - ~0.5+
-        progress_reward = 0.0
-        if self.last_xy_body_position is not None:
-            current_pos = self.get_body_com("Body")[:2]
-            progress = np.linalg.norm(current_pos - self.last_xy_body_position)
-            progress_reward = 2.5 * progress
-
-        # Height reward (critical for staying upright)
-        # Base reward: 0 - 3
         height = self.data.qpos[2]
         height_error = abs(height - self.target_height)
-        height_reward = 1.5 * (1.0 - min(float(height_error), 0.1) / 0.1)
+        height_reward = 20.0 * np.exp(-100 * height_error**2)
 
-        # Upright reward (critical for stability)
-        # Base reward: 0 - 2
-        body_quat = self.data.xquat[1]
-        w, x, y, z = body_quat
-        up_vector = np.array(
-            [2 * (x * z - w * y), 2 * (y * z + w * x), 1 - 2 * (x * x + y * y)]
-        )
-        upright_error = np.linalg.norm(up_vector - np.array([0, 0, 1]))
-        upright_reward = 1.0 * (1.0 - min(float(upright_error), 0.5) / 0.5)
+        # Bonus for maintaining target height
+        height_bonus = 10.0 if height_error < 0.01 else 0.0
 
-        # Penalty for large action changes
-        # (base: 0 - 96, total: -1.92 - 0)
-        if self.previous_action is not None:
-            action_change = np.sum((action - self.previous_action) ** 2)
-            action_smoothness_penalty = -0.02 * action_change
-        else:
-            action_smoothness_penalty = 0.0
+        orientation = self.data.xquat[1]
+        upright_error = 1.0 - orientation[3]
+        upright_reward = 15.0 * np.exp(-20 * upright_error**2)
 
-        # Penalty for the robot bodies touching the ground or bodies colliding
-        # Moderate penalty to prevent body ground contact
-        # Base reward: -32 - 0
-        contact_penalty = -0.25 * self._get_contact_penalty(foot_contacts)
+        # Gyro sensor measurements for stability
+        gyro_stability = self._get_gyro_stability()
 
-        # Downward velocity penalty with cap
-        # (base: 0 - 2.0, total: -2.0 - 0)
-        z_velocity = self.data.qvel[2]
-        downward_velocity = max(0, -z_velocity)
-        downward_velocity = min(downward_velocity, 2.0)  # Cap at 2.0 m/s
-        downward_velocity_penalty = -1.0 * downward_velocity
+        # Contact penalties for non-foot parts
+        foot_contacts = self._get_foot_contacts()
+        contact_penalty = self._get_contact_penalty(foot_contacts)
 
-        # Simplified foot air time reward
-        # Base reward: -1.25 - 1.25
-        foot_air_time_reward = self._get_simplified_foot_reward(foot_contacts) * 0.125
+        joint_velocities = self.data.qvel[6:30]
+        joint_movement_penalty = -0.5 * np.sum(np.abs(joint_velocities))
 
-        # Survival bonus to encourage staying upright
-        survival_reward = 0.5
+        body_stillness = 8.0 * np.exp(-10 * np.sum(self.data.qvel[:6] ** 2))
 
-        # Recovery reward - encourage getting up when fallen
-        # Base reward: -2.0 to +2.0
-        recovery_reward = 0.0
-        feet_on_ground = np.sum(foot_contacts == 1)
-        if height < 0.1:  # Robot is fallen/very low
-            # Reward any upward movement
-            if hasattr(self, "previous_height"):
-                height_change = height - self.previous_height
-                if height_change > 0:
-                    recovery_reward = (
-                        20.0 * height_change
-                    )  # Strong reward for lifting up
-            # Reward for having any feet on ground (needed to push up)
-            if feet_on_ground > 0:
-                recovery_reward += 0.5
-        self.previous_height = height
+        gyro_reward = 10.0 * gyro_stability  # Even stronger gyro reward
 
         reward = (
-            forward_reward
-            + height_reward
+            height_reward
             + upright_reward
-            + action_smoothness_penalty
-            + contact_penalty
-            + downward_velocity_penalty
-            + foot_air_time_reward
-            + progress_reward
-            + survival_reward
-            + recovery_reward
+            + body_stillness
+            + joint_movement_penalty
+            + gyro_reward
+            + height_bonus
+            + contact_penalty * 0.2
+            + 5.0
         )
-
         return reward
 
     def _get_simplified_foot_reward(self, foot_contacts):
@@ -590,24 +536,23 @@ class SpiderRobotEnv(MujocoEnv):
             if not (foot_contact and ground_contact):
                 if ground_contact:
                     # Penalty for any other body on the ground
-                    penalty += 2.0
+                    penalty -= 10.0
                 else:
                     # Mild penalty for robot part collision
-                    penalty += 0.2
+                    penalty -= 1.0
 
         return penalty
 
     def _get_gyro_stability(self):
         """Get gyro sensor stability measurement."""
-        # Try to find gyro sensor by iterating through sensors
-        gyro_sensor_id = None
-        for i in range(self.model.nsensor):
-            if self.model.sensor(i).name == "gyro_sensor":
-                gyro_sensor_id = i
-                break
+        # Get gyro sensor data (angular velocity)
+        gyro_sensor = self.model.sensor("gyro_sensor")
 
-        if gyro_sensor_id is not None:
-            gyro_data = self.data.sensordata[gyro_sensor_id : gyro_sensor_id + 3]
+        if gyro_sensor is not None:
+            gyro_data = self.data.sensordata[gyro_sensor.id]
+
+            # Calculate stability based on angular velocity magnitude
+            # Lower angular velocity = more stable
             angular_velocity_magnitude = np.linalg.norm(gyro_data)
 
             # Convert to stability score (0 = unstable, 1 = very stable)
@@ -617,6 +562,7 @@ class SpiderRobotEnv(MujocoEnv):
             return stability
         else:
             # Fallback if gyro sensor not found
+            print("⚠️ Warning: gyro_sensor not found, using fallback stability")
             # Use body angular velocity as fallback
             body_angular_vel = self.data.qvel[3:6]  # Roll, pitch, yaw velocities
             angular_velocity_magnitude = np.linalg.norm(body_angular_vel)
@@ -693,9 +639,9 @@ class SpiderRobotEnv(MujocoEnv):
         )
         upright_error = np.linalg.norm(up_vector - np.array([0, 0, 1]))
         if upright_error > 0.5:
-            print(
-                f"🔴 Episode terminated at step {self.episode_length}: robot has flipped"
-            )
+            # print(
+            #     f"🔴 Episode terminated at step {self.episode_length}: robot has flipped"
+            # )
             return True
 
         return False
