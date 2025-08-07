@@ -1926,7 +1926,7 @@
     <parent link="Leg1_Femur_actuator_assembly_Femur" />
     <child link="Leg1_Tibia_Leg" />
     <axis xyz="0.0 -1.0 -2.2541062116020984e-32" />
-    <limit lower="-2.7" upper="0.0" effort="1000000" velocity="1000000" />
+    <limit lower="0.0" upper="2.7" effort="1000000" velocity="1000000" />
   </joint>
   <joint name="Leg1_Femur_actuator_assembly_Motor_Rigid_16" type="fixed">
     <origin xyz="0.03426633 0.013999999999999995 0.06214509" rpy="-3.141592653589793 2.465190328815725e-32 -4.93038065763137e-32" />
@@ -1987,7 +1987,7 @@
     <parent link="Leg2_Femur_actuator_assembly_Femur" />
     <child link="Leg2_Tibia_Leg" />
     <axis xyz="-1.615741237056297e-16 -0.9396930000000002 -0.34202000000000005" />
-    <limit lower="-2.7" upper="0.0" effort="1000000" velocity="1000000" />
+    <limit lower="0.0" upper="2.7" effort="1000000" velocity="1000000" />
   </joint>
   <joint name="Leg2_Femur_actuator_assembly_Motor_Rigid_16" type="fixed">
     <origin xyz="0.03426633 -0.008099179999999997 0.06318557000000002" rpy="-3.141592653589793 5.551115123125782e-17 -3.1123312397483497e-32" />
@@ -2048,7 +2048,7 @@
     <parent link="Leg3_Femur_actuator_assembly_Femur" />
     <child link="Leg3_Tibia_Leg" />
     <axis xyz="4.197067618819102e-18 0.9455190000000002 -0.325568" />
-    <limit lower="-2.7" upper="0.0" effort="1000000" velocity="1000000" />
+    <limit lower="0.0" upper="2.7" effort="1000000" velocity="1000000" />
   </joint>
   <joint name="Leg3_Femur_actuator_assembly_Motor_Rigid_16" type="fixed">
     <origin xyz="0.03426633 -0.03346973 -0.05420140000000002" rpy="-3.141592653589793 1.2789126161629393e-32 -6.162975822039166e-32" />
@@ -2109,7 +2109,7 @@
     <parent link="Leg4_Femur_actuator_assembly_Femur" />
     <child link="Leg4_Tibia_Leg" />
     <axis xyz="0.0 1.0 -2.110841172135633e-33" />
-    <limit lower="-2.7" upper="0.0" effort="1000000" velocity="1000000" />
+    <limit lower="0.0" upper="2.7" effort="1000000" velocity="1000000" />
   </joint>
   <joint name="Leg4_Femur_actuator_assembly_Motor_Rigid_16" type="fixed">
     <origin xyz="0.03426633 -0.013999999999999995 -0.06214510000000001" rpy="-3.141592653589793 1.232595164407858e-32 -4.930380657631343e-32" />
@@ -2170,7 +2170,7 @@
     <parent link="Leg5_Femur_actuator_assembly_Femur" />
     <child link="Leg5_Tibia_Leg" />
     <axis xyz="-0.0 -1.0 2.110841172135633e-33" />
-    <limit lower="-2.7" upper="0.0" effort="1000000" velocity="1000000" />
+    <limit lower="0.0" upper="2.7" effort="1000000" velocity="1000000" />
   </joint>
   <joint name="Leg5_Femur_actuator_assembly_Motor_Rigid_16" type="fixed">
     <origin xyz="0.03426633 0.013999999999999986 0.06214509" rpy="-3.141592653589793 -8.224896002365597e-46 8.597034325155041e-47" />
@@ -2231,7 +2231,7 @@
     <parent link="Leg6_Femur_actuator_assembly_Femur" />
     <child link="Leg6_Tibia_Leg" />
     <axis xyz="-1.6211171054303168e-16 -0.945519 0.3255680000000001" />
-    <limit lower="-2.7" upper="0.0" effort="1000000" velocity="1000000" />
+    <limit lower="0.0" upper="2.7" effort="1000000" velocity="1000000" />
   </joint>
   <joint name="Leg6_Femur_actuator_assembly_Motor_Rigid_16" type="fixed">
     <origin xyz="0.03426633 0.03346973 0.05420139000000002" rpy="-3.141592653589793 1.2789126161628715e-32 2.46519032881567e-32" />
@@ -2292,7 +2292,7 @@
     <parent link="Leg7_Femur_actuator_assembly_Femur" />
     <child link="Leg7_Tibia_Leg" />
     <axis xyz="-7.189583156360531e-18 0.939693 0.34202" />
-    <limit lower="-2.7" upper="0.0" effort="1000000" velocity="1000000" />
+    <limit lower="0.0" upper="2.7" effort="1000000" velocity="1000000" />
   </joint>
   <joint name="Leg7_Femur_actuator_assembly_Motor_Rigid_16" type="fixed">
     <origin xyz="0.03426633 0.008099179999999997 -0.06318557999999998" rpy="-3.141592653589793 -1.3352616924852523e-32 8.456209532292938e-47" />
@@ -2353,7 +2353,7 @@
     <parent link="Leg8_Femur_actuator_assembly_Femur" />
     <child link="Leg8_Tibia_Leg" />
     <axis xyz="0.0 1.0 -2.110841172135633e-33" />
-    <limit lower="-2.7" upper="0.0" effort="1000000" velocity="1000000" />
+    <limit lower="0.0" upper="2.7" effort="1000000" velocity="1000000" />
   </joint>
   <joint name="Leg8_Femur_actuator_assembly_Motor_Rigid_16" type="fixed">
     <origin xyz="0.03426633 -0.013999999999999999 -0.06214510000000001" rpy="-3.141592653589793 -9.860761315262595e-32 -2.747540295028193e-46" />

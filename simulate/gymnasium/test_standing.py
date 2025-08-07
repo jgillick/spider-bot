@@ -1,12 +1,12 @@
 """Test rewards for standing still vs simple walking motions"""
 
 import numpy as np
-from .environment import SpiderRobotEnv, INITIAL_JOINT_POSITIONS
+from environment import SpiderRobotEnv, INITIAL_JOINT_POSITIONS
 import os
 
 # Get the robot XML path
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
-XML_FILE = os.path.abspath(os.path.join(THIS_DIR, "../robot/SpiderBot.xml"))
+XML_FILE = os.path.abspath(os.path.join(THIS_DIR, "../robot/SpiderEnv.xml"))
 
 
 FALLING_POSITIONS = (
