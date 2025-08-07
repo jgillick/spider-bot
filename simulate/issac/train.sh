@@ -22,9 +22,8 @@ MAX_ITERATIONS=500
 VIDEO_LENGTH=1000
 VIDEO_INTERVAL=500
 
-# TRAINING_TASK="Isaac-SpiderLocomotion-Flat-v0"
-TRAINING_TASK="Isaac-SpiderLocomotion-Flat-v0"
-TRAINING_SCRIPT="./scripts/reinforcement_learning/rsl_rl/train.py"
+TRAINING_TASK="SpiderBot-Flat-v0"
+TRAINING_SCRIPT="$SCRIPT_DIR/scripts/rsl_rl/train.py"
 
 #######################################################
 # MAIN
@@ -39,7 +38,7 @@ trap "kill 0" EXIT
 export HYDRA_FULL_ERROR=1
 
 if [ $HEADLESS -eq 1 ]; then
-  ./isaaclab.sh -p $TRAINING_SCRIPT \
+  $ISAACLAB_ROOT/isaaclab.sh -p $TRAINING_SCRIPT \
     --task $TRAINING_TASK \
     --num_envs $NUM_ENVS \
     --max_iterations $MAX_ITERATIONS \
@@ -50,5 +49,5 @@ if [ $HEADLESS -eq 1 ]; then
     --video_length $VIDEO_LENGTH \
     --video_interval $VIDEO_INTERVAL
 else
-  ./isaaclab.sh -p ./scripts/reinforcement_learning/rsl_rl/train.py --task $TRAINING_TASK --num_envs $NUM_ENVS --max_iterations $MAX_ITERATIONS 
+  $ISAACLAB_ROOT/isaaclab.sh -p $TRAINING_SCRIPT --task $TRAINING_TASK --num_envs $NUM_ENVS --max_iterations $MAX_ITERATIONS
 fi

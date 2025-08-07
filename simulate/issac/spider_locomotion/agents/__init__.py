@@ -1,1 +1,0 @@
-"""Spider locomotion agents package."""
