@@ -2,12 +2,12 @@
   <compiler angle="radian" />
   <default>
     <mesh scale="0.001 0.001 0.001" />
-    <motor ctrlrange="-11.0 11.0" gear="1" />
+    <motor gear="1" ctrlrange="-11.0 11.0" forcelimited="true" forcerange="-11.0 11.0" />
     <geom contype="0" conaffinity="0" material="body_material" group="2" />
     <default class="collision">
       <geom contype="1" conaffinity="1" group="3" pos="0 0 0" mass="0.0" material="" />
     </default>
-    <joint limited="true" />
+    <joint limited="true" actuatorfrclimited="true" actuatorfrcrange="-11.0 11.0" />
     <default class="femur_joint">
       <joint range="0 1.25" />
     </default>

@@ -14,12 +14,12 @@ source $SCRIPT_DIR/env.cfg
 #######################################################
 # CONFIGURATION
 #######################################################
-HEADLESS=1
-NUM_ENVS=600
+HEADLESS=0
+NUM_ENVS=100
 MAX_ITERATIONS=500
 
 # Video settings (only when HEADLESS=1)
-VIDEO_LENGTH=1000
+VIDEO_LENGTH=2000
 VIDEO_INTERVAL=500
 
 TRAINING_TASK="SpiderBot-Flat-v0"
