@@ -62,6 +62,9 @@ args_cli = parser.parse_args()
 ROOT_PATH = "/spider"
 BODY_MATERIAL_PATH = f"{ROOT_PATH}/Looks/material_rbga"
 
+JOINT_DRIVE_DAMPING = 0.2
+JOINT_DRIVE_STIFFNESS = 15
+JOINT_MAX_FORCE = 12
 
 def printout(info_str):
     """Simple print wrapper, since the Python print() statements are suppressed sometimes."""
@@ -104,7 +107,7 @@ def set_materials(stage):
     # Apply rubber to feet
     for leg in range(1, 9):
         foot_prim = stage.GetPrimAtPath(f"{ROOT_PATH}/Body/Leg{leg}_Tibia_Foot")
-        
+
         if foot_prim:
             material_binding_api = UsdShade.MaterialBindingAPI.Apply(foot_prim)
             material_binding_api.Bind(
@@ -113,7 +116,7 @@ def set_materials(stage):
             )
         else:
             printout(f"WARNING: Could the foot prim for Leg{leg}")
-    
+
     ##
     # Apply default material to all bodies but feet
     default_material_prim = stage.GetPrimAtPath(f"{ROOT_PATH}/Looks/material_body_material")
@@ -129,6 +132,17 @@ def set_materials(stage):
                         default_material,
                         bindingStrength=UsdShade.Tokens.strongerThanDescendants,
                     )
+
+
+def set_joint_gains(stage):
+    """Add damping and stiffness to the existing UsdPhysicsDriveAPI of every joint"""
+    for joint in stage.GetPrimAtPath(f"{ROOT_PATH}/joints").GetChildren():
+        if joint.GetTypeName() == "PhysicsRevoluteJoint":
+            api_path = f"{joint.GetPath()}.drive:angular"
+            drive_api = UsdPhysics.DriveAPI.Get(stage, api_path)
+            drive_api.CreateDampingAttr().Set(JOINT_DRIVE_DAMPING)
+            drive_api.CreateStiffnessAttr().Set(JOINT_DRIVE_STIFFNESS)
+            drive_api.CreateMaxForceAttr().Set(JOINT_MAX_FORCE)
 
 
 async def main():
@@ -165,6 +179,7 @@ async def main():
 
     # Set body material
     set_materials(stage)
+    set_joint_gains(stage)
 
     # Save
     stage.Export(dest_path)
