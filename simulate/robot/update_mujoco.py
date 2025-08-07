@@ -116,17 +116,6 @@ def simplify_names(tree):
             if attr in elem.attrib:
                 value = elem.attrib[attr]
                 value = normalize_name_string(value)
-
-                # Simplify join names
-                # if elem.tag == "joint" and attr == "name":
-                #     value = re.sub(
-                #         r"Hip_actuator_assembly_Hip_Bracket_Hip", "Hip", value
-                #     )
-                #     value = re.sub(
-                #         r"Femur_actuator_assembly_Femur_Revolute_2", "Femur", value
-                #     )
-                #     value = re.sub(r"Tibia_Leg_Tibia", "Tibia", value)
-
                 elem.attrib[attr] = value
 
     return tree
@@ -151,11 +140,6 @@ def update_joint_values(tree):
     )
 
     # Ranges
-    hip_joint_def = ET.SubElement(
-        default,
-        "default",
-        {"class": "hip_joint"},
-    )
     femur_joint_def = ET.SubElement(
         default,
         "default",
@@ -167,17 +151,9 @@ def update_joint_values(tree):
         {"class": "tibia_joint"},
     )
     ET.SubElement(
-        hip_joint_def,
-        "joint",
-        {
-            "axis": JOINT_AXIS["hip"],
-        },
-    )
-    ET.SubElement(
         femur_joint_def,
         "joint",
         {
-            "axis": JOINT_AXIS["femur"],
             "range": " ".join(FEMUR_RANGE),
         },
     )
@@ -185,7 +161,6 @@ def update_joint_values(tree):
         tibia_joint_def,
         "joint",
         {
-            "axis": JOINT_AXIS["tibia"],
             "range": " ".join(TIBIA_RANGE),
         },
     )
@@ -198,13 +173,12 @@ def update_joint_values(tree):
             if joint is None:
                 continue
             joint_class = f"{joint_type}_joint".lower()
-            joint.set("class", joint_class)
-            del joint.attrib["axis"]
             del joint.attrib["limited"]
 
             if joint_type == "Hip":
                 joint.set("range", " ".join(HIP_RANGES[leg - 1]))
             else:
+                joint.set("class", joint_class)
                 del joint.attrib["range"]
 
     return tree
