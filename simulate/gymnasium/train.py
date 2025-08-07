@@ -24,13 +24,13 @@ from environment import SpiderRobotEnv
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 
-XML_FILE = os.path.abspath(os.path.join(THIS_DIR, "../robot/SpiderBot.xml"))
+XML_FILE = os.path.abspath(os.path.join(THIS_DIR, "../robot/SpiderEnv.xml"))
 OUT_ROOT = os.path.abspath(os.path.join(THIS_DIR, "./logs/"))
 
 DEFAULT_NUM_ENVS = 8
 
 CONFIG = {
-    "total_timesteps": 10_000_000,
+    "total_timesteps": 2_000_000,
     "max_episode_steps": 1_000,
     "eval_episodes": 10,
     "evaluation_steps": 500,
@@ -55,13 +55,7 @@ CONFIG = {
         "clip_range": 0.15,
         "ent_coef": 0.01,
         "max_grad_norm": 0.5,
-        "policy_kwargs": {
-            "net_arch": [
-                128,
-                256,
-                64,
-            ]
-        },
+        "policy_kwargs": {"net_arch": [256, 256, 128]},
     },
     "SAC_params": {
         "verbose": 1,
@@ -401,7 +395,7 @@ def train_spider(algorithm="PPO", num_envs=DEFAULT_NUM_ENVS):
     print()
     print(f"📜 Algorithm: {algorithm}")
     print(f"📁 Output directory: {out_dir}")
-    print(f"🏋️‍♀️ Training for {CONFIG['total_timesteps']:,} timesteps")
+    print(f"🚴 Training for {CONFIG['total_timesteps']:,} timesteps")
     print(f"👯 Parallel environments: {num_envs}")
     print(f"⏰ Evaluation frequency: {CONFIG['eval_freq']:,}")
     print(f"🎥 Video frequency: {CONFIG['video_freq']:,}")
