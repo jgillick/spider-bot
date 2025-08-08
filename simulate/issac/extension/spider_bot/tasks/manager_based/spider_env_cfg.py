@@ -45,7 +45,7 @@ class SpiderSceneCfg(InteractiveSceneCfg):
             # restitution=0.0,
             static_friction=1.0,
             dynamic_friction=1.0,
-        # ),
+        ),
     )
 
     # Robots
