@@ -49,5 +49,8 @@ if [ $HEADLESS -eq 1 ]; then
     --video_length $VIDEO_LENGTH \
     --video_interval $VIDEO_INTERVAL
 else
-  $ISAACLAB_ROOT/isaaclab.sh -p $TRAINING_SCRIPT --task $TRAINING_TASK --num_envs $NUM_ENVS --max_iterations $MAX_ITERATIONS
+  $ISAACLAB_ROOT/isaaclab.sh -p $TRAINING_SCRIPT \
+    --task $TRAINING_TASK \
+    --num_envs $NUM_ENVS \
+    --max_iterations $MAX_ITERATIONS
 fi
