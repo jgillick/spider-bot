@@ -14,7 +14,7 @@ source $SCRIPT_DIR/env.cfg
 #######################################################
 # CONFIGURATION
 #######################################################
-HEADLESS=0
+HEADLESS=1
 NUM_ENVS=100
 MAX_ITERATIONS=500
 
