@@ -17,9 +17,7 @@ class SpiderBotPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     experiment_name = "spider_bot"
     empirical_normalization = False
     policy = RslRlPpoActorCriticCfg(
-        init_noise_std=2.0,  # Increased from 1.5 for more exploration
-        # Larger network for 24 DOF spider robot (vs 12 DOF ANYmal)
-        # Increased capacity to handle more complex coordination patterns
+        init_noise_std=2.0, 
         actor_hidden_dims=[256, 256, 128],
         critic_hidden_dims=[256, 256, 128],
         activation="elu",
@@ -31,7 +29,7 @@ class SpiderBotPPORunnerCfg(RslRlOnPolicyRunnerCfg):
         entropy_coef=0.05,
         num_learning_epochs=5,
         num_mini_batches=4,
-        learning_rate=5.0e-4,
+        learning_rate=3.0e-4,
         schedule="adaptive",
         gamma=0.99,
         lam=0.95,

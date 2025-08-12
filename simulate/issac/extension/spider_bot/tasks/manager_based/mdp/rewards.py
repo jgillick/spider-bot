@@ -55,7 +55,39 @@ def desired_contacts(
     return 1.0 * zero_contact
 
 
-def flat_orientation_exp(env: ManagerBasedRLEnv, decay_rate: float = 5.0, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+def has_contact(env, sensor_cfg, threshold=1.0):
+    """
+    Returns:
+        1 for each contact meeting the threshold
+    """
+    
+    contact_sensor = env.scene.sensors[sensor_cfg.name]
+    contacts = (
+        contact_sensor.data.net_forces_w_history[:, :, sensor_cfg.body_ids, :]
+        .norm(dim=-1).max(dim=1)[0] > threshold
+    )
+    return contacts.sum(dim=1).float()
+
+def no_contact(env, sensor_cfg, threshold=1.0):
+    """
+    Penalty for each contact not meeting the threshold.
+
+    Returns:
+        1 for each contact under the threshold
+    """
+    contact_sensor = env.scene.sensors[sensor_cfg.name]
+    contacts = (
+        contact_sensor.data.net_forces_w_history[:, :, sensor_cfg.body_ids, :]
+        .norm(dim=-1).max(dim=1)[0] < threshold
+    )
+    return contacts.sum(dim=1).float()
+
+
+def flat_orientation_exp(
+    env: ManagerBasedRLEnv,
+    decay_rate: float = 5.0,
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+) -> torch.Tensor:
     """
     Reward for flat base orientation with exponential decay.
 
@@ -87,7 +119,12 @@ def flat_orientation_exp(env: ManagerBasedRLEnv, decay_rate: float = 5.0, asset_
 
     return reward
 
-def ang_vel_xy_exp(env: ManagerBasedRLEnv, decay_rate: float = 5.0, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+
+def ang_vel_xy_exp(
+    env: ManagerBasedRLEnv,
+    decay_rate: float = 5.0,
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+) -> torch.Tensor:
     """Reward for maintaining not tilting the base in the xy plane with exponential decay."""
     asset: RigidObject = env.scene[asset_cfg.name]
     ang_vel_xy = asset.data.root_ang_vel_b[:, :2]
@@ -95,21 +132,13 @@ def ang_vel_xy_exp(env: ManagerBasedRLEnv, decay_rate: float = 5.0, asset_cfg: S
     reward = torch.exp(-decay_rate * magnitude)
     return reward
 
-def foot_contacts(env: ManagerBasedRLEnv, sensor_cfg: SceneEntityCfg, threshold: float = 1.0) -> torch.Tensor:
-    """Reward for maintaining a stable number of feet on the ground."""
-    contact_sensor: ContactSensor = env.scene.sensors[sensor_cfg.name]
-    contacts = (
-        contact_sensor.data.net_forces_w_history[:, :, sensor_cfg.body_ids, :]
-        .norm(dim=-1)
-        .max(dim=1)[0] > threshold
-    )
-    if 4 <= contacts <= 6:
-        return 1.0
-    elif contacts == 3 or contacts == 7:
-        return 0.5
-    return 0.0
 
-def balanced_contact_force(env: ManagerBasedRLEnv, sensor_cfg: SceneEntityCfg, threshold: float = 1.0, min_contacts: int = 3) -> torch.Tensor:
+def balanced_contact_force(
+    env: ManagerBasedRLEnv,
+    sensor_cfg: SceneEntityCfg,
+    threshold: float = 1.0,
+    min_contacts: int = 3,
+) -> torch.Tensor:
     """Reward for all target contact sensors having a similar force.
 
     Args:
@@ -119,7 +148,9 @@ def balanced_contact_force(env: ManagerBasedRLEnv, sensor_cfg: SceneEntityCfg, t
         min_contacts: Minimum number of sensors that should be in contact.
     """
     contact_sensor: ContactSensor = env.scene.sensors[sensor_cfg.name]
-    contact_forces = contact_sensor.data.net_forces_w_history[:, :, sensor_cfg.body_ids, :]
+    contact_forces = contact_sensor.data.net_forces_w_history[
+        :, :, sensor_cfg.body_ids, :
+    ]
     contact_forces_norm = contact_forces.norm(dim=-1)
     contact_forces_avg = contact_forces_norm.mean(dim=1)
 
@@ -137,14 +168,18 @@ def balanced_contact_force(env: ManagerBasedRLEnv, sensor_cfg: SceneEntityCfg, t
         contact_forces_filtered = contact_forces_norm.clone()
         # Expand has_contact to match the history dimension
         has_contact_expanded = has_contact.unsqueeze(1).expand_as(contact_forces_norm)
-        contact_forces_filtered[~has_contact_expanded] = 0.0  # Zero out contacts below threshold
+        contact_forces_filtered[~has_contact_expanded] = (
+            0.0  # Zero out contacts below threshold
+        )
 
         # Compute statistics only for valid contacts
         contact_forces_mean = contact_forces_filtered.mean(dim=1)
         contact_forces_std = contact_forces_filtered.std(dim=1)
 
         # Calculate coefficient of variation for scale-invariant measure
-        cv = contact_forces_std / (contact_forces_mean + 1e-8)  # Add small epsilon to avoid division by zero
+        cv = contact_forces_std / (
+            contact_forces_mean + 1e-8
+        )  # Add small epsilon to avoid division by zero
 
         # Take mean across sensors to get one reward value per environment
         cv_mean = cv.mean(dim=1)
@@ -155,7 +190,13 @@ def balanced_contact_force(env: ManagerBasedRLEnv, sensor_cfg: SceneEntityCfg, t
 
     return reward
 
-def lateral_force_distribution(env: ManagerBasedRLEnv, sensor1_cfg: SceneEntityCfg, sensor2_cfg: SceneEntityCfg, threshold: float = 1.0) -> torch.Tensor:
+
+def lateral_force_distribution(
+    env: ManagerBasedRLEnv,
+    sensor1_cfg: SceneEntityCfg,
+    sensor2_cfg: SceneEntityCfg,
+    threshold: float = 1.0,
+) -> torch.Tensor:
     """Reward for maintaining a balanced force between two sets of sensors.
 
     Args:
@@ -168,8 +209,12 @@ def lateral_force_distribution(env: ManagerBasedRLEnv, sensor1_cfg: SceneEntityC
     contact_sensor2: ContactSensor = env.scene.sensors[sensor2_cfg.name]
 
     # Get force data for both sensor groups
-    contact_forces1 = contact_sensor1.data.net_forces_w_history[:, :, sensor1_cfg.body_ids, :]
-    contact_forces2 = contact_sensor2.data.net_forces_w_history[:, :, sensor2_cfg.body_ids, :]
+    contact_forces1 = contact_sensor1.data.net_forces_w_history[
+        :, :, sensor1_cfg.body_ids, :
+    ]
+    contact_forces2 = contact_sensor2.data.net_forces_w_history[
+        :, :, sensor2_cfg.body_ids, :
+    ]
 
     # Calculate force magnitudes and average over history
     contact_forces1_norm = contact_forces1.norm(dim=-1)
@@ -188,18 +233,22 @@ def lateral_force_distribution(env: ManagerBasedRLEnv, sensor1_cfg: SceneEntityC
     # Check if either group has any contacts
     any_contact1 = has_contact1.any(dim=1)
     any_contact2 = has_contact2.any(dim=1)
-    
+
     # Initialize reward tensor
     reward = torch.zeros_like(total_force1, dtype=torch.float)
-    
+
     # Only compute reward for environments where both groups have at least some contact
     valid_envs = any_contact1 & any_contact2
     if valid_envs.any():
         # Calculate coefficient of variation for balanced force distribution
-        forces = torch.stack([total_force1[valid_envs], total_force2[valid_envs]], dim=1)  # Shape: (num_valid_envs, 2)
+        forces = torch.stack(
+            [total_force1[valid_envs], total_force2[valid_envs]], dim=1
+        )  # Shape: (num_valid_envs, 2)
         force_mean = forces.mean(dim=1)
         force_std = forces.std(dim=1)
-        cv = force_std / (force_mean + 1e-8)  # Add small epsilon to avoid division by zero
+        cv = force_std / (
+            force_mean + 1e-8
+        )  # Add small epsilon to avoid division by zero
 
         # Convert to reward (1.0 = perfectly balanced, approaches 0.0 as imbalance increases)
         valid_reward = torch.exp(-3.0 * cv)
@@ -207,13 +256,14 @@ def lateral_force_distribution(env: ManagerBasedRLEnv, sensor1_cfg: SceneEntityC
 
     return reward
 
+
 def contact_reward(
     env: ManagerBasedRLEnv,
     sensor_cfg: SceneEntityCfg,
     min_contacts: int = 4,
-    threshold: float = 1.0
+    threshold: float = 1.0,
 ) -> torch.Tensor:
-    """Reward for maintaining stable contact with multiple feet.
+    """Reward for maintaining stable contact with multiple sensors.
 
     Args:
         env: The environment.
@@ -228,7 +278,9 @@ def contact_reward(
     contact_sensor: ContactSensor = env.scene.sensors[sensor_cfg.name]
 
     # Check which feet have contact (force > threshold)
-    contact_forces = contact_sensor.data.net_forces_w_history[:, :, sensor_cfg.body_ids, :]
+    contact_forces = contact_sensor.data.net_forces_w_history[
+        :, :, sensor_cfg.body_ids, :
+    ]
     has_contact = contact_forces.norm(dim=-1).max(dim=1)[0] > threshold
 
     # Count number of feet in contact
@@ -243,7 +295,7 @@ def proper_leg_configuration(
     env: ManagerBasedRLEnv,
     target_femur_angle: float = 0.9,  # ~45 degrees
     target_tibia_angle: float = -0.9,  # ~90 degrees to femur
-    angle_tolerance: float = 0.2
+    angle_tolerance: float = 0.2,
 ) -> torch.Tensor:
     """Reward for maintaining proper leg joint angles.
 
@@ -278,8 +330,7 @@ def proper_leg_configuration(
 
 
 def action_symmetry_bonus(
-    env: ManagerBasedRLEnv,
-    symmetry_threshold: float = 0.2
+    env: ManagerBasedRLEnv, symmetry_threshold: float = 0.2
 ) -> torch.Tensor:
     """Reward for symmetric actions across legs.
 
@@ -302,12 +353,13 @@ def action_symmetry_bonus(
 
     return symmetry_reward
 
+
 def base_height_gaussian(
     env: ManagerBasedRLEnv,
     target_height: float = 0.1,
     min_height: float = 0.05,
     asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
-    ) -> torch.Tensor:
+) -> torch.Tensor:
     """Reward for maintaining a target height."""
     asset: RigidObject = env.scene[asset_cfg.name]
     height = asset.data.root_pos_w[:, 2]
@@ -316,7 +368,57 @@ def base_height_gaussian(
     # Dynamic Gaussian parameter based on acceptable height range
     min_height_error = target_height - min_height
     desired_reward_at_min = 0.1  # 10% of max reward at minimum acceptable height
-    gaussian_param = -torch.log(torch.tensor(desired_reward_at_min)) / (min_height_error**2)
+    gaussian_param = -torch.log(torch.tensor(desired_reward_at_min)) / (
+        min_height_error**2
+    )
 
     return torch.exp(-gaussian_param * height_error**2)
 
+
+def quadratic_height_reward(
+    env: ManagerBasedRLEnv,
+    target_height: float = 0.14,
+    min_height: float = 0.09,
+    power: float = 2.0,
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+) -> torch.Tensor:
+    """Quadratic height reward: +1 at target, 0 at minimum, gentle near target, strong corrections far away.
+    
+    Args:
+        env: The environment.
+        target_height: Target height for maximum reward (m).
+        min_height: Minimum height where reward becomes 0 (m).
+        power: Controls the curve shape (higher = gentler near target, stronger corrections far away).
+        asset_cfg: Configuration for the robot asset.
+    
+    Returns:
+        Reward tensor with values in [0, 1] range.
+    """
+    # Get robot asset
+    asset: RigidObject = env.scene[asset_cfg.name]
+    
+    # Get current heights for all environments
+    current_heights = asset.data.root_pos_w[:, 2]  # Z-coordinate
+    
+    # Initialize reward tensor
+    reward = torch.zeros_like(current_heights)
+    
+    # Only compute reward for heights above minimum
+    valid_mask = current_heights >= min_height
+    
+    if valid_mask.any():
+        # Calculate deviation from target (absolute value)
+        deviation = torch.abs(current_heights[valid_mask] - target_height)
+        
+        # Calculate maximum possible deviation (from min_height to target)
+        max_deviation = target_height - min_height
+        
+        # Normalize deviation to [0, 1] range
+        normalized_deviation = deviation / max_deviation
+        
+        # Quadratic curve: 1 - (normalized_deviation)^power
+        # This gives 1.0 at target (deviation=0) and approaches 0 as deviation increases
+        # Higher powers = gentler near target, stronger corrections far away
+        reward[valid_mask] = 1.0 - (normalized_deviation ** power)
+    
+    return reward

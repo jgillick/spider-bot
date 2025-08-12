@@ -102,40 +102,29 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene):
     sim_dt = sim.get_physics_dt()
     while simulation_app.is_running() and count < MAX_STEPS:
         # Reset the state
-        if count == 0:
-            root_state = robot.data.default_root_state.clone()
-            root_state[:, :3] += scene.env_origins
-            robot.write_root_pose_to_sim(root_state[:, :7])
-            robot.write_root_velocity_to_sim(root_state[:, 7:])
-            joint_pos, joint_vel = robot.data.default_joint_pos.clone(), robot.data.default_joint_vel.clone()
-            robot.write_joint_state_to_sim(joint_pos, joint_vel)
-            scene.reset()
+        # if count == 0:
+        #     root_state = robot.data.default_root_state.clone()
+        #     root_state[:, :3] += scene.env_origins
+        #     robot.write_root_pose_to_sim(root_state[:, :7])
+        #     robot.write_root_velocity_to_sim(root_state[:, 7:])
+        #     joint_pos, joint_vel = robot.data.default_joint_pos.clone(), robot.data.default_joint_vel.clone()
+        #     robot.write_joint_state_to_sim(joint_pos, joint_vel)
+        #     scene.reset()
 
         # Standup 
         if count == 100:
             print("Standing up (1)...")
             for i, name in enumerate(joint_names):
-                if name in ("Leg1_Tibia", "Leg4_Tibia", "Leg5_Tibia", "Leg8_Tibia"):
+                if name in ("Leg1_Tibia", "Leg2_Tibia", "Leg3_Tibia", "Leg4_Tibia", "Leg5_Tibia", "Leg6_Tibia", "Leg7_Tibia", "Leg8_Tibia"):
                     target_joint_pos[0][i] = STABLE_TIBIA
         if count == 110:
             print("Standing up (2)...")
             for i, name in enumerate(joint_names):
-                if name in ("Leg1_Femur", "Leg4_Femur", "Leg5_Femur", "Leg8_Femur"):
+                if name in ("Leg1_Femur", "Leg2_Femur", "Leg3_Femur", "Leg4_Femur", "Leg5_Femur", "Leg6_Femur", "Leg7_Femur", "Leg8_Femur"):
                     target_joint_pos[0][i] = STABLE_FEMUR
-        if count == 200:
-            print("Collapse (1)...")
-            for i, name in enumerate(joint_names):
-                if name in ("Leg2_Tibia", "Leg3_Tibia", "Leg6_Tibia", "Leg7_Tibia"):
-                    target_joint_pos[0][i] = 0.01
-                if name in ("Leg2_Femur", "Leg3_Femur", "Leg6_Femur", "Leg7_Femur"):
-                    target_joint_pos[0][i] = 0.99
-        if count == 250:
-            print("Collapse (2)...")
-            for i, name in enumerate(joint_names):
-                if name in ("Leg1_Femur", "Leg4_Femur", "Leg5_Femur", "Leg8_Femur"):
-                    target_joint_pos[0][i] = 0.01
-       
-        print(f"[{count}] Height: {robot.data.root_pos_w[:, 2]}")
+
+        if count % 10 == 0:
+            print(f"[{count}] Height: {robot.data.root_pos_w[:, 2]}")
 
         robot.set_joint_position_target(target_joint_pos)        
         scene.write_data_to_sim()
