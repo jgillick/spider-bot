@@ -25,6 +25,7 @@ from spider_bot.spider_bot_cfg import SpiderBotCfg
 from .managers import MetricsTermCfg
 from . import mdp
 
+TARGET_HEIGHT = 0.15
 
 ##
 # Scene definition
@@ -68,7 +69,8 @@ class SpiderSceneCfg(InteractiveSceneCfg):
 
     # Add contact sensors to all parts connected to the root body
     contact_forces = ContactSensorCfg(
-        prim_path="{ENV_REGEX_NS}/Robot/Body/.*", history_length=3, track_air_time=True
+        prim_path="{ENV_REGEX_NS}/Robot/Body/.*", history_length=3, 
+        #track_air_time=True
     )
 
     # Lights
@@ -135,8 +137,8 @@ class EventCfg:
 
     # -- Startup
     physics_material = EventTerm(
-        func=mdp.randomize_rigid_body_material,
         mode="startup",
+        func=mdp.randomize_rigid_body_material,
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names=".*"),
             # Friction of rubber feet
@@ -149,8 +151,8 @@ class EventCfg:
 
     # -- Reset
     reset_robot_joints = EventTerm(
-        func=mdp.reset_scene_to_default,
         mode="reset",
+        func=mdp.reset_scene_to_default,
     )
 
 
@@ -159,22 +161,25 @@ class RewardsCfg:
     """Reward terms for the spider robot."""
 
     # -- Aliveness
-    is_alive = RewTerm(func=mdp.is_alive, weight=0.5)
-    termination_penalty = RewTerm(func=mdp.is_terminated, weight=-10.0)
+    alive = RewTerm(func=mdp.is_alive, weight=0.5)
+    terminated = RewTerm(func=mdp.is_terminated, weight=-1000.0)
 
     # -- Task
+    # Target height
     height = RewTerm(
         func=mdp.base_height_l2,
-        weight=10.0,
-        params={"target_height": 0.17},
+        weight=-2.0e+3,
+        params={
+            "target_height": TARGET_HEIGHT,
+        },
     )
-    # Reward for maintaining equal force on all feet
-    balanced_feet = RewTerm(
-        func=mdp.balanced_contact_force,
-        weight=2.0,
+    # Penalty for feet not being in contact with the ground
+    foot_contact = RewTerm(
+        func=mdp.no_contact,
+        weight=-1.0,
         params={
             "sensor_cfg": SceneEntityCfg(
-                "contact_forces", body_names=[".*_Tibia_Foot"]
+                "contact_forces", body_names=["Leg[1-8]_Tibia_Foot"]
             ),
             "threshold": 5.0,
         },
@@ -186,7 +191,18 @@ class RewardsCfg:
     ang_vel_xy_l2 = RewTerm(func=mdp.ang_vel_xy_l2, weight=-0.05)
     dof_torques_l2 = RewTerm(func=mdp.joint_torques_l2, weight=-1.0e-5)
     dof_acc_l2 = RewTerm(func=mdp.joint_acc_l2, weight=-2.5e-7)
-    action_rate_l2 = RewTerm(func=mdp.action_rate_l2, weight=-0.01)
+    action_rate_l2 = RewTerm(func=mdp.action_rate_l2, weight=-0.001)
+
+    bad_touch = RewTerm(
+        func=mdp.has_contact,
+        weight=-10.0,
+        params={
+            "sensor_cfg": SceneEntityCfg(
+                "contact_forces", body_names=["Leg[1-8]_Tibia_BadTouch"]
+            ),
+            "threshold": 5.0,
+        },
+    )
 
 
 @configclass
@@ -202,6 +218,12 @@ class TerminationsCfg:
         params={"limit_angle": 1.5},
     )
 
+    # The robot has fallen
+    fallen = DoneTerm(
+        func=mdp.root_height_below_minimum,
+        params={"minimum_height": 0.09},
+    )
+
 
 @configclass
 class MetricsCfg:
@@ -210,16 +232,36 @@ class MetricsCfg:
     height = MetricsTermCfg(
         func=mdp.robot_height,
     )
-    bad_touch = MetricsTermCfg(
-        func=mdp.max_contact_forces,
+    height_diff = MetricsTermCfg(
+        func=mdp.height_diff_from_target,
         params={
-            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=[".*_BadTouch"]),
+            "target_height": TARGET_HEIGHT,
+        },
+    )
+    bad_mean_force = MetricsTermCfg(
+        func=mdp.mean_contact_forces,
+        params={
+            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=["Leg[1-8]_Tibia_BadTouch"]),
+        },
+    )
+    bad_contact = MetricsTermCfg(
+        func=mdp.has_contact,
+        params={
+            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=["Leg[1-8]_Tibia_BadTouch"]),
+            "threshold": 5.0,
         },
     )
     feet_force = MetricsTermCfg(
         func=mdp.mean_contact_forces,
         params={
-            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=[".*Tibia_Foot"]),
+            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=["Leg[1-8]_Tibia_Foot"]),
+        },
+    )
+    feet_contact = MetricsTermCfg(
+        func=mdp.has_contact,
+        params={
+            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=["Leg[1-8]_Tibia_Foot"]),
+            "threshold": 5.0,
         },
     )
 
@@ -247,23 +289,23 @@ class SpiderEnvCfg(ManagerBasedRLEnvCfg):
     def __post_init__(self):
         """Post initialization."""
         # General settings
-        self.decimation = 4  # Run at 50Hz
+        self.decimation = 4
         self.episode_length_s = 16.0
 
-        # Simulation settings
-        self.sim.dt = 0.001  # 500Hz physics
+        self.sim.dt = 1/100  # 100Hz
         self.sim.render_interval = self.decimation
         self.sim.physics_material = self.scene.terrain.physics_material
         self.sim.physx.gpu_max_rigid_patch_count = 5 * 2**15
+        self.sim.physx.default_buffer_size_multiplier = 12.0
 
         # Viewer settings
         self.viewer: ViewerCfg = ViewerCfg(
             # origin_type="asset_root",
             # asset_name="robot",
-            # env_index=0, 
+            # env_index=0,
             # eye=(2.5, 1.5, 1.5),
             # lookat=(0.0, 0.0, 0.0),
-            eye=(5.0, -2.0, 3.0), 
+            eye=(5.0, -2.0, 3.0),
         )
 
         # update sensor update periods

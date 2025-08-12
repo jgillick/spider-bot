@@ -22,8 +22,8 @@ class SpiderBotCfg(ArticulationCfg):
         activate_contact_sensors=True,
         articulation_props=sim_utils.ArticulationRootPropertiesCfg(
             enabled_self_collisions=False,
-            solver_position_iteration_count=8, 
-            solver_velocity_iteration_count=1,
+            # solver_position_iteration_count=8, 
+            # solver_velocity_iteration_count=1,
         ),
     )
 
@@ -46,8 +46,8 @@ class SpiderBotCfg(ArticulationCfg):
             joint_names_expr=[".*"],
             effort_limit_sim=8.0,
             velocity_limit_sim=12.0,  # Rated: 12.5 rad/s, Max: 43 rad/s
-            stiffness={".*": 150.0},
-            damping={".*": 0.5},
+            stiffness={".*": 40.0}, 
+            damping={".*": 0.5},    
         ),
     }
 
