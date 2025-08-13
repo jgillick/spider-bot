@@ -13,7 +13,6 @@ class SpiderBotRLManagerEnv(ManagerBasedRLEnv):
     RL Manager that limits the action space to be -1 to 1 and adds metrics to the logger
     """
     def __init__(self, cfg: ManagerBasedRLEnvCfg, render_mode: str | None = None, **kwargs):
-        print("SPIDERBOT RL MANAGER ENV")
         super().__init__(cfg, render_mode, **kwargs)
 
     def _configure_gym_env_spaces(self):
