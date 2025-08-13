@@ -48,6 +48,7 @@ SKIP_COLLIDERS = [
     "Leg_KneeMotorPulley",
     "Leg_Knee_motor_bearings",
     "Motor",
+    "Leg_Body_Bracket",
     "Leg_Hip_Bracket",
     "Leg_End_Bearing_Holder",
 ]
@@ -62,9 +63,7 @@ COLLISION_THRESHOLDS = {
 DEFAULT_MATERIAL_NAME = "body_material"
 
 
-def main(
-    tree, input_dir, output_path, ground=False, light=False, head=False, imu=False
-):
+def main(tree, input_dir, output_path, head=False, imu=False):
     output_dir = path.dirname(output_path)
 
     tree = create_materials(tree)
@@ -136,6 +135,8 @@ def update_joint_values(tree):
         "joint",
         {
             "limited": "true",
+            "actuatorfrclimited": "true",
+            "actuatorfrcrange": " ".join(ACTUATOR_TORQUE_RANGE),
         },
     )
 
@@ -244,8 +245,10 @@ def add_defaults(tree):
         default,
         "motor",
         {
-            "ctrlrange": " ".join(ACTUATOR_TORQUE_RANGE),
             "gear": "1",
+            "ctrlrange": " ".join(ACTUATOR_TORQUE_RANGE),
+            "forcelimited": "true",
+            "forcerange": " ".join(ACTUATOR_TORQUE_RANGE),
         },
     )
 
@@ -376,31 +379,7 @@ def main_body(tree, head=False, imu=False):
             {"name": "accelerometer_sensor", "site": "imu_site"},
         )
 
-    # Bottom planes that should cover the entire bottom of the robot
-    # (this makes it easier to detect when the robot is on the ground)
-    # bottom1 = ET.Element(
-    #     "geom",
-    #     {
-    #         "name": "body_bottom1",
-    #         "pos": "0.24115 0 -0.075",
-    #         "size": "0.17 0.175 0.0001",
-    #         "type": "box",
-    #         "rgba": "1 0 0 0",
-    #     },
-    # )
-    # bottom2 = ET.Element(
-    #     "geom",
-    #     {
-    #         "name": "body_bottom2",
-    #         "pos": "0.24115 0 -0.075",
-    #         "size": "0.3 0.12 0.0001",
-    #         "type": "box",
-    #         "rgba": "1 0 0 0",
-    #     },
-    # )
-    # root_body.insert(0, bottom1)
-    # root_body.insert(0, bottom2)
-
+    # Add bodies
     root_body.insert(0, ground_cam)
     root_body.insert(0, body_cam)
     root_body.insert(0, free_joint)
@@ -777,19 +756,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Update SpiderBot XML configuration")
     parser.add_argument("output_path", help="Output file path for the generated XML")
     parser.add_argument(
-        "--ground", action="store_true", help="Add ground plane", default=False
-    )
-    parser.add_argument(
         "--head", action="store_true", help="Add a head to the robot", default=False
     )
     parser.add_argument(
         "--imu", action="store_true", help="Add an IMU spot & sensors", default=False
-    )
-    parser.add_argument(
-        "--light",
-        action="store_true",
-        help="Add light",
-        default=False,
     )
 
     args = parser.parse_args()

@@ -2,12 +2,12 @@
   <compiler angle="radian" />
   <default>
     <mesh scale="0.001 0.001 0.001" />
-    <motor ctrlrange="-11.0 11.0" gear="1" />
+    <motor gear="1" ctrlrange="-11.0 11.0" forcelimited="true" forcerange="-11.0 11.0" />
     <geom contype="0" conaffinity="0" material="body_material" group="2" />
     <default class="collision">
       <geom contype="1" conaffinity="1" group="3" pos="0 0 0" mass="0.0" material="" />
     </default>
-    <joint limited="true" />
+    <joint limited="true" actuatorfrclimited="true" actuatorfrcrange="-11.0 11.0" />
     <default class="femur_joint">
       <joint range="0 1.25" />
     </default>
@@ -55,12 +55,6 @@
     <mesh name="Leg_Femur_collision14" file="meshes/mujoco/colliders/Leg_Femur/14.stl" />
     <mesh name="Leg_Femur_collision15" file="meshes/mujoco/colliders/Leg_Femur/15.stl" />
     <mesh name="Leg_Femur_collision16" file="meshes/mujoco/colliders/Leg_Femur/16.stl" />
-    <mesh name="Leg_Body_Bracket_collision00" file="meshes/mujoco/colliders/Leg_Body_Bracket/00.stl" />
-    <mesh name="Leg_Body_Bracket_collision01" file="meshes/mujoco/colliders/Leg_Body_Bracket/01.stl" />
-    <mesh name="Leg_Body_Bracket_collision02" file="meshes/mujoco/colliders/Leg_Body_Bracket/02.stl" />
-    <mesh name="Leg_Body_Bracket_collision03" file="meshes/mujoco/colliders/Leg_Body_Bracket/03.stl" />
-    <mesh name="Leg_Body_Bracket_collision04" file="meshes/mujoco/colliders/Leg_Body_Bracket/04.stl" />
-    <mesh name="Leg_Body_Bracket_collision05" file="meshes/mujoco/colliders/Leg_Body_Bracket/05.stl" />
     <mesh name="Leg_Tibia_Leg_collision00" file="meshes/mujoco/colliders/Leg_Tibia_Leg/00.stl" />
     <mesh name="Leg_Tibia_Leg_collision01" file="meshes/mujoco/colliders/Leg_Tibia_Leg/01.stl" />
     <mesh name="Leg_Tibia_Leg_collision02" file="meshes/mujoco/colliders/Leg_Tibia_Leg/02.stl" />
@@ -77,6 +71,7 @@
       <joint name="root" type="free" pos="0 0 0" armature="0" damping="0" limited="false" margin="0.01" />
       <camera name="track" mode="targetbodycom" target="Body" pos="-0.817 -1.628 0.6" />
       <camera name="groundcam" mode="targetbodycom" target="Body" pos="-1.0 0 0.1" />
+      <geom name="base-stand" type="box" pos="0.24115 0.0 -0.05" size="0.2 0.09 0.02" class="collision" />
       <site name="imu_site" pos="0.24115 0 0" size="0.01" />
       <geom name="head" pos="0.49 0 0.015" size="0.025" type="sphere" rgba="0.0 0.5 0.9 1.9" material="" />
       <geom name="Body" type="mesh" mesh="Body" pos="0 0 0" quat="1 0 0 0" />
@@ -164,12 +159,6 @@
           <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.04 0.013" pos="0.013 0 0" class="collision" mass="0.0" />
           <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.028 0.011" pos="0.0 0 0" class="collision" mass="0.0" />
         </body>
-        <geom mesh="Leg_Body_Bracket_collision00" type="mesh" class="collision" name="Leg1_Body_Bracket_collision00" />
-        <geom mesh="Leg_Body_Bracket_collision01" type="mesh" class="collision" name="Leg1_Body_Bracket_collision01" />
-        <geom mesh="Leg_Body_Bracket_collision02" type="mesh" class="collision" name="Leg1_Body_Bracket_collision02" />
-        <geom mesh="Leg_Body_Bracket_collision03" type="mesh" class="collision" name="Leg1_Body_Bracket_collision03" />
-        <geom mesh="Leg_Body_Bracket_collision04" type="mesh" class="collision" name="Leg1_Body_Bracket_collision04" />
-        <geom mesh="Leg_Body_Bracket_collision05" type="mesh" class="collision" name="Leg1_Body_Bracket_collision05" />
       </body>
       <body name="Leg2_Body_Bracket" pos="0.39247899757722804 0.17001612341601535 -0.02862177809359275" quat="0.5 -0.5 0.5 -0.5">
         <geom name="Leg2_Body_Bracket" type="mesh" mesh="Leg_Body_Bracket" pos="0 0 0" quat="1 0 0 0" />
@@ -254,12 +243,6 @@
           <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.04 0.013" pos="0.013 0 0" class="collision" mass="0.0" />
           <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.028 0.011" pos="0.0 0 0" class="collision" mass="0.0" />
         </body>
-        <geom mesh="Leg_Body_Bracket_collision00" type="mesh" class="collision" name="Leg2_Body_Bracket_collision00" />
-        <geom mesh="Leg_Body_Bracket_collision01" type="mesh" class="collision" name="Leg2_Body_Bracket_collision01" />
-        <geom mesh="Leg_Body_Bracket_collision02" type="mesh" class="collision" name="Leg2_Body_Bracket_collision02" />
-        <geom mesh="Leg_Body_Bracket_collision03" type="mesh" class="collision" name="Leg2_Body_Bracket_collision03" />
-        <geom mesh="Leg_Body_Bracket_collision04" type="mesh" class="collision" name="Leg2_Body_Bracket_collision04" />
-        <geom mesh="Leg_Body_Bracket_collision05" type="mesh" class="collision" name="Leg2_Body_Bracket_collision05" />
       </body>
       <body name="Leg3_Body_Bracket" pos="0.2548789975772281 0.17001612341601535 -0.02862177809359275" quat="0.5 -0.5 0.5 -0.5">
         <geom name="Leg3_Body_Bracket" type="mesh" mesh="Leg_Body_Bracket" pos="0 0 0" quat="1 0 0 0" />
@@ -344,12 +327,6 @@
           <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.04 0.013" pos="0.013 0 0" class="collision" mass="0.0" />
           <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.028 0.011" pos="0.0 0 0" class="collision" mass="0.0" />
         </body>
-        <geom mesh="Leg_Body_Bracket_collision00" type="mesh" class="collision" name="Leg3_Body_Bracket_collision00" />
-        <geom mesh="Leg_Body_Bracket_collision01" type="mesh" class="collision" name="Leg3_Body_Bracket_collision01" />
-        <geom mesh="Leg_Body_Bracket_collision02" type="mesh" class="collision" name="Leg3_Body_Bracket_collision02" />
-        <geom mesh="Leg_Body_Bracket_collision03" type="mesh" class="collision" name="Leg3_Body_Bracket_collision03" />
-        <geom mesh="Leg_Body_Bracket_collision04" type="mesh" class="collision" name="Leg3_Body_Bracket_collision04" />
-        <geom mesh="Leg_Body_Bracket_collision05" type="mesh" class="collision" name="Leg3_Body_Bracket_collision05" />
       </body>
       <body name="Leg4_Body_Bracket" pos="0.1172789975772281 0.10561612341601537 -0.02862177809359275" quat="0.5 -0.5 0.5 -0.5">
         <geom name="Leg4_Body_Bracket" type="mesh" mesh="Leg_Body_Bracket" pos="0 0 0" quat="1 0 0 0" />
@@ -434,12 +411,6 @@
           <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.04 0.013" pos="0.013 0 0" class="collision" mass="0.0" />
           <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.028 0.011" pos="0.0 0 0" class="collision" mass="0.0" />
         </body>
-        <geom mesh="Leg_Body_Bracket_collision00" type="mesh" class="collision" name="Leg4_Body_Bracket_collision00" />
-        <geom mesh="Leg_Body_Bracket_collision01" type="mesh" class="collision" name="Leg4_Body_Bracket_collision01" />
-        <geom mesh="Leg_Body_Bracket_collision02" type="mesh" class="collision" name="Leg4_Body_Bracket_collision02" />
-        <geom mesh="Leg_Body_Bracket_collision03" type="mesh" class="collision" name="Leg4_Body_Bracket_collision03" />
-        <geom mesh="Leg_Body_Bracket_collision04" type="mesh" class="collision" name="Leg4_Body_Bracket_collision04" />
-        <geom mesh="Leg_Body_Bracket_collision05" type="mesh" class="collision" name="Leg4_Body_Bracket_collision05" />
       </body>
       <body name="Leg5_Body_Bracket" pos="0.36512101275220393 -0.1056161234160153 -0.028621778093592735" quat="0.5 -0.5 -0.5 0.5">
         <geom name="Leg5_Body_Bracket" type="mesh" mesh="Leg_Body_Bracket" pos="0 0 0" quat="1 0 0 0" />
@@ -524,12 +495,6 @@
           <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.04 0.013" pos="0.013 0 0" class="collision" mass="0.0" />
           <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.028 0.011" pos="0.0 0 0" class="collision" mass="0.0" />
         </body>
-        <geom mesh="Leg_Body_Bracket_collision00" type="mesh" class="collision" name="Leg5_Body_Bracket_collision00" />
-        <geom mesh="Leg_Body_Bracket_collision01" type="mesh" class="collision" name="Leg5_Body_Bracket_collision01" />
-        <geom mesh="Leg_Body_Bracket_collision02" type="mesh" class="collision" name="Leg5_Body_Bracket_collision02" />
-        <geom mesh="Leg_Body_Bracket_collision03" type="mesh" class="collision" name="Leg5_Body_Bracket_collision03" />
-        <geom mesh="Leg_Body_Bracket_collision04" type="mesh" class="collision" name="Leg5_Body_Bracket_collision04" />
-        <geom mesh="Leg_Body_Bracket_collision05" type="mesh" class="collision" name="Leg5_Body_Bracket_collision05" />
       </body>
       <body name="Leg6_Body_Bracket" pos="0.22752101275220393 -0.1700161234160153 -0.028621778093592735" quat="0.5 -0.5 -0.5 0.5">
         <geom name="Leg6_Body_Bracket" type="mesh" mesh="Leg_Body_Bracket" pos="0 0 0" quat="1 0 0 0" />
@@ -614,12 +579,6 @@
           <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.04 0.013" pos="0.013 0 0" class="collision" mass="0.0" />
           <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.028 0.011" pos="0.0 0 0" class="collision" mass="0.0" />
         </body>
-        <geom mesh="Leg_Body_Bracket_collision00" type="mesh" class="collision" name="Leg6_Body_Bracket_collision00" />
-        <geom mesh="Leg_Body_Bracket_collision01" type="mesh" class="collision" name="Leg6_Body_Bracket_collision01" />
-        <geom mesh="Leg_Body_Bracket_collision02" type="mesh" class="collision" name="Leg6_Body_Bracket_collision02" />
-        <geom mesh="Leg_Body_Bracket_collision03" type="mesh" class="collision" name="Leg6_Body_Bracket_collision03" />
-        <geom mesh="Leg_Body_Bracket_collision04" type="mesh" class="collision" name="Leg6_Body_Bracket_collision04" />
-        <geom mesh="Leg_Body_Bracket_collision05" type="mesh" class="collision" name="Leg6_Body_Bracket_collision05" />
       </body>
       <body name="Leg7_Body_Bracket" pos="0.08992101275220396 -0.1700161234160153 -0.028621778093592735" quat="0.5 -0.5 -0.5 0.5">
         <geom name="Leg7_Body_Bracket" type="mesh" mesh="Leg_Body_Bracket" pos="0 0 0" quat="1 0 0 0" />
@@ -704,12 +663,6 @@
           <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.04 0.013" pos="0.013 0 0" class="collision" mass="0.0" />
           <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.028 0.011" pos="0.0 0 0" class="collision" mass="0.0" />
         </body>
-        <geom mesh="Leg_Body_Bracket_collision00" type="mesh" class="collision" name="Leg7_Body_Bracket_collision00" />
-        <geom mesh="Leg_Body_Bracket_collision01" type="mesh" class="collision" name="Leg7_Body_Bracket_collision01" />
-        <geom mesh="Leg_Body_Bracket_collision02" type="mesh" class="collision" name="Leg7_Body_Bracket_collision02" />
-        <geom mesh="Leg_Body_Bracket_collision03" type="mesh" class="collision" name="Leg7_Body_Bracket_collision03" />
-        <geom mesh="Leg_Body_Bracket_collision04" type="mesh" class="collision" name="Leg7_Body_Bracket_collision04" />
-        <geom mesh="Leg_Body_Bracket_collision05" type="mesh" class="collision" name="Leg7_Body_Bracket_collision05" />
       </body>
       <body name="Leg8_Body_Bracket" pos="-0.04767898724779603 -0.10561612341601528 -0.028621778093592735" quat="0.5 -0.5 -0.5 0.5">
         <geom name="Leg8_Body_Bracket" type="mesh" mesh="Leg_Body_Bracket" pos="0 0 0" quat="1 0 0 0" />
@@ -794,12 +747,6 @@
           <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.04 0.013" pos="0.013 0 0" class="collision" mass="0.0" />
           <geom quat="0.7071 0 0.7071 0" type="cylinder" size="0.028 0.011" pos="0.0 0 0" class="collision" mass="0.0" />
         </body>
-        <geom mesh="Leg_Body_Bracket_collision00" type="mesh" class="collision" name="Leg8_Body_Bracket_collision00" />
-        <geom mesh="Leg_Body_Bracket_collision01" type="mesh" class="collision" name="Leg8_Body_Bracket_collision01" />
-        <geom mesh="Leg_Body_Bracket_collision02" type="mesh" class="collision" name="Leg8_Body_Bracket_collision02" />
-        <geom mesh="Leg_Body_Bracket_collision03" type="mesh" class="collision" name="Leg8_Body_Bracket_collision03" />
-        <geom mesh="Leg_Body_Bracket_collision04" type="mesh" class="collision" name="Leg8_Body_Bracket_collision04" />
-        <geom mesh="Leg_Body_Bracket_collision05" type="mesh" class="collision" name="Leg8_Body_Bracket_collision05" />
       </body>
       <geom mesh="Body_collision00" type="mesh" class="collision" name="Body_collision00" />
       <geom mesh="Body_collision01" type="mesh" class="collision" name="Body_collision01" />
