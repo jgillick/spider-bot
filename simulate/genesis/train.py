@@ -20,16 +20,16 @@ THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-n", "--num_envs", type=int, default=2)
-    parser.add_argument("--max_iterations", type=int, default=100)
+    parser.add_argument("-n", "--num_envs", type=int, default=600)
+    parser.add_argument("--max_iterations", type=int, default=500)
+    parser.add_argument("-d", "--device", type=str, default="gpu")
     args = parser.parse_args()
 
-    torch.set_default_device("cpu")
-    gs.init(logging_level="warning", backend=gs.cpu)
-
-    #  Create environment
-    env = SpiderRobotEnv(num_envs=args.num_envs)
-    env = SkrlEnvWapper(env)
+    backend = gs.gpu
+    if args.device == "cpu":
+        backend = gs.cpu
+        torch.set_default_device("cpu")
+    gs.init(logging_level="warning", backend=backend)
 
     # Load RL configuration from yaml
     cfg = Runner.load_cfg_from_yaml(SKRL_CONFIG)
@@ -41,6 +41,7 @@ def main():
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     experiment_name = f"{timestamp}_PPO"
     log_path = os.path.join(log_base_dir, experiment_name)
+    video_path = os.path.join(log_path, "videos")
     os.makedirs(log_path, exist_ok=False)
 
     cfg["agent"]["experiment"]["directory"] = log_base_dir
@@ -49,10 +50,15 @@ def main():
     # Save config to dir
     pickle.dump([cfg], open(f"{log_path}/cfg.pkl", "wb"))
 
+    #  Create environment
+    env = SpiderRobotEnv(num_envs=args.num_envs, video=True, video_dir=video_path)
+    env = SkrlEnvWapper(env)
+
     # Setup interrupt handler
     def shutdown(_sig, _frame):
+        print("Shutting down...")
         env.close()
-        sys.exit(0)
+        os._exit(0)
 
     signal.signal(signal.SIGINT, shutdown)
 

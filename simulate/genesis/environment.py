@@ -21,14 +21,18 @@ from genesis.utils.geom import (
 
 TARGET_HEIGHT = 0.14
 REWARDS = {
+    "tracking_lin_vel": 1.0,
+    "tracking_ang_vel": 0.2,
     "lin_vel_z": -1.0,
     "base_height": -50.0,
     "action_rate": -0.005,
     "similar_to_default": -0.1,
 }
 
+INITIAL_BODY_POSITION = [0.0, 0.0, 0.145]
+INITIAL_QUAT = [1.0, 0.0, 0.0, 0.0]
 FEMUR_INIT_POSITION = 0.5
-TIBIA_INIT_POSITION = -0.5
+TIBIA_INIT_POSITION = 0.6
 INITIAL_JOINT_POSITIONS = {
     "Leg1_Hip": -1.0,
     "Leg1_Femur": FEMUR_INIT_POSITION,
@@ -56,27 +60,38 @@ INITIAL_JOINT_POSITIONS = {
     "Leg8_Tibia": TIBIA_INIT_POSITION,
 }
 
-
-INITIAL_POSITION = [0.0, 0.0, 0.2]
-INITIAL_QUAT = [1.0, 0.0, 0.0, 0.0]
-
 PD_KP = 50.0
 PD_KV = 0.5
 MAX_TORQUE = 8.0
+
+COMMANDS = {
+    "lin_vel_x_range": [0.5, 0.5],
+    "lin_vel_y_range": [0.5, 0.5],
+    "ang_vel_range": [0.5, 0.5],
+}
+COMMAND_REWARD_SIGMA = 0.25
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 SPIDER_XML = os.path.abspath(os.path.join(THIS_DIR, "../robot/SpiderBot.xml"))
 
 
+def gs_rand_float(lower, upper, shape, device):
+    return (upper - lower) * torch.rand(size=shape, device=device) + lower
+
+
 class SpiderRobotEnv:
     """
-    Gymnasium compatible environment for SpiderBot.
+    SpiderBot environment for Genesis
     """
 
     def __init__(
         self,
         num_envs: int = 1,
-        max_episode_length_s: int = 16,
+        max_episode_length_s: int = 10,
+        video: bool = False,
+        video_every_n_steps: int = 500,
+        video_length_s: int = 10,
+        video_dir: str = "videos",
     ):
         self.device = gs.device
         self.num_envs = num_envs
@@ -84,8 +99,18 @@ class SpiderRobotEnv:
         self.max_episode_length = math.ceil(max_episode_length_s / self.dt)
         self._track_data: Callable[[str, float], None] = None
 
+        self.video = video
+        self.video_length_steps = math.ceil(video_length_s / self.dt)
+        self.video_every_n_steps = video_every_n_steps
+        self.video_dir = video_dir
+        self.video_is_recording = False
+        self.video_recording_steps_remaining = 0
+        self.video_next_start_step = 0
+        if self.video:
+            os.makedirs(self.video_dir, exist_ok=True)
+
         # Environment spaces
-        self.num_obs = 78
+        self.num_obs = 81
         self.num_actions = 24
         self.observation_space = spaces.Box(
             low=-np.inf,
@@ -107,6 +132,8 @@ class SpiderRobotEnv:
             dict(),
         )
         for name, base_weight in REWARDS.items():
+            if base_weight == 0.0:
+                continue
             self.reward_weight[name] = base_weight * self.dt
             self.reward_func[name] = getattr(self, "_reward_" + name)
             self._episode_rewards[name] = torch.zeros(
@@ -122,11 +149,11 @@ class SpiderRobotEnv:
         """Create the scene."""
         # create scene
         self.scene = gs.Scene(
-            sim_options=gs.options.SimOptions(dt=self.dt, substeps=2),
+            show_viewer=False,
+            sim_options=gs.options.SimOptions(dt=self.dt, substeps=1),
             viewer_options=gs.options.ViewerOptions(
-                max_FPS=int(0.5 / self.dt),
-                camera_pos=(2.0, 0.0, 2.5),
-                camera_lookat=(0.0, 0.0, 0.5),
+                camera_pos=(1.5, 1.5, 1.0),
+                camera_lookat=(0.0, 0.0, 0.0),
                 camera_fov=40,
             ),
             vis_options=gs.options.VisOptions(rendered_envs_idx=list(range(1))),
@@ -136,47 +163,54 @@ class SpiderRobotEnv:
                 enable_collision=True,
                 enable_joint_limit=True,
             ),
-            show_viewer=True,
         )
 
-        # add plain
+        # Add camera
+        self.cam = self.scene.add_camera(
+            res=(1280, 960),
+            pos=(2.5, 1.5, 1.0),
+            lookat=(0.0, 0.0, 0.0),
+            fov=40,
+        )
+
+        # Add plane
         self.scene.add_entity(gs.morphs.URDF(file="urdf/plane/plane.urdf", fixed=True))
 
         # add robot
-        self.base_init_pos = torch.tensor(INITIAL_POSITION, device=gs.device)
+        self.base_init_pos = torch.tensor(INITIAL_BODY_POSITION, device=gs.device)
         self.base_init_quat = torch.tensor(INITIAL_QUAT, device=gs.device)
         self.inv_base_init_quat = inv_quat(self.base_init_quat)
         self.robot = self.scene.add_entity(
             gs.morphs.MJCF(
                 file=SPIDER_XML,
-                pos=self.base_init_pos.cpu().numpy(),
-                quat=self.base_init_quat.cpu().numpy(),
+                pos=self.base_init_pos,
+                quat=self.base_init_quat,
             ),
         )
 
         # build
-        self.scene.build(n_envs=self.num_envs)
+        self.scene.build(n_envs=self.num_envs, env_spacing=(1.5, 1.5))
 
     def _init_actuators(self):
         """Fetch the actuators and set the Kp/Kv values."""
         # Actuator indices
-        self.motors_dof_idx = [
+        self.dof_idx = [
             self.robot.get_joint(name).dof_start
             for name in INITIAL_JOINT_POSITIONS.keys()
         ]
 
         # Gains and torque limits
-        self.robot.set_dofs_kp([PD_KP] * self.num_actions, self.motors_dof_idx)
-        self.robot.set_dofs_kv([PD_KV] * self.num_actions, self.motors_dof_idx)
+        self.robot.set_dofs_kp([PD_KP] * self.num_actions, self.dof_idx)
+        self.robot.set_dofs_kv([PD_KV] * self.num_actions, self.dof_idx)
         self.robot.set_dofs_force_range(
             [-MAX_TORQUE] * self.num_actions,
             [MAX_TORQUE] * self.num_actions,
-            self.motors_dof_idx,
+            self.dof_idx,
         )
 
         # Position Limits
         self.actuator_limits_lower, self.actuator_limits_upper = (
-            self.robot.get_dofs_limit(self.motors_dof_idx)
+            self.robot.get_dofs_limit(self.dof_idx)
         )
         self.actuator_limits_lower = self.actuator_limits_lower.unsqueeze(0).expand(
             self.num_envs, -1
@@ -194,6 +228,7 @@ class SpiderRobotEnv:
 
     def _init_buffers(self):
         """Initialize buffers that will track the state of the environments."""
+        self.current_step = 0
         self.base_lin_vel = torch.zeros(
             (self.num_envs, 3), device=gs.device, dtype=gs.tc_float
         )
@@ -229,8 +264,17 @@ class SpiderRobotEnv:
         self.base_quat = torch.zeros(
             (self.num_envs, 4), device=gs.device, dtype=gs.tc_float
         )
-        self.extras = dict()  # extra information for logging
-        self.extras["observations"] = dict()
+        self.commands = torch.zeros(
+            (self.num_envs, len(COMMANDS)), device=gs.device, dtype=gs.tc_float
+        )
+
+        self.infos = dict()
+        self.infos["time_outs"] = torch.zeros(
+            (self.num_envs,), device=gs.device, dtype=gs.tc_float
+        )
+        self.infos["terminations"] = torch.zeros(
+            (self.num_envs,), device=gs.device, dtype=gs.tc_float
+        )
 
     def track_data(self, tag: str, value: float):
         """Log data to tensorboard."""
@@ -243,6 +287,8 @@ class SpiderRobotEnv:
 
     def step(self, actions: torch.Tensor):
         """Perform a step in the environment."""
+        self.current_step += 1
+        self._handle_video()
 
         # Validate actions
         if torch.isnan(actions).any():
@@ -277,8 +323,8 @@ class SpiderRobotEnv:
         self.base_lin_vel[:] = transform_by_quat(self.robot.get_vel(), inv_base_quat)
         self.base_ang_vel[:] = transform_by_quat(self.robot.get_ang(), inv_base_quat)
         self.projected_gravity = transform_by_quat(self.global_gravity, inv_base_quat)
-        self.dof_pos[:] = self.robot.get_dofs_position(self.motors_dof_idx)
-        self.dof_vel[:] = self.robot.get_dofs_velocity(self.motors_dof_idx)
+        self.dof_pos[:] = self.robot.get_dofs_position(self.dof_idx)
+        self.dof_vel[:] = self.robot.get_dofs_velocity(self.dof_idx)
 
         # Termination, rewards, and observations
         terminations, timeouts = self._check_terminated()
@@ -289,7 +335,7 @@ class SpiderRobotEnv:
         self.last_actions[:] = self.actions[:]
         self.last_dof_vel[:] = self.dof_vel[:]
 
-        return self.obs_buf, self.rew_buf, terminations, timeouts, self.extras
+        return self.obs_buf, self.rew_buf, terminations, timeouts, self.infos
 
     def reset(self):
         self.reset_buf[:] = True
@@ -301,7 +347,7 @@ class SpiderRobotEnv:
 
     def close(self):
         """Close the environment."""
-        pass
+        self.scene.reset()
 
     def _set_actuator_positions(self, actions: torch.Tensor):
         """Convert actions to position commands, and send them to the actuators."""
@@ -321,12 +367,13 @@ class SpiderRobotEnv:
         )
 
         # Set target positions
-        self.robot.control_dofs_position(self.target_positions, self.motors_dof_idx)
+        self.robot.control_dofs_position(self.target_positions, self.dof_idx)
 
     def _get_observation(self):
         """Environment observations"""
         self.obs_buf = torch.cat(
             [
+                self.commands,  # 3
                 self.base_ang_vel,  # 3
                 self.projected_gravity,  # 3
                 self.dof_pos,  # 24
@@ -335,7 +382,6 @@ class SpiderRobotEnv:
             ],
             dim=-1,
         )
-        self.extras["observations"]["critic"] = self.obs_buf
         return self.obs_buf
 
     def _check_terminated(self):
@@ -344,10 +390,10 @@ class SpiderRobotEnv:
         # -- Timeout
         timeouts = self.episode_length_buf > self.max_episode_length
         time_out_idx = timeouts.nonzero(as_tuple=False).reshape((-1,))
-        self.extras["time_outs"] = torch.zeros_like(
+        self.infos["time_outs"] = torch.zeros_like(
             timeouts, device=gs.device, dtype=gs.tc_float
         )
-        self.extras["time_outs"][time_out_idx] = 1.0
+        self.infos["time_outs"][time_out_idx] = 1.0
 
         # -- Termination
         # Check if robot has flipped over
@@ -355,10 +401,10 @@ class SpiderRobotEnv:
         terminations |= torch.abs(self.base_euler[:, 0]) > 90  # Degrees
 
         term_idx = terminations.nonzero(as_tuple=False).reshape((-1,))
-        self.extras["terminations"] = torch.zeros_like(
+        self.infos["terminations"] = torch.zeros_like(
             terminations, device=gs.device, dtype=gs.tc_float
         )
-        self.extras["terminations"][term_idx] = 1.0
+        self.infos["terminations"][term_idx] = 1.0
 
         # Reset if necessary
         self.reset_buf[:] = timeouts | terminations
@@ -379,28 +425,35 @@ class SpiderRobotEnv:
         self.episode_length_buf[envs_idx] = 0
         self.reset_buf[envs_idx] = True
 
-        # reset dofs
-        self.dof_pos[envs_idx] = self.default_dof_pos
-        self.dof_vel[envs_idx] = 0.0
-        self.robot.set_dofs_position(
-            position=self.dof_pos[envs_idx],
-            dofs_idx_local=self.motors_dof_idx,
-            zero_velocity=True,
-            envs_idx=envs_idx,
-        )
-
         # reset base
         self.base_pos[envs_idx] = self.base_init_pos
         self.base_quat[envs_idx] = self.base_init_quat.reshape(1, -1)
         self.robot.zero_all_dofs_velocity(envs_idx)
         self.robot.set_pos(
-            self.base_pos[envs_idx], zero_velocity=False, envs_idx=envs_idx
+            self.base_pos[envs_idx], zero_velocity=True, envs_idx=envs_idx
         )
         self.robot.set_quat(
-            self.base_quat[envs_idx], zero_velocity=False, envs_idx=envs_idx
+            self.base_quat[envs_idx], zero_velocity=True, envs_idx=envs_idx
         )
+
+        # reset dofs
+        self.dof_pos[envs_idx] = self.default_dof_pos
+        self.dof_vel[envs_idx] = 0.0
+        self.robot.set_dofs_position(
+            position=self.dof_pos[envs_idx],
+            dofs_idx_local=self.dof_idx,
+            zero_velocity=True,
+            envs_idx=envs_idx,
+        )
+
         self.base_lin_vel[envs_idx] = 0
         self.base_ang_vel[envs_idx] = 0
+
+        self.infos["time_outs"][envs_idx] = 0.0
+        self.infos["terminations"][envs_idx] = 0.0
+
+        # Set new command
+        self._resample_commands(envs_idx)
 
     def _calculate_rewards(self):
         """Compute the total rewards"""
@@ -432,6 +485,29 @@ class SpiderRobotEnv:
             # reset episodic sum
             self._episode_rewards[key][env_idx] = 0.0
 
+    def _resample_commands(self, envs_idx):
+        self.commands[envs_idx, 0] = gs_rand_float(
+            *COMMANDS["lin_vel_x_range"], (len(envs_idx),), gs.device
+        )
+        self.commands[envs_idx, 1] = gs_rand_float(
+            *COMMANDS["lin_vel_y_range"], (len(envs_idx),), gs.device
+        )
+        self.commands[envs_idx, 2] = gs_rand_float(
+            *COMMANDS["ang_vel_range"], (len(envs_idx),), gs.device
+        )
+
+    def _reward_tracking_lin_vel(self):
+        # Tracking of linear velocity commands (xy axes)
+        lin_vel_error = torch.sum(
+            torch.square(self.commands[:, :2] - self.base_lin_vel[:, :2]), dim=1
+        )
+        return torch.exp(-lin_vel_error / COMMAND_REWARD_SIGMA)
+
+    def _reward_tracking_ang_vel(self):
+        # Tracking of angular velocity commands (yaw)
+        ang_vel_error = torch.square(self.commands[:, 2] - self.base_ang_vel[:, 2])
+        return torch.exp(-ang_vel_error / COMMAND_REWARD_SIGMA)
+
     def _reward_lin_vel_z(self):
         # Penalize z axis base linear velocity
         return torch.square(self.base_lin_vel[:, 2])
@@ -447,3 +523,29 @@ class SpiderRobotEnv:
     def _reward_base_height(self):
         # Penalize base height away from target
         return torch.square(self.base_pos[:, 2] - TARGET_HEIGHT)
+
+    def _handle_video(self):
+        """Record video at each step."""
+        self.cam.render()
+        # Currently recording
+        if self.video_is_recording:
+            self.video_recording_steps_remaining -= 1
+            if self.video_recording_steps_remaining <= 0:
+                # Save recording
+                filename = os.path.join(
+                    self.video_dir,
+                    f"video_{self.video_next_start_step}.mp4",
+                )
+                self.cam.stop_recording(filename, fps=60)
+
+                # Reset recording state
+                self.video_is_recording = False
+                self.video_recording_steps_remaining = 0
+                self.video_next_start_step = (
+                    self.current_step + self.video_every_n_steps
+                )
+        # Start new recording
+        elif self.video_next_start_step <= self.current_step:
+            self.video_is_recording = True
+            self.video_recording_steps_remaining = self.video_length_steps
+            self.cam.start_recording()
