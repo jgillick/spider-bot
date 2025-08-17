@@ -213,8 +213,7 @@ __marimo__/
 *.tmp.usd
 ._*
 simulate/robot/export/
-simulate/gymnasium/logs
 simulate/issac/cloud.cfg
 simulate/issac/env.cfg
-simulate/issac/logs
+simulate/*/logs
 secrets.cfg
