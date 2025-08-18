@@ -23,6 +23,10 @@ class GenesisEnv:
     observation_space: spaces = None
     headless: bool = True
     num_envs: int = 1
+    num_steps: int = 0
+
+    actions: torch.Tensor = None
+    last_actions: torch.Tensor = None
 
     def __init__(
         self,
@@ -87,7 +91,16 @@ class GenesisEnv:
         Returns:
             Batch of (observations, rewards, terminations, truncations, infos)
         """
-        raise NotImplementedError
+        self.num_steps += 1
+        self.episode_length += 1
+
+        if self.actions is not None:
+            self.last_actions[:] = self.actions[:]
+        else:
+            self.last_actions = torch.zeros_like(actions)
+        self.actions = actions
+
+        return None, None, None, None, {}
 
     def reset(
         self,
@@ -102,7 +115,27 @@ class GenesisEnv:
         Returns:
             A batch of observations and info from the vectorized environment.
         """
-        raise NotImplementedError
+
+        # Initial reset, set buffers
+        if self.num_steps == 0:
+            self.actions = torch.zeros(
+                (self.num_envs, self.action_space.shape[0]),
+                device=gs.device,
+                dtype=gs.tc_float,
+            )
+            self.last_actions = torch.zeros_like(self.actions)
+            self.episode_length = torch.zeros(
+                (self.num_envs,), device=gs.device, dtype=gs.tc_int
+            )
+
+        # Actions
+        self.actions[env_ids] = 0.0
+        self.last_actions[env_ids] = 0.0
+
+        # Episode length
+        self.episode_length[env_ids] = 0
+
+        return None, None
 
     def close(self):
         """Close the environment."""

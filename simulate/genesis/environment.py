@@ -160,7 +160,7 @@ class SpiderRobotEnv(GenesisEnv):
             for name in INITIAL_JOINT_POSITIONS.keys()
         ]
 
-        # Gains and torque limits
+        # Set gains and torque limit
         self.robot.set_dofs_kp([PD_KP] * self.num_actions, self.dof_idx)
         self.robot.set_dofs_kv([PD_KV] * self.num_actions, self.dof_idx)
         self.robot.set_dofs_force_range(
@@ -169,7 +169,7 @@ class SpiderRobotEnv(GenesisEnv):
             self.dof_idx,
         )
 
-        # Position Limits
+        # Get position Limits and convert to shape (num_envs, limit)
         self.actuator_limits_lower, self.actuator_limits_upper = (
             self.robot.get_dofs_limit(self.dof_idx)
         )
@@ -206,28 +206,25 @@ class SpiderRobotEnv(GenesisEnv):
         self.rew_buf = torch.zeros(
             (self.num_envs,), device=gs.device, dtype=gs.tc_float
         )
-        self.episode_length_buf = torch.zeros(
-            (self.num_envs,), device=gs.device, dtype=gs.tc_int
-        )
-        self.actions = torch.zeros(
+
+        self.dof_pos = torch.zeros(
             (self.num_envs, self.num_actions), device=gs.device, dtype=gs.tc_float
         )
-        self.last_actions = torch.zeros_like(self.actions)
-        self.dof_pos = torch.zeros_like(self.actions)
-        self.dof_vel = torch.zeros_like(self.actions)
-        self.last_dof_vel = torch.zeros_like(self.actions)
+        self.dof_vel = torch.zeros_like(self.dof_pos)
         self.base_pos = torch.zeros(
             (self.num_envs, 3), device=gs.device, dtype=gs.tc_float
         )
         self.base_quat = torch.zeros(
             (self.num_envs, 4), device=gs.device, dtype=gs.tc_float
         )
+
         self.commands = torch.zeros(
             (self.num_envs, len(COMMANDS)), device=gs.device, dtype=gs.tc_float
         )
 
     def step(self, actions: torch.Tensor):
         """Perform a step in the environment."""
+        super().step(actions)
 
         # Validate actions
         if torch.isnan(actions).any():
@@ -242,16 +239,11 @@ class SpiderRobotEnv(GenesisEnv):
         self.scene.step()
 
         # Update state buffers
-        self.episode_length_buf += 1
         self.base_pos[:] = self.robot.get_pos()
         self.base_quat[:] = self.robot.get_quat()
-        # Fix the quaternion transformation to ensure proper shapes
-        inv_base_init_quat_expanded = self.inv_base_init_quat.unsqueeze(0).expand(
-            self.num_envs, -1
-        )
         self.base_euler = quat_to_xyz(
             transform_quat_by_quat(
-                inv_base_init_quat_expanded,
+                torch.ones_like(self.base_quat) * self.inv_base_init_quat,
                 self.base_quat,
             ),
             rpy=True,
@@ -275,11 +267,6 @@ class SpiderRobotEnv(GenesisEnv):
         self.reset(reset_idx)
 
         self.get_observations()
-
-        # Retain previous state
-        self.last_actions[:] = self.actions[:]
-        self.last_dof_vel[:] = self.dof_vel[:]
-
         info = {
             "logs": {
                 "episode": rewards_logs,
@@ -291,13 +278,10 @@ class SpiderRobotEnv(GenesisEnv):
         self,
         env_ids: Sequence[int] = None,
     ) -> tuple[torch.Tensor, dict[str, Any]]:
+        """Reset one or more environments."""
+        super().reset(env_ids)
         if env_ids is None:
             env_ids = torch.arange(self.num_envs, device=gs.device)
-
-        # reset buffers
-        self.last_actions[env_ids] = 0.0
-        self.last_dof_vel[env_ids] = 0.0
-        self.episode_length_buf[env_ids] = 0
 
         # reset base
         self.base_pos[env_ids] = self.base_init_pos
@@ -373,7 +357,7 @@ class SpiderRobotEnv(GenesisEnv):
         """Check if episode should terminate (robot has fallen or become unstable)."""
 
         # -- Timeout
-        timeouts = self.episode_length_buf > self.max_episode_length
+        timeouts = self.episode_length > self.max_episode_length
 
         # -- Termination
         # Check if robot has flipped over
@@ -399,7 +383,7 @@ class SpiderRobotEnv(GenesisEnv):
         """Compute the total rewards"""
         for key in REWARDS.keys():
             # Get episode lengths and ensure they're valid
-            episode_lengths = self.episode_length_buf[env_idx]
+            episode_lengths = self.episode_length[env_idx]
 
             # Handle edge cases where episode lengths might be zero
             valid_mask = episode_lengths > 0
