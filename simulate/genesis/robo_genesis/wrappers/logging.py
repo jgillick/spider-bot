@@ -102,7 +102,7 @@ class DataLoggerWrapper(Wrapper):
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, Any]:
         """Perform a step in the environment and log data at the end of it."""
         self.episode_length += 1
-        obs, rewards, terminations, timeouts, info = self.env.step(actions)
+        obs, rewards, terminations, timeouts, info = super().step(actions)
 
         if self.key in info:
             # Step logs
@@ -128,7 +128,7 @@ class DataLoggerWrapper(Wrapper):
     def reset(
         self, env_ids: Sequence[int] = None
     ) -> tuple[torch.Tensor, dict[str, Any]]:
-        (obs, info) = self.env.reset(env_ids)
+        (obs, info) = super().reset(env_ids)
 
         # If env_ids is None, we're resetting all environments
         if env_ids is None:

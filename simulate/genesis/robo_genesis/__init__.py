@@ -1,5 +1,10 @@
 from .env.skrl_env import create_skrl_env
-from .wrappers import DataLoggerWrapper, VideoWrapper, VideoCameraConfig
+from .wrappers import (
+    DataLoggerWrapper,
+    VideoWrapper,
+    VideoCameraConfig,
+    VideoFollowRobotConfig,
+)
 from .genesis_env import GenesisEnv
 
 __all__ = [
@@ -7,5 +12,6 @@ __all__ = [
     "DataLoggerWrapper",
     "VideoWrapper",
     "VideoCameraConfig",
+    "VideoFollowRobotConfig",
     "create_skrl_env",
 ]
