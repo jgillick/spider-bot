@@ -5,12 +5,11 @@ import argparse
 import pickle
 import torch
 from datetime import datetime
-from skrl.envs.wrappers.torch import wrap_env
 from skrl.utils.runner.torch import Runner
 
 import genesis as gs
 
-from skrl_env_wrapper import SkrlEnvWapper
+from robo_genesis import create_skrl_env, DataLoggerWrapper, VideoWrapper
 from environment import SpiderRobotEnv
 
 SKRL_CONFIG = "./ppo.yaml"
@@ -44,6 +43,8 @@ def main():
     video_path = os.path.join(log_path, "videos")
     os.makedirs(log_path, exist_ok=False)
 
+    print(f"Logging to: {log_path}")
+
     cfg["agent"]["experiment"]["directory"] = log_base_dir
     cfg["agent"]["experiment"]["experiment_name"] = experiment_name
 
@@ -51,21 +52,36 @@ def main():
     pickle.dump([cfg], open(f"{log_path}/cfg.pkl", "wb"))
 
     #  Create environment
-    env = SpiderRobotEnv(num_envs=args.num_envs, video=True, video_dir=video_path)
-    env = SkrlEnvWapper(env)
+    env = SpiderRobotEnv(num_envs=args.num_envs)
+    env = DataLoggerWrapper(env)
+    env = VideoWrapper(
+        env,
+        video_length_s=5,
+        out_dir=video_path,
+        camera={
+            "pos": (2.5, 1.5, 1.0),
+            "lookat": (0.0, 0.0, 0.0),
+            "fov": 40,
+        },
+    )
 
-    # Setup interrupt handler
-    def shutdown(_sig, _frame):
-        print("Shutting down...")
-        env.close()
-        os._exit(0)
-
-    signal.signal(signal.SIGINT, shutdown)
-
-    # Start runner
+    # Train agent
     try:
-        runner = Runner(env, cfg)
+        skrl_env = create_skrl_env(env)
+
+        # Setup interrupt handler
+        def shutdown(_sig, _frame):
+            print("Shutting down...")
+            skrl_env.close()
+            os._exit(0)
+
+        signal.signal(signal.SIGINT, shutdown)
+
+        obs = env.observation_space
+        print(obs)
+        runner = Runner(skrl_env, cfg)
         env.set_data_tracker(runner.agent.track_data)
+        env.build_scene()
         runner.run("train")
     except KeyboardInterrupt:
         shutdown(None, None)
