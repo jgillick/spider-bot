@@ -8,7 +8,7 @@ import math
 import torch
 import numpy as np
 from gymnasium import spaces
-from typing import Callable, Sequence, Any
+from typing import Sequence, Any
 
 import genesis as gs
 from genesis.utils.geom import (
@@ -21,7 +21,7 @@ from genesis.utils.geom import (
 from robo_genesis import GenesisEnv
 
 
-TARGET_HEIGHT = 0.14
+TARGET_HEIGHT = 0.15
 REWARDS = {
     "tracking_lin_vel": 1.0,
     "tracking_ang_vel": 0.2,

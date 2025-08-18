@@ -1,4 +1,9 @@
 from .logging import DataLoggerWrapper
-from .video import VideoWrapper, VideoCameraConfig
+from .video import VideoWrapper, VideoCameraConfig, VideoFollowRobotConfig
 
-__all__ = ["DataLoggerWrapper", "VideoWrapper", "VideoCameraConfig"]
+__all__ = [
+    "DataLoggerWrapper",
+    "VideoWrapper",
+    "VideoCameraConfig",
+    "VideoFollowRobotConfig",
+]
