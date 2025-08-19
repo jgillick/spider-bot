@@ -53,8 +53,9 @@ class GenesisEnv:
                 camera_pos=(-2.5, -1.5, 1.0),
                 camera_lookat=(0.0, 0.0, 0.0),
                 camera_fov=40,
+                max_FPS=60,
             ),
-            vis_options=gs.options.VisOptions(rendered_envs_idx=list(range(1))),
+            vis_options=gs.options.VisOptions(n_rendered_envs=1),
             rigid_options=gs.options.RigidOptions(
                 dt=self.dt,
                 constraint_solver=gs.constraint_solver.Newton,

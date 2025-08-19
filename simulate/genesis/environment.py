@@ -99,17 +99,16 @@ class SpiderRobotEnv(GenesisEnv):
 
         self.command_manager = VelocityCommandManager(
             self,
-            visualize=not headless,
             lin_vel_x_range=COMMANDS["lin_vel_x_range"],
             lin_vel_y_range=COMMANDS["lin_vel_y_range"],
             ang_vel_z_range=COMMANDS["ang_vel_range"],
+            debug_visualizer=True,
+            debug_visualizer_env_idx=[0],
         )
 
         # Spread out max episode lengths so not all envs are resetting at the same time
         steps_margin = self.max_episode_length * 0.1
-        self.max_episode_length_steps = torch.zeros(
-            (self.num_envs,), device=gs.device
-        )
+        self.max_episode_length_steps = torch.zeros((self.num_envs,), device=gs.device)
         self.max_episode_length_steps.uniform_(
             self.max_episode_length - steps_margin,
             self.max_episode_length + steps_margin,
@@ -258,7 +257,8 @@ class SpiderRobotEnv(GenesisEnv):
         self.base_quat[:] = self.robot.get_quat()
         self.base_euler = quat_to_xyz(
             transform_quat_by_quat(
-                torch.ones_like(self.base_quat, device=gs.device) * self.inv_base_init_quat,
+                torch.ones_like(self.base_quat, device=gs.device)
+                * self.inv_base_init_quat,
                 self.base_quat,
             ),
             rpy=True,
