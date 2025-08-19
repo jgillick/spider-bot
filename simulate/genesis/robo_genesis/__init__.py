@@ -1,4 +1,4 @@
-from .env.skrl_env import create_skrl_env
+from .rl.skrl import create_skrl_env
 from .wrappers import (
     DataLoggerWrapper,
     VideoWrapper,
