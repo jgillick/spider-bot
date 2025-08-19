@@ -2,4 +2,3 @@ genesis-world
 torch
 skrl[torch]
 pyyaml
-pickle
