@@ -1,16 +1,16 @@
+from typing import Tuple, Sequence
+
 import os
-from re import I
 import torch
 import genesis as gs
-from typing import Tuple, Sequence
-from genesis.engine.entities import RigidEntity
-
+from genesis.vis.rasterizer_context import RasterizerContext
 from robo_genesis.genesis_env import GenesisEnv
 
 Range = Tuple[float, float]
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 
+ARROW_RADIUS = 0.026
 ARROW_VEC_MAX = 0.15
 
 
@@ -163,11 +163,12 @@ class VelocityCommandManager:
         if not self.visualize:
             return
 
-        scene_context = self.env.scene.visualizer.context
+        rasterizer = self.env.scene.visualizer.context
 
         # Remove existing arrows
-        for arrow in self._arrow_nodes:
-            scene_context.clear_debug_object(arrow)
+        if rasterizer is not None:
+            for arrow in self._arrow_nodes:
+                rasterizer.clear_debug_object(arrow)
         self._arrow_nodes = []
 
         # Scale the arrow size based on the maximum target velocity range
@@ -200,20 +201,25 @@ class VelocityCommandManager:
 
         for i in range(self.env.num_envs):
             # Target arrow
-            self._arrow_nodes.append(
-                scene_context.draw_debug_arrow(
-                    pos=arrow_pos[i],
-                    vec=vec[i],
-                    color=[0.0, 0.5, 0.0],
-                    radius=0.025,
-                )
+            self.draw_arrow(
+                rasterizer, pos=arrow_pos[i], vec=vec[i], color=[0.0, 0.5, 0.0]
             )
             # Actual arrow
-            self._arrow_nodes.append(
-                scene_context.draw_debug_arrow(
-                    pos=arrow_pos[i],
-                    vec=actual_vec[i],
-                    color=[0.0, 0.0, 0.5],
-                    radius=0.026,
-                )
+            self.draw_arrow(
+                rasterizer, pos=arrow_pos[i], vec=actual_vec[i], color=[0.0, 0.0, 0.5]
             )
+
+    def draw_arrow(
+        self,
+        rasterizer: RasterizerContext,
+        pos: torch.Tensor,
+        vec: torch.Tensor,
+        color: Sequence[float],
+    ):
+        if rasterizer is None:
+            return
+        node = rasterizer.draw_debug_arrow(
+            pos=pos, vec=vec, color=color, radius=ARROW_RADIUS, persistent=True
+        )
+        if node:
+            self._arrow_nodes.append(node)
