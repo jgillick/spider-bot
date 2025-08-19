@@ -99,7 +99,7 @@ class SpiderRobotEnv(GenesisEnv):
 
         self.command_manager = VelocityCommandManager(
             self,
-            visualize=True,
+            visualize=not headless,
             lin_vel_x_range=COMMANDS["lin_vel_x_range"],
             lin_vel_y_range=COMMANDS["lin_vel_y_range"],
             ang_vel_z_range=COMMANDS["ang_vel_range"],
@@ -108,7 +108,7 @@ class SpiderRobotEnv(GenesisEnv):
         # Spread out max episode lengths so not all envs are resetting at the same time
         steps_margin = self.max_episode_length * 0.1
         self.max_episode_length_steps = torch.zeros(
-            (self.num_envs,), device=self.device
+            (self.num_envs,), device=gs.device
         )
         self.max_episode_length_steps.uniform_(
             self.max_episode_length - steps_margin,
@@ -162,8 +162,8 @@ class SpiderRobotEnv(GenesisEnv):
         self.robot = scene.add_entity(
             gs.morphs.MJCF(
                 file=SPIDER_XML,
-                pos=self.base_init_pos,
-                quat=self.base_init_quat,
+                pos=INITIAL_BODY_POSITION,
+                quat=INITIAL_QUAT,
             ),
         )
 
@@ -229,7 +229,7 @@ class SpiderRobotEnv(GenesisEnv):
         self.dof_pos = torch.zeros(
             (self.num_envs, self.num_actions), device=gs.device, dtype=gs.tc_float
         )
-        self.dof_vel = torch.zeros_like(self.dof_pos)
+        self.dof_vel = torch.zeros_like(self.dof_pos, device=gs.device)
         self.base_pos = torch.zeros(
             (self.num_envs, 3), device=gs.device, dtype=gs.tc_float
         )
@@ -258,7 +258,7 @@ class SpiderRobotEnv(GenesisEnv):
         self.base_quat[:] = self.robot.get_quat()
         self.base_euler = quat_to_xyz(
             transform_quat_by_quat(
-                torch.ones_like(self.base_quat) * self.inv_base_init_quat,
+                torch.ones_like(self.base_quat, device=gs.device) * self.inv_base_init_quat,
                 self.base_quat,
             ),
             rpy=True,

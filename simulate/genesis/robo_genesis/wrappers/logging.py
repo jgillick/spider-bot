@@ -91,7 +91,7 @@ class DataLoggerWrapper(Wrapper):
                 )
 
                 # Take the mean across valid episodes only
-                episode_mean = torch.mean(episode_avg[valid_episodes])
+                episode_mean = torch.mean(episode_avg[valid_episodes]).cpu().item()
                 self.track_data(name, episode_mean)
 
             # Reset episodic sum
@@ -109,7 +109,7 @@ class DataLoggerWrapper(Wrapper):
             if "step" in info[self.key]:
                 for name, value in info[self.key]["step"].items():
                     if isinstance(value, torch.Tensor):
-                        value = value.mean().item()
+                        value = value.mean().cpu().item()
                     self.track_data(name, value)
 
             # Update episode logs
