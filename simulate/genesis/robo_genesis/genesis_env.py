@@ -27,6 +27,7 @@ class GenesisEnv:
 
     actions: torch.Tensor = None
     last_actions: torch.Tensor = None
+    episode_length: torch.Tensor = None
 
     def __init__(
         self,
@@ -49,11 +50,11 @@ class GenesisEnv:
             show_viewer=not self.headless,
             sim_options=gs.options.SimOptions(dt=self.dt, substeps=1),
             viewer_options=gs.options.ViewerOptions(
-                camera_pos=(2.5, 1.5, 1.0),
+                camera_pos=(-2.5, -1.5, 1.0),
                 camera_lookat=(0.0, 0.0, 0.0),
                 camera_fov=40,
             ),
-            vis_options=gs.options.VisOptions(rendered_envs_idx=list(range(1))),
+            # vis_options=gs.options.VisOptions(rendered_envs_idx=list(range(1))),
             rigid_options=gs.options.RigidOptions(
                 dt=self.dt,
                 constraint_solver=gs.constraint_solver.Newton,
@@ -64,14 +65,14 @@ class GenesisEnv:
 
         # Add plane
         self.terrain = self.scene.add_entity(
-            gs.morphs.URDF(file="urdf/plane/plane.urdf", fixed=True)
+            gs.morphs.Plane(),
         )
 
         return self.scene
 
     def build_scene(self) -> None:
         """Builds the scene once all entities have been added (via construct_scene). This operation is required before running the simulation."""
-        self.scene.build(n_envs=self.num_envs, env_spacing=(1.5, 1.5))
+        self.scene.build(n_envs=self.num_envs, env_spacing=(2, 2))
 
     def get_observations(self) -> torch.Tensor:
         """

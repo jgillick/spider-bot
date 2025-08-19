@@ -4,7 +4,6 @@ Focuses on core objectives with progressive difficulty
 """
 
 import os
-import math
 import torch
 import numpy as np
 from gymnasium import spaces
@@ -18,15 +17,15 @@ from genesis.utils.geom import (
     transform_quat_by_quat,
 )
 
-from robo_genesis import GenesisEnv
+from robo_genesis import GenesisEnv, VelocityCommandManager
 
 
 TARGET_HEIGHT = 0.15
 REWARDS = {
-    "tracking_lin_vel": 1.0,
-    "tracking_ang_vel": 0.2,
+    "tracking_lin_vel": 2.0,
+    "tracking_ang_vel": 1.0,
     "lin_vel_z": -1.0,
-    "base_height": -50.0,
+    "base_height": -100.0,
     "action_rate": -0.005,
     "similar_to_default": -0.1,
 }
@@ -67,18 +66,15 @@ PD_KV = 0.5
 MAX_TORQUE = 8.0
 
 COMMANDS = {
-    "lin_vel_x_range": [0.5, 0.5],
-    "lin_vel_y_range": [0.5, 0.5],
+    "lin_vel_x_range": [-1.0, 1.0],
+    "lin_vel_y_range": [-1.0, 1.0],
     "ang_vel_range": [0.5, 0.5],
 }
 COMMAND_REWARD_SIGMA = 0.25
+COMMAND_RESAMPLING_TIME_S = 5.0
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 SPIDER_XML = os.path.abspath(os.path.join(THIS_DIR, "../robot/SpiderBot.xml"))
-
-
-def gs_rand_float(lower, upper, shape, device):
-    return (upper - lower) * torch.rand(size=shape, device=device) + lower
 
 
 class SpiderRobotEnv(GenesisEnv):
@@ -88,19 +84,40 @@ class SpiderRobotEnv(GenesisEnv):
 
     base_init_pos: torch.Tensor
     base_init_quat: torch.Tensor
+    command_resample_steps: int
+    max_episode_length_steps: torch.Tensor
+    command_manager: VelocityCommandManager
 
     def __init__(
         self,
         num_envs: int = 1,
         dt: float = 1 / 100,
-        max_episode_length_s: int = 15,
+        max_episode_length_s: int = 12,
         headless: bool = True,
     ):
         super().__init__(num_envs, dt, max_episode_length_s, headless)
 
+        self.command_manager = VelocityCommandManager(
+            self,
+            visualize=True,
+            lin_vel_x_range=COMMANDS["lin_vel_x_range"],
+            lin_vel_y_range=COMMANDS["lin_vel_y_range"],
+            ang_vel_z_range=COMMANDS["ang_vel_range"],
+        )
+
+        # Spread out max episode lengths so not all envs are resetting at the same time
+        steps_margin = self.max_episode_length * 0.1
+        self.max_episode_length_steps = torch.zeros(
+            (self.num_envs,), device=self.device
+        )
+        self.max_episode_length_steps.uniform_(
+            self.max_episode_length - steps_margin,
+            self.max_episode_length + steps_margin,
+        )
+
         # Observation/Action spaces
         self.num_actions = 24
-        self.num_observations = 81
+        self.num_observations = 84
         self.action_space = spaces.Box(
             low=-1.0,
             high=1.0,
@@ -128,6 +145,8 @@ class SpiderRobotEnv(GenesisEnv):
             self._episode_rewards[name] = torch.zeros(
                 (self.num_envs,), device=gs.device, dtype=gs.tc_float
             )
+
+        self.command_resample_steps = int(COMMAND_RESAMPLING_TIME_S / self.dt)
 
         # Initialize the scene
         self._init_buffers()
@@ -218,10 +237,6 @@ class SpiderRobotEnv(GenesisEnv):
             (self.num_envs, 4), device=gs.device, dtype=gs.tc_float
         )
 
-        self.commands = torch.zeros(
-            (self.num_envs, len(COMMANDS)), device=gs.device, dtype=gs.tc_float
-        )
-
     def step(self, actions: torch.Tensor):
         """Perform a step in the environment."""
         super().step(actions)
@@ -266,10 +281,18 @@ class SpiderRobotEnv(GenesisEnv):
         reset_idx = resets.nonzero(as_tuple=False).reshape((-1,))
         self.reset(reset_idx)
 
+        # Command manager
+        self.command_manager.step()
+
         self.get_observations()
         info = {
             "logs": {
                 "episode": rewards_logs,
+                "step": {
+                    "Done / Terminations": terminations.float(),
+                    "Done / Timeouts": timeouts.float(),
+                    # **rewards_logs,
+                },
             }
         }
         return self.obs_buf, rewards, terminations, timeouts, info
@@ -306,7 +329,7 @@ class SpiderRobotEnv(GenesisEnv):
         self.base_ang_vel[env_ids] = 0
 
         # Set new command
-        self._resample_commands(env_ids)
+        self.command_manager.reset(env_ids)
 
         obs = self.get_observations()
         return obs, {}
@@ -342,8 +365,9 @@ class SpiderRobotEnv(GenesisEnv):
         """Environment observations"""
         self.obs_buf = torch.cat(
             [
-                self.commands,  # 3
+                self.command_manager.command,  # 3
                 self.base_ang_vel,  # 3
+                self.base_lin_vel,  # 3
                 self.projected_gravity,  # 3
                 self.dof_pos,  # 24
                 self.dof_vel,  # 24
@@ -357,12 +381,16 @@ class SpiderRobotEnv(GenesisEnv):
         """Check if episode should terminate (robot has fallen or become unstable)."""
 
         # -- Timeout
-        timeouts = self.episode_length > self.max_episode_length
+        timeouts = self.episode_length > self.max_episode_length_steps
 
         # -- Termination
+
         # Check if robot has flipped over
-        terminations = torch.abs(self.base_euler[:, 1]) > 90  # Degrees
-        terminations |= torch.abs(self.base_euler[:, 0]) > 90  # Degrees
+        terminations = torch.abs(self.base_euler[:, 1]) > 45  # Degrees
+        terminations |= torch.abs(self.base_euler[:, 0]) > 45  # Degrees
+
+        # Fallen over
+        terminations |= self.base_pos[:, 2] < 0.05
 
         return terminations, timeouts
 
@@ -401,27 +429,18 @@ class SpiderRobotEnv(GenesisEnv):
             # reset episodic sum
             self._episode_rewards[key][env_idx] = 0.0
 
-    def _resample_commands(self, envs_idx):
-        self.commands[envs_idx, 0] = gs_rand_float(
-            *COMMANDS["lin_vel_x_range"], (len(envs_idx),), gs.device
-        )
-        self.commands[envs_idx, 1] = gs_rand_float(
-            *COMMANDS["lin_vel_y_range"], (len(envs_idx),), gs.device
-        )
-        self.commands[envs_idx, 2] = gs_rand_float(
-            *COMMANDS["ang_vel_range"], (len(envs_idx),), gs.device
-        )
-
     def _reward_tracking_lin_vel(self):
         # Tracking of linear velocity commands (xy axes)
+        command = self.command_manager.command
         lin_vel_error = torch.sum(
-            torch.square(self.commands[:, :2] - self.base_lin_vel[:, :2]), dim=1
+            torch.square(command[:, :2] - self.base_lin_vel[:, :2]), dim=1
         )
         return torch.exp(-lin_vel_error / COMMAND_REWARD_SIGMA)
 
     def _reward_tracking_ang_vel(self):
         # Tracking of angular velocity commands (yaw)
-        ang_vel_error = torch.square(self.commands[:, 2] - self.base_ang_vel[:, 2])
+        command = self.command_manager.command
+        ang_vel_error = torch.square(command[:, 2] - self.base_ang_vel[:, 2])
         return torch.exp(-ang_vel_error / COMMAND_REWARD_SIGMA)
 
     def _reward_lin_vel_z(self):

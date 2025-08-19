@@ -21,7 +21,7 @@ from environment import SpiderRobotEnv
 SKRL_CONFIG = "./ppo.yaml"
 
 CAMERA_CONFIG: VideoCameraConfig = {
-    "pos": (2.5, 1.5, 1.0),
+    "pos": (-2.5, -1.5, 1.0),
     "lookat": (0.0, 0.0, 0.0),
     "fov": 40,
 }
@@ -93,8 +93,7 @@ def train(
     print("💪 Training model...")
     env.build_scene()
     runner.run("train")
-    # skrl_env.close()
-    return runner
+    skrl_env.close()
 
 
 def record_video(cfg: dict, log_path: str, video_path: str):
