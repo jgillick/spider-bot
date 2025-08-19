@@ -24,6 +24,7 @@ CAMERA_CONFIG: VideoCameraConfig = {
     "pos": (-2.5, -1.5, 1.0),
     "lookat": (0.0, 0.0, 0.0),
     "fov": 40,
+    "env_idx": 0,
 }
 CAMERA_FOLLOW_CONFIG: VideoFollowRobotConfig = {
     "fixed_axis": (None, None, None),

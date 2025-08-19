@@ -25,6 +25,8 @@ class VideoCameraConfig(TypedDict):
     focus_dist: float
     spp: int
     denoise: bool
+    debug: bool
+    env_idx: int
 
 
 class VideoFollowRobotConfig(TypedDict):
@@ -56,17 +58,10 @@ class VideoWrapper(Wrapper):
     Automatically record videos during training.
     """
 
-    cam: Camera = None
-    follow_robot: VideoFollowRobotConfig = None
-    out_dir: str
     current_step: int = 0
-    every_n_steps: int
-    video_length_steps: int
     is_recording: bool = False
     recording_steps_remaining: int = 0
     next_start_step: int = 0
-    camera_config: VideoCameraConfig = DEFAULT_CAMERA
-    filename: str = None
 
     def __init__(
         self,

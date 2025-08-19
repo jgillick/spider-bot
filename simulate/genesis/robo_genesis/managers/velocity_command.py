@@ -72,13 +72,6 @@ class VelocityCommandManager:
 
     """
 
-    env: GenesisEnv
-    lin_vel_x_range: Range
-    lin_vel_y_range: Range
-    ang_vel_z_range: Range
-    arrow_offset: float = 0.01
-    visualize: bool
-
     _command: torch.Tensor = None
     _arrow_nodes: list = ()
     _command_resample_steps: int
@@ -91,14 +84,16 @@ class VelocityCommandManager:
         ang_vel_z_range: Range,
         arrow_offset: float = 0.01,
         resample_time_s: float = 5.0,
-        visualize: bool = False,
+        debug_visualizer: bool = False,
+        debug_visualizer_env_idx: Sequence[int] = None,
     ):
         self.env = env
-        self.visualize = visualize
+        self.debug_visualizer = debug_visualizer
         self.arrow_offset = arrow_offset
         self.lin_vel_x_range = lin_vel_x_range
         self.lin_vel_y_range = lin_vel_y_range
         self.ang_vel_z_range = ang_vel_z_range
+        self.debug_visualizer_env_idx = debug_visualizer_env_idx
 
         self._command = torch.zeros(env.num_envs, 3, device=gs.device)
         self.resample_steps = int(resample_time_s / env.dt)
@@ -160,7 +155,7 @@ class VelocityCommandManager:
 
     def _render_arrows(self):
         """Render the command arrows"""
-        if not self.visualize:
+        if not self.debug_visualizer:
             return
 
         rasterizer = self.env.scene.visualizer.context
@@ -199,7 +194,12 @@ class VelocityCommandManager:
         actual_vec[:, 2] = 0.0
         actual_vec[:, :] *= scale_factor
 
-        for i in range(self.env.num_envs):
+        debug_envs = (
+            self.debug_visualizer_env_idx
+            if self.debug_visualizer_env_idx is not None
+            else range(self.env.num_envs)
+        )
+        for i in debug_envs:
             # Target arrow
             self.draw_arrow(
                 rasterizer, pos=arrow_pos[i], vec=vec[i], color=[0.0, 0.5, 0.0]
