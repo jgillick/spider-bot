@@ -187,7 +187,7 @@ class VelocityCommandManager:
         arrow_pos[:, 0] = robot_x
         arrow_pos[:, 1] = robot_y
         arrow_pos[:, 2] = robot_z + self.arrow_offset
-        arrow_pos += self.env.scene.envs_offset
+        arrow_pos += torch.from_numpy(self.env.scene.envs_offset).to(gs.device)
 
         # Convert velocity command to vector direction
         vec = self._command.clone()
@@ -219,7 +219,11 @@ class VelocityCommandManager:
         if rasterizer is None:
             return
         node = rasterizer.draw_debug_arrow(
-            pos=pos, vec=vec, color=color, radius=ARROW_RADIUS, persistent=True
+            pos=pos.cpu().numpy(),
+            vec=vec.cpu().numpy(),
+            color=color,
+            radius=ARROW_RADIUS,
+            persistent=True,
         )
         if node:
             self._arrow_nodes.append(node)

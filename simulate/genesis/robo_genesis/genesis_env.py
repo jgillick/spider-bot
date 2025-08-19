@@ -54,7 +54,7 @@ class GenesisEnv:
                 camera_lookat=(0.0, 0.0, 0.0),
                 camera_fov=40,
             ),
-            # vis_options=gs.options.VisOptions(rendered_envs_idx=list(range(1))),
+            vis_options=gs.options.VisOptions(rendered_envs_idx=list(range(1))),
             rigid_options=gs.options.RigidOptions(
                 dt=self.dt,
                 constraint_solver=gs.constraint_solver.Newton,
@@ -98,7 +98,7 @@ class GenesisEnv:
         if self.actions is not None:
             self.last_actions[:] = self.actions[:]
         else:
-            self.last_actions = torch.zeros_like(actions)
+            self.last_actions = torch.zeros_like(actions, device=gs.device)
         self.actions = actions
 
         return None, None, None, None, {}
@@ -124,7 +124,7 @@ class GenesisEnv:
                 device=gs.device,
                 dtype=gs.tc_float,
             )
-            self.last_actions = torch.zeros_like(self.actions)
+            self.last_actions = torch.zeros_like(self.actions, device=gs.device)
             self.episode_length = torch.zeros(
                 (self.num_envs,), device=gs.device, dtype=gs.tc_int
             )
