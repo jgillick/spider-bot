@@ -11,11 +11,12 @@ from typing import Sequence, Any
 
 import genesis as gs
 
-from genesis_forge import (
-    GenesisEnv,
+from genesis_forge import GenesisEnv
+from genesis_forge.managers import (
     VelocityCommandManager,
     RewardManager,
     TerminationManager,
+    DofPositionActionManager,
 )
 from genesis_forge.utils import robot_projected_gravity, robot_ang_vel, robot_lin_vel
 from genesis_forge.mdp import rewards, terminations
@@ -67,8 +68,6 @@ class SpiderRobotEnv(GenesisEnv):
     SpiderBot environment for Genesis
     """
 
-    num_actions = 24
-
     def __init__(
         self,
         num_envs: int = 1,
@@ -77,8 +76,24 @@ class SpiderRobotEnv(GenesisEnv):
         headless: bool = True,
     ):
         super().__init__(num_envs, dt, max_episode_length_s, headless)
-        self.default_dof_pos = torch.tensor(
-            list(INIT_JOINT_POS.values()), device=gs.device
+
+        # Define the DOF actuators
+        self.action_manager = DofPositionActionManager(
+            self,
+            joint_names=".*",
+            default_pos={
+                # Hip joints
+                "Leg[1-2]_Hip": -1.0,
+                "Leg[3-6]_Hip": 1.0,
+                "Leg[7-8]_Hip": -1.0,
+                # Femur joints
+                "Leg[1-8]_Femur": 0.5,
+                # Tibia joints
+                "Leg[1-8]_Tibia": 0.6,
+            },
+            pd_kp={".*": 50},
+            pd_kv={".*": 0.5},
+            max_force={".*": 8.0},
         )
 
         # Command manager: instruct the robot to move in a certain direction
@@ -114,8 +129,7 @@ class SpiderRobotEnv(GenesisEnv):
                     "weight": -0.1,
                     "fn": rewards.dof_similar_to_default,
                     "params": {
-                        "dof_idx": self._get_dof_idx,
-                        "default_dof_pos": self.default_dof_pos,
+                        "dof_action_manager": self.action_manager,
                     },
                 },
                 "Action rate": {
@@ -157,6 +171,18 @@ class SpiderRobotEnv(GenesisEnv):
             },
         )
 
+        # Cache position buffers
+        self.base_init_pos = torch.tensor(INITIAL_BODY_POSITION, device=gs.device)
+        self.base_init_quat = torch.tensor(INITIAL_QUAT, device=gs.device).reshape(
+            1, -1
+        )
+        self.base_pos = torch.zeros(
+            (self.num_envs, 3), device=gs.device, dtype=gs.tc_float
+        )
+        self.base_quat = torch.zeros(
+            (self.num_envs, 4), device=gs.device, dtype=gs.tc_float
+        )
+
     @property
     def observation_space(self):
         return spaces.Box(
@@ -168,12 +194,7 @@ class SpiderRobotEnv(GenesisEnv):
 
     @property
     def action_space(self):
-        return spaces.Box(
-            low=-1.0,
-            high=1.0,
-            shape=(self.num_actions,),
-            dtype=np.float32,
-        )
+        return self.action_manager.action_space
 
     def construct_scene(self) -> gs.Scene:
         """Add the robot to the scene."""
@@ -190,52 +211,13 @@ class SpiderRobotEnv(GenesisEnv):
 
         return scene
 
-    def build_scene(self) -> None:
+    def build(self) -> None:
         """
         Builds the scene after all entities have been added (via construct_scene).
         This operation is required before running the simulation.
         """
-        super().build_scene()
-
-        # Actuator indices
-        self.dof_idx = [
-            self.robot.get_joint(name).dof_start for name in INIT_JOINT_POS.keys()
-        ]
-
-        # Set gains and torque limit
-        self.robot.set_dofs_kp([PD_KP] * self.num_actions, self.dof_idx)
-        self.robot.set_dofs_kv([PD_KV] * self.num_actions, self.dof_idx)
-        self.robot.set_dofs_force_range(
-            [-MAX_TORQUE] * self.num_actions,
-            [MAX_TORQUE] * self.num_actions,
-            self.dof_idx,
-        )
-
-        # Get position Limits and convert to shape (num_envs, limit)
-        self.actuator_limits_lower, self.actuator_limits_upper = (
-            self.robot.get_dofs_limit(self.dof_idx)
-        )
-        self.actuator_limits_lower = self.actuator_limits_lower.unsqueeze(0).expand(
-            self.num_envs, -1
-        )
-        self.actuator_limits_upper = self.actuator_limits_upper.unsqueeze(0).expand(
-            self.num_envs, -1
-        )
-
-        # Cache position tensors
-        self.base_init_pos = torch.tensor(INITIAL_BODY_POSITION, device=gs.device)
-        self.base_init_quat = torch.tensor(INITIAL_QUAT, device=gs.device).reshape(
-            1, -1
-        )
-        self.base_pos = torch.zeros(
-            (self.num_envs, 3), device=gs.device, dtype=gs.tc_float
-        )
-        self.base_quat = torch.zeros(
-            (self.num_envs, 4), device=gs.device, dtype=gs.tc_float
-        )
-        self.dof_pos = torch.zeros(
-            (self.num_envs, self.num_actions), device=gs.device, dtype=gs.tc_float
-        )
+        super().build()
+        self.action_manager.build()
 
     def step(self, actions: torch.Tensor):
         """
@@ -243,16 +225,8 @@ class SpiderRobotEnv(GenesisEnv):
         """
         super().step(actions)
 
-        # Validate actions
-        if torch.isnan(actions).any():
-            print(f"ERROR: NaN actions received in step function! Actions: {actions}")
-        if torch.isinf(actions).any():
-            print(
-                f"ERROR: Infinite actions received in step function! Actions: {actions}"
-            )
-
-        # Execute simulation step
-        self._control_dof_position_from_actions(actions)
+        # Execute the actions and a simulation step
+        self.action_manager.step(actions)
         self.scene.step()
 
         # Termination, rewards
@@ -283,19 +257,14 @@ class SpiderRobotEnv(GenesisEnv):
             self.command_manager.reset(envs_idx)
             self.termination_manager.reset(envs_idx)
             self.reward_manager.reset(envs_idx)
+            self.action_manager.reset(envs_idx)
 
             # Reset robot
             self.base_pos[envs_idx] = self.base_init_pos
             self.base_quat[envs_idx] = self.base_init_quat
-            self.dof_pos[envs_idx] = self.default_dof_pos
             self.robot.zero_all_dofs_velocity(envs_idx)
             self.robot.set_pos(self.base_pos[envs_idx], envs_idx=envs_idx)
             self.robot.set_quat(self.base_quat[envs_idx], envs_idx=envs_idx)
-            self.robot.set_dofs_position(
-                position=self.dof_pos[envs_idx],
-                dofs_idx_local=self.dof_idx,
-                envs_idx=envs_idx,
-            )
 
         obs = self._get_observations()
         return obs, {}
@@ -315,37 +284,10 @@ class SpiderRobotEnv(GenesisEnv):
                 robot_ang_vel(self),  # 3
                 robot_lin_vel(self),  # 3
                 robot_projected_gravity(self),  # 3
-                self.robot.get_dofs_position(self.dof_idx),  # 24
-                self.robot.get_dofs_velocity(self.dof_idx),  # 24
+                self.action_manager.get_dofs_position(),  # 24
+                self.action_manager.get_dofs_velocity(),  # 24
                 self.actions,  # 24
             ],
             dim=-1,
         )
         return self.obs_buf
-
-    def _control_dof_position_from_actions(self, actions: torch.Tensor):
-        """Convert actions to position commands, and send them to the actuators."""
-        self.actions = actions.clamp(-1.0, 1.0)
-        lower = self.actuator_limits_lower
-        upper = self.actuator_limits_upper
-
-        # Get the center of each actuator range
-        center = (upper + lower) * 0.5
-
-        # Convert the action to absolute position (from -1 - 1, to position)
-        self.target_positions = (
-            self.actions
-            * (self.actuator_limits_upper - self.actuator_limits_lower)
-            * 0.5
-            + center
-        )
-
-        # Set target positions
-        self.robot.control_dofs_position(self.target_positions, self.dof_idx)
-
-    def _get_dof_idx(self) -> Sequence[int]:
-        """
-        Helper function used by the reward manager to get the DOF indices.
-        This is necessary since the rewards are defined before the scene is built and the DOF indices are known.
-        """
-        return self.dof_idx

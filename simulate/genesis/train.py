@@ -85,6 +85,7 @@ def train(
         camera=CAMERA_CONFIG,
         follow_robot=CAMERA_FOLLOW_CONFIG,
     )
+    env.build()
 
     # Setup training runner
     skrl_env = create_skrl_env(env)
@@ -93,7 +94,6 @@ def train(
 
     # Train
     print("💪 Training model...")
-    env.build_scene()
     runner.run("train")
     skrl_env.close()
 
@@ -135,7 +135,7 @@ def record_video(cfg: dict, log_path: str, video_path: str):
 
     # Eval
     print("🎬 Recording video of best model...")
-    env.build_scene()
+    env.build()
     runner.run("eval")
     skrl_env.close()
 

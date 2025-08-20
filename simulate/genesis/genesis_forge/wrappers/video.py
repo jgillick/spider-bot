@@ -90,9 +90,9 @@ class VideoWrapper(Wrapper):
         scene = super().construct_scene()
         self.cam = scene.add_camera(**self._camera_config)
 
-    def build_scene(self):
+    def build(self):
         """Setup the camera to follow the robot."""
-        super().build_scene()
+        super().build()
         if self._follow_robot:
             self.cam.follow_entity(self.env.robot, **self._follow_robot)
 
