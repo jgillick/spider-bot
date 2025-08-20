@@ -4,9 +4,9 @@ import os
 import torch
 import genesis as gs
 
-from robo_genesis.genesis_env import GenesisEnv
-from robo_genesis.utils import robot_lin_vel
-from robo_genesis.managers.base import BaseManager
+from genesis_forge.genesis_env import GenesisEnv
+from genesis_forge.utils import robot_lin_vel
+from genesis_forge.managers.base import BaseManager
 
 Range = Tuple[float, float]
 

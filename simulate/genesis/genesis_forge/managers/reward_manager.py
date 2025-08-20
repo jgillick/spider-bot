@@ -2,8 +2,8 @@ import torch
 import genesis as gs
 from typing import Sequence, TypedDict, Callable, Any
 
-from robo_genesis.genesis_env import GenesisEnv
-from robo_genesis.managers.base import BaseManager
+from genesis_forge.genesis_env import GenesisEnv
+from genesis_forge.managers.base import BaseManager
 
 
 class RewardConfig(TypedDict):

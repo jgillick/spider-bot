@@ -2,8 +2,8 @@ import torch
 from typing import Sequence, TypedDict, Callable, Any
 
 import genesis as gs
-from robo_genesis.genesis_env import GenesisEnv
-from robo_genesis.managers.base import BaseManager
+from genesis_forge.genesis_env import GenesisEnv
+from genesis_forge.managers.base import BaseManager
 
 
 class TerminationConfig(TypedDict):

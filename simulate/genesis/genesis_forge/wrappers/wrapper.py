@@ -3,7 +3,7 @@ from typing import Any, TypeVar, Sequence, Callable
 import torch
 import genesis as gs
 from gymnasium import spaces
-from robo_genesis.genesis_env import GenesisEnv
+from genesis_forge.genesis_env import GenesisEnv
 
 RenderFrame = TypeVar("RenderFrame")
 

@@ -77,7 +77,7 @@ def main():
     # Arrow
     # arrow = scene.add_entity(
     #     gs.morphs.Mesh(
-    #         file="./robo_genesis/assets/arrow.stl",
+    #         file="./genesis_forge/assets/arrow.stl",
     #         pos=[0.0, 0.0, 0.0],
     #         quat=[1.0, 0.0, 0.0, 0.0],
     #         scale=0.02,

@@ -1,6 +1,6 @@
 import torch
-from robo_genesis.genesis_env import GenesisEnv
-from robo_genesis.utils import robot_projected_gravity
+from genesis_forge.genesis_env import GenesisEnv
+from genesis_forge.utils import robot_projected_gravity
 
 
 def timeout(env: GenesisEnv):
