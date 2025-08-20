@@ -3,7 +3,6 @@ from typing import Tuple, Sequence, TypedDict
 import os
 import torch
 import genesis as gs
-from genesis.vis.rasterizer_context import RasterizerContext
 
 from robo_genesis.genesis_env import GenesisEnv
 from robo_genesis.utils import robot_lin_vel
@@ -41,8 +40,8 @@ DEFAULT_VISUALIZER_CONFIG: DebugVisualizerConfig = {
     "arrow_offset": 0.01,
     "arrow_radius": 0.02,
     "arrow_max_length": 0.15,
-    "commanded_color": (0.0, 0.5, 0.0, 0.0),
-    "actual_color": (0.0, 0.0, 0.5, 0.0),
+    "commanded_color": (0.0, 0.5, 0.0, 1.0),
+    "actual_color": (0.0, 0.0, 0.5, 1.0),
 }
 
 
@@ -133,7 +132,7 @@ class VelocityCommandManager(BaseManager):
         self.debug_visualizer = debug_visualizer
         self.visualizer_cfg = {**DEFAULT_VISUALIZER_CONFIG, **debug_visualizer_cfg}
 
-        self._arrow_nodes: list = ()
+        self._arrow_nodes: list = []
         self._command = torch.zeros(env.num_envs, 3, device=gs.device)
         self._resample_steps = int(resample_time_s / env.dt)
 
@@ -174,12 +173,9 @@ class VelocityCommandManager(BaseManager):
         if not self.debug_visualizer:
             return
 
-        rasterizer = self.env.scene.visualizer.context
-
         # Remove existing arrows
-        if rasterizer is not None:
-            for arrow in self._arrow_nodes:
-                rasterizer.clear_debug_object(arrow)
+        for arrow in self._arrow_nodes:
+            self.env.scene.clear_debug_object(arrow)
         self._arrow_nodes = []
 
         # Scale the arrow size based on the maximum target velocity range
@@ -220,14 +216,12 @@ class VelocityCommandManager(BaseManager):
         for i in debug_envs:
             # Target arrow
             self.draw_arrow(
-                rasterizer,
                 pos=arrow_pos[i],
                 vec=vec[i],
                 color=self.visualizer_cfg["commanded_color"],
             )
             # Actual arrow
             self.draw_arrow(
-                rasterizer,
                 pos=arrow_pos[i],
                 vec=actual_vec[i],
                 color=self.visualizer_cfg["actual_color"],
@@ -235,19 +229,20 @@ class VelocityCommandManager(BaseManager):
 
     def draw_arrow(
         self,
-        rasterizer: RasterizerContext,
         pos: torch.Tensor,
         vec: torch.Tensor,
         color: Sequence[float],
     ):
-        if rasterizer is None:
-            return
-        node = rasterizer.draw_debug_arrow(
-            pos=pos.cpu().numpy(),
-            vec=vec.cpu().numpy(),
-            color=color,
-            radius=self.visualizer_cfg["arrow_radius"],
-            persistent=True,
-        )
-        if node:
-            self._arrow_nodes.append(node)
+        try:
+            node = self.env.scene.draw_debug_arrow(
+                pos=pos.cpu().numpy(),
+                vec=vec.cpu().numpy(),
+                color=color,
+                radius=self.visualizer_cfg["arrow_radius"],
+            )
+            if node:
+                self._arrow_nodes.append(node)
+            else:
+                print("No node returned")
+        except Exception as e:
+            print(f"Error adding debug visualizing in VelocityCommandManager: {e}")
