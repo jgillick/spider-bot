@@ -57,11 +57,11 @@ class Wrapper:
         """Uses the :meth:`construct_scene` of the :attr:`env` that can be overwritten to change the returned data."""
         return self.env.construct_scene()
 
-    def build_scene(self) -> None:
+    def build(self) -> None:
         """Builds the scene once all entities have been added (via construct_scene). This operation is required before running the simulation."""
         if self.env.scene is None:
             self.construct_scene()
-        self.env.build_scene()
+        self.env.build()
 
     def step(
         self, actions: torch.Tensor

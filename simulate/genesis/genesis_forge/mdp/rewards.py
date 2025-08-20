@@ -1,7 +1,7 @@
 import torch
 from typing import Sequence, Callable, Union
 from genesis_forge.genesis_env import GenesisEnv
-from genesis_forge.managers import VelocityCommandManager
+from genesis_forge.managers import VelocityCommandManager, DofPositionActionManager
 from genesis_forge.utils import robot_lin_vel, robot_ang_vel
 
 
@@ -22,24 +22,21 @@ def base_height(env: GenesisEnv, target_height: float):
 
 def dof_similar_to_default(
     env: GenesisEnv,
-    dof_idx: Union[Callable[[], Sequence[int]], Sequence[int]],
-    default_dof_pos: Sequence[float],
+    dof_action_manager: DofPositionActionManager,
 ):
     """
     Penalize joint poses far away from default pose
 
     Args:
         env: The Genesis environment containing the robot
-        default_dof_pos: The default joint positions
+        dof_action_manager: The DOF action manager
 
     Returns:
         torch.Tensor: Penalty for joint poses far away from default pose
     """
-    robot = env.robot
-    if callable(dof_idx):
-        dof_idx = dof_idx()
-    dof_pos = robot.get_dofs_position(dof_idx)
-    return torch.sum(torch.abs(dof_pos - default_dof_pos), dim=1)
+    dof_pos = dof_action_manager.get_dofs_position()
+    default_pos = dof_action_manager.default_dofs_pos
+    return torch.sum(torch.abs(dof_pos - default_pos), dim=1)
 
 
 def lin_vel_z(env: GenesisEnv):

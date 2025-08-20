@@ -84,7 +84,7 @@ class GenesisEnv:
 
         return self.scene
 
-    def build_scene(self) -> None:
+    def build(self) -> None:
         """Builds the scene once all entities have been added (via construct_scene). This operation is required before running the simulation."""
         self.scene.build(n_envs=self.num_envs, env_spacing=(2, 2))
 
