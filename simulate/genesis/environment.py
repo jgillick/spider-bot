@@ -110,10 +110,6 @@ class SpiderRobotEnv(GenesisEnv):
                         "target_height": TARGET_HEIGHT,
                     },
                 },
-                "Action rate": {
-                    "weight": -0.005,
-                    "fn": rewards.action_rate,
-                },
                 "Similar to default": {
                     "weight": -0.1,
                     "fn": rewards.dof_similar_to_default,
@@ -121,6 +117,10 @@ class SpiderRobotEnv(GenesisEnv):
                         "dof_idx": self._get_dof_idx,
                         "default_dof_pos": self.default_dof_pos,
                     },
+                },
+                "Action rate": {
+                    "weight": -0.005,
+                    "fn": rewards.action_rate,
                 },
                 "Cmd linear velocity": {
                     "weight": 2.0,
