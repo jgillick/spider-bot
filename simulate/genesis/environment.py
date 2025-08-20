@@ -11,14 +11,14 @@ from typing import Sequence, Any
 
 import genesis as gs
 
-from robo_genesis import (
+from genesis_forge import (
     GenesisEnv,
     VelocityCommandManager,
     RewardManager,
     TerminationManager,
 )
-from robo_genesis.utils import robot_projected_gravity, robot_ang_vel, robot_lin_vel
-from robo_genesis.mdp import rewards, terminations
+from genesis_forge.utils import robot_projected_gravity, robot_ang_vel, robot_lin_vel
+from genesis_forge.mdp import rewards, terminations
 
 
 TARGET_HEIGHT = 0.15

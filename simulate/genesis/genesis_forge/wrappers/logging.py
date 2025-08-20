@@ -2,8 +2,8 @@ import torch
 import genesis as gs
 from typing import Any, Tuple, Callable, Union, Sequence
 
-from robo_genesis.wrappers.wrapper import Wrapper
-from robo_genesis.genesis_env import GenesisEnv
+from genesis_forge.wrappers.wrapper import Wrapper
+from genesis_forge.genesis_env import GenesisEnv
 
 LogFn = Union[Callable[[str, float], None], None]
 

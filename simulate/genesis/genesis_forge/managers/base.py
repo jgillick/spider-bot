@@ -1,6 +1,6 @@
 from typing import Sequence
 
-from robo_genesis.genesis_env import GenesisEnv
+from genesis_forge.genesis_env import GenesisEnv
 
 
 class BaseManager:

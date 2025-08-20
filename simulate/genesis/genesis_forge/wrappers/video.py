@@ -4,8 +4,8 @@ import torch
 from genesis.vis.camera import Camera
 from typing import TypedDict, Tuple, Literal, Any, Sequence
 
-from robo_genesis.wrappers.wrapper import Wrapper
-from robo_genesis.genesis_env import GenesisEnv
+from genesis_forge.wrappers.wrapper import Wrapper
+from genesis_forge.genesis_env import GenesisEnv
 
 
 class VideoCameraConfig(TypedDict):

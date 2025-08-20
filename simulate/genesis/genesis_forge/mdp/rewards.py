@@ -1,8 +1,8 @@
 import torch
 from typing import Sequence, Callable, Union
-from robo_genesis.genesis_env import GenesisEnv
-from robo_genesis.managers import VelocityCommandManager
-from robo_genesis.utils import robot_lin_vel, robot_ang_vel
+from genesis_forge.genesis_env import GenesisEnv
+from genesis_forge.managers import VelocityCommandManager
+from genesis_forge.utils import robot_lin_vel, robot_ang_vel
 
 
 def base_height(env: GenesisEnv, target_height: float):

@@ -9,7 +9,7 @@ from skrl.utils.runner.torch import Runner
 
 import genesis as gs
 
-from robo_genesis import (
+from genesis_forge import (
     create_skrl_env,
     DataLoggerWrapper,
     VideoWrapper,
