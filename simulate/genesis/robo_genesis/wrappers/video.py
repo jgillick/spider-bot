@@ -25,8 +25,8 @@ class VideoCameraConfig(TypedDict):
     focus_dist: float
     spp: int
     denoise: bool
-    debug: bool
     env_idx: int
+    debug: bool
 
 
 class VideoFollowRobotConfig(TypedDict):
@@ -50,6 +50,8 @@ DEFAULT_CAMERA: VideoCameraConfig = {
     "focus_dist": None,
     "spp": 256,
     "denoise": True,
+    "env_idx": 0,
+    "debug": True,
 }
 
 
@@ -57,11 +59,6 @@ class VideoWrapper(Wrapper):
     """
     Automatically record videos during training.
     """
-
-    current_step: int = 0
-    is_recording: bool = False
-    recording_steps_remaining: int = 0
-    next_start_step: int = 0
 
     def __init__(
         self,
@@ -75,69 +72,73 @@ class VideoWrapper(Wrapper):
     ):
         super().__init__(env)
 
-        self.out_dir = out_dir
-        self.every_n_steps = every_n_steps
-        self.video_length_steps = math.ceil(video_length_s / self.dt)
-        self.camera_config = {**DEFAULT_CAMERA, **camera}
-        self.filename = filename
-        self.follow_robot = follow_robot
+        self._out_dir = out_dir
+        self._filename = filename
+        self._every_n_steps = every_n_steps
+        self._video_length_steps = math.ceil(video_length_s / self.dt)
+        self._camera_config = {**DEFAULT_CAMERA, **camera}
+        self._follow_robot = follow_robot
+        self._current_step: int = 0
+        self._is_recording: bool = False
+        self._recording_steps_remaining: int = 0
+        self._next_start_step: int = 0
 
-        os.makedirs(self.out_dir, exist_ok=True)
+        os.makedirs(self._out_dir, exist_ok=True)
 
     def construct_scene(self):
         """Add a camera to the scene."""
         scene = super().construct_scene()
-        self.cam = scene.add_camera(**self.camera_config)
+        self.cam = scene.add_camera(**self._camera_config)
 
     def build_scene(self):
         """Setup the camera to follow the robot."""
         super().build_scene()
-        if self.follow_robot:
-            self.cam.follow_entity(self.env.robot, **self.follow_robot)
+        if self._follow_robot:
+            self.cam.follow_entity(self.env.robot, **self._follow_robot)
 
     def start_recording(self):
         """Start recording a video."""
-        self.is_recording = True
-        self.recording_steps_remaining = self.video_length_steps
+        self._is_recording = True
+        self._recording_steps_remaining = self._video_length_steps
         self.cam.start_recording()
         self.cam.render()
 
     def finish_recording(self):
         """Stop recording and save the video."""
-        if not self.is_recording:
+        if not self._is_recording:
             return
 
         # Save recording
-        filename = self.filename or f"{self.next_start_step}.mp4"
-        filepath = os.path.join(self.out_dir, filename)
+        filename = self._filename or f"{self._next_start_step}.mp4"
+        filepath = os.path.join(self._out_dir, filename)
         self.cam.stop_recording(filepath, fps=60)
 
         # Reset recording state
-        self.is_recording = False
-        self.recording_steps_remaining = 0
-        self.next_start_step = self.current_step + self.every_n_steps
+        self._is_recording = False
+        self._recording_steps_remaining = 0
+        self._next_start_step = self._current_step + self._every_n_steps
 
     def step(
         self, actions: torch.Tensor
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, dict[str, Any]]:
         """Record a video image at each step."""
-        self.current_step += 1
+        self._current_step += 1
 
         # Currently recording
-        if self.is_recording:
+        if self._is_recording:
             self.cam.render()
-            self.recording_steps_remaining -= 1
-            if self.recording_steps_remaining <= 0:
+            self._recording_steps_remaining -= 1
+            if self._recording_steps_remaining <= 0:
                 self.finish_recording()
 
         # Start new recording
-        elif self.next_start_step <= self.current_step:
+        elif self._next_start_step <= self._current_step:
             self.start_recording()
 
         return super().step(actions)
 
     def close(self):
         """Finish recording on close"""
-        if self.is_recording:
+        if self._is_recording:
             self.finish_recording()
         super().close()

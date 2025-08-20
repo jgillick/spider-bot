@@ -10,68 +10,53 @@ from gymnasium import spaces
 from typing import Sequence, Any
 
 import genesis as gs
-from genesis.utils.geom import (
-    quat_to_xyz,
-    transform_by_quat,
-    inv_quat,
-    transform_quat_by_quat,
-)
 
-from robo_genesis import GenesisEnv, VelocityCommandManager
+from robo_genesis import (
+    GenesisEnv,
+    VelocityCommandManager,
+    RewardManager,
+    TerminationManager,
+)
+from robo_genesis.utils import robot_projected_gravity, robot_ang_vel, robot_lin_vel
+from robo_genesis.mdp import rewards, terminations
 
 
 TARGET_HEIGHT = 0.15
-REWARDS = {
-    "tracking_lin_vel": 2.0,
-    "tracking_ang_vel": 1.0,
-    "lin_vel_z": -1.0,
-    "base_height": -100.0,
-    "action_rate": -0.005,
-    "similar_to_default": -0.1,
-}
-
-INITIAL_BODY_POSITION = [0.0, 0.0, 0.135]
-INITIAL_QUAT = [1.0, 0.0, 0.0, 0.0]
-FEMUR_INIT_POSITION = 0.5
-TIBIA_INIT_POSITION = 0.6
-INITIAL_JOINT_POSITIONS = {
-    "Leg1_Hip": -1.0,
-    "Leg1_Femur": FEMUR_INIT_POSITION,
-    "Leg1_Tibia": TIBIA_INIT_POSITION,
-    "Leg2_Hip": -1.0,
-    "Leg2_Femur": FEMUR_INIT_POSITION,
-    "Leg2_Tibia": TIBIA_INIT_POSITION,
-    "Leg3_Hip": 1.0,
-    "Leg3_Femur": FEMUR_INIT_POSITION,
-    "Leg3_Tibia": TIBIA_INIT_POSITION,
-    "Leg4_Hip": 1.0,
-    "Leg4_Femur": FEMUR_INIT_POSITION,
-    "Leg4_Tibia": TIBIA_INIT_POSITION,
-    "Leg5_Hip": 1.0,
-    "Leg5_Femur": FEMUR_INIT_POSITION,
-    "Leg5_Tibia": TIBIA_INIT_POSITION,
-    "Leg6_Hip": 1.0,
-    "Leg6_Femur": FEMUR_INIT_POSITION,
-    "Leg6_Tibia": TIBIA_INIT_POSITION,
-    "Leg7_Hip": -1.0,
-    "Leg7_Femur": FEMUR_INIT_POSITION,
-    "Leg7_Tibia": TIBIA_INIT_POSITION,
-    "Leg8_Hip": -1.0,
-    "Leg8_Femur": FEMUR_INIT_POSITION,
-    "Leg8_Tibia": TIBIA_INIT_POSITION,
-}
-
 PD_KP = 50.0
 PD_KV = 0.5
 MAX_TORQUE = 8.0
 
-COMMANDS = {
-    "lin_vel_x_range": [-1.0, 1.0],
-    "lin_vel_y_range": [-1.0, 1.0],
-    "ang_vel_range": [0.5, 0.5],
+INITIAL_BODY_POSITION = [0.0, 0.0, 0.135]
+INITIAL_QUAT = [1.0, 0.0, 0.0, 0.0]
+
+INIT_FEMUR_POS = 0.5
+INIT_TIBIA_POS = 0.6
+INIT_JOINT_POS = {
+    "Leg1_Hip": -1.0,
+    "Leg1_Femur": INIT_FEMUR_POS,
+    "Leg1_Tibia": INIT_TIBIA_POS,
+    "Leg2_Hip": -1.0,
+    "Leg2_Femur": INIT_FEMUR_POS,
+    "Leg2_Tibia": INIT_TIBIA_POS,
+    "Leg3_Hip": 1.0,
+    "Leg3_Femur": INIT_FEMUR_POS,
+    "Leg3_Tibia": INIT_TIBIA_POS,
+    "Leg4_Hip": 1.0,
+    "Leg4_Femur": INIT_FEMUR_POS,
+    "Leg4_Tibia": INIT_TIBIA_POS,
+    "Leg5_Hip": 1.0,
+    "Leg5_Femur": INIT_FEMUR_POS,
+    "Leg5_Tibia": INIT_TIBIA_POS,
+    "Leg6_Hip": 1.0,
+    "Leg6_Femur": INIT_FEMUR_POS,
+    "Leg6_Tibia": INIT_TIBIA_POS,
+    "Leg7_Hip": -1.0,
+    "Leg7_Femur": INIT_FEMUR_POS,
+    "Leg7_Tibia": INIT_TIBIA_POS,
+    "Leg8_Hip": -1.0,
+    "Leg8_Femur": INIT_FEMUR_POS,
+    "Leg8_Tibia": INIT_TIBIA_POS,
 }
-COMMAND_REWARD_SIGMA = 0.25
-COMMAND_RESAMPLING_TIME_S = 5.0
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 SPIDER_XML = os.path.abspath(os.path.join(THIS_DIR, "../robot/SpiderBot.xml"))
@@ -82,11 +67,7 @@ class SpiderRobotEnv(GenesisEnv):
     SpiderBot environment for Genesis
     """
 
-    base_init_pos: torch.Tensor
-    base_init_quat: torch.Tensor
-    command_resample_steps: int
-    max_episode_length_steps: torch.Tensor
-    command_manager: VelocityCommandManager
+    num_actions = 24
 
     def __init__(
         self,
@@ -96,68 +77,109 @@ class SpiderRobotEnv(GenesisEnv):
         headless: bool = True,
     ):
         super().__init__(num_envs, dt, max_episode_length_s, headless)
+        self.default_dof_pos = torch.tensor(
+            list(INIT_JOINT_POS.values()), device=gs.device
+        )
 
+        # Command manager: instruct the robot to move in a certain direction
         self.command_manager = VelocityCommandManager(
             self,
-            lin_vel_x_range=COMMANDS["lin_vel_x_range"],
-            lin_vel_y_range=COMMANDS["lin_vel_y_range"],
-            ang_vel_z_range=COMMANDS["ang_vel_range"],
+            lin_vel_x_range=[-1.0, 1.0],
+            lin_vel_y_range=[-1.0, 1.0],
+            ang_vel_z_range=[0.5, 0.5],
+            resample_time_s=5.0,
             debug_visualizer=True,
-            debug_visualizer_env_idx=[0],
+            debug_visualizer_cfg={
+                "envs_idx": [0],
+            },
         )
 
-        # Spread out max episode lengths so not all envs are resetting at the same time
-        steps_margin = self.max_episode_length * 0.1
-        self.max_episode_length_steps = torch.zeros((self.num_envs,), device=gs.device)
-        self.max_episode_length_steps.uniform_(
-            self.max_episode_length - steps_margin,
-            self.max_episode_length + steps_margin,
+        # Rewards
+        self.reward_manager = RewardManager(
+            self,
+            logging_enabled=True,
+            reward_cfg={
+                "Linear Z velocity": {
+                    "weight": -1.0,
+                    "fn": rewards.lin_vel_z,
+                },
+                "Base height": {
+                    "weight": -100.0,
+                    "fn": rewards.base_height,
+                    "params": {
+                        "target_height": TARGET_HEIGHT,
+                    },
+                },
+                "Action rate": {
+                    "weight": -0.005,
+                    "fn": rewards.action_rate,
+                },
+                "Similar to default": {
+                    "weight": -0.1,
+                    "fn": rewards.dof_similar_to_default,
+                    "params": {
+                        "dof_idx": self._get_dof_idx,
+                        "default_dof_pos": self.default_dof_pos,
+                    },
+                },
+                "Cmd linear velocity": {
+                    "weight": 2.0,
+                    "fn": rewards.command_tracking_lin_vel,
+                    "params": {
+                        "vel_cmd_manager": self.command_manager,
+                    },
+                },
+                "Cmd angular velocity": {
+                    "weight": 1.0,
+                    "fn": rewards.command_tracking_ang_vel,
+                    "params": {
+                        "vel_cmd_manager": self.command_manager,
+                    },
+                },
+            },
         )
 
-        # Observation/Action spaces
-        self.num_actions = 24
-        self.num_observations = 84
-        self.action_space = spaces.Box(
+        # Termination conditions
+        self.termination_manager = TerminationManager(
+            self,
+            logging_enabled=True,
+            term_cfg={
+                "Timeout": {
+                    "fn": terminations.timeout,
+                    "time_out": True,
+                },
+                "Bad angle": {
+                    "fn": terminations.bad_orientation,
+                    "params": {
+                        "limit_angle": 0.7,
+                    },
+                },
+            },
+        )
+
+    @property
+    def observation_space(self):
+        return spaces.Box(
+            low=-np.inf,
+            high=np.inf,
+            shape=(84,),
+            dtype=np.float32,
+        )
+
+    @property
+    def action_space(self):
+        return spaces.Box(
             low=-1.0,
             high=1.0,
             shape=(self.num_actions,),
             dtype=np.float32,
         )
-        self.observation_space = spaces.Box(
-            low=-np.inf,
-            high=np.inf,
-            shape=(self.num_observations,),
-            dtype=np.float32,
-        )
-
-        # Prepare reward functions
-        self.reward_func, self.reward_weight, self._episode_rewards = (
-            dict(),
-            dict(),
-            dict(),
-        )
-        for name, base_weight in REWARDS.items():
-            if base_weight == 0.0:
-                continue
-            self.reward_weight[name] = base_weight * self.dt
-            self.reward_func[name] = getattr(self, "_reward_" + name)
-            self._episode_rewards[name] = torch.zeros(
-                (self.num_envs,), device=gs.device, dtype=gs.tc_float
-            )
-
-        self.command_resample_steps = int(COMMAND_RESAMPLING_TIME_S / self.dt)
-
-        # Initialize the scene
-        self._init_buffers()
 
     def construct_scene(self) -> gs.Scene:
         """Add the robot to the scene."""
         scene = super().construct_scene()
 
         # add robot
-        self.base_init_pos = torch.tensor(INITIAL_BODY_POSITION, device=gs.device)
-        self.base_init_quat = torch.tensor(INITIAL_QUAT, device=gs.device)
-        self.inv_base_init_quat = inv_quat(self.base_init_quat)
         self.robot = scene.add_entity(
             gs.morphs.MJCF(
                 file=SPIDER_XML,
@@ -169,13 +191,15 @@ class SpiderRobotEnv(GenesisEnv):
         return scene
 
     def build_scene(self) -> None:
-        """Builds the scene once all entities have been added (via construct_scene). This operation is required before running the simulation."""
+        """
+        Builds the scene after all entities have been added (via construct_scene).
+        This operation is required before running the simulation.
+        """
         super().build_scene()
 
         # Actuator indices
         self.dof_idx = [
-            self.robot.get_joint(name).dof_start
-            for name in INITIAL_JOINT_POSITIONS.keys()
+            self.robot.get_joint(name).dof_start for name in INIT_JOINT_POS.keys()
         ]
 
         # Set gains and torque limit
@@ -198,46 +222,25 @@ class SpiderRobotEnv(GenesisEnv):
             self.num_envs, -1
         )
 
-        # Initial positions
-        self.default_dof_pos = torch.tensor(
-            list(INITIAL_JOINT_POSITIONS.values()),
-            device=gs.device,
-            dtype=gs.tc_float,
+        # Cache position tensors
+        self.base_init_pos = torch.tensor(INITIAL_BODY_POSITION, device=gs.device)
+        self.base_init_quat = torch.tensor(INITIAL_QUAT, device=gs.device).reshape(
+            1, -1
         )
-
-    def _init_buffers(self):
-        """Initialize buffers that will track the state of the environments."""
-        self.base_lin_vel = torch.zeros(
-            (self.num_envs, 3), device=gs.device, dtype=gs.tc_float
-        )
-        self.base_ang_vel = torch.zeros(
-            (self.num_envs, 3), device=gs.device, dtype=gs.tc_float
-        )
-        self.projected_gravity = torch.zeros(
-            (self.num_envs, 3), device=gs.device, dtype=gs.tc_float
-        )
-
-        self.global_gravity = torch.tensor(
-            [0.0, 0.0, -1.0], device=gs.device, dtype=gs.tc_float
-        ).repeat(self.num_envs, 1)
-
-        self.rew_buf = torch.zeros(
-            (self.num_envs,), device=gs.device, dtype=gs.tc_float
-        )
-
-        self.dof_pos = torch.zeros(
-            (self.num_envs, self.num_actions), device=gs.device, dtype=gs.tc_float
-        )
-        self.dof_vel = torch.zeros_like(self.dof_pos, device=gs.device)
         self.base_pos = torch.zeros(
             (self.num_envs, 3), device=gs.device, dtype=gs.tc_float
         )
         self.base_quat = torch.zeros(
             (self.num_envs, 4), device=gs.device, dtype=gs.tc_float
         )
+        self.dof_pos = torch.zeros(
+            (self.num_envs, self.num_actions), device=gs.device, dtype=gs.tc_float
+        )
 
     def step(self, actions: torch.Tensor):
-        """Perform a step in the environment."""
+        """
+        Perform a step in the environment.
+        """
         super().step(actions)
 
         # Validate actions
@@ -249,89 +252,52 @@ class SpiderRobotEnv(GenesisEnv):
             )
 
         # Execute simulation step
-        self._set_actuator_positions(actions)
+        self._control_dof_position_from_actions(actions)
         self.scene.step()
 
-        # Update state buffers
-        self.base_pos[:] = self.robot.get_pos()
-        self.base_quat[:] = self.robot.get_quat()
-        self.base_euler = quat_to_xyz(
-            transform_quat_by_quat(
-                torch.ones_like(self.base_quat, device=gs.device)
-                * self.inv_base_init_quat,
-                self.base_quat,
-            ),
-            rpy=True,
-            degrees=True,
-        )
-
-        inv_base_quat = inv_quat(self.base_quat)
-        self.base_lin_vel[:] = transform_by_quat(self.robot.get_vel(), inv_base_quat)
-        self.base_ang_vel[:] = transform_by_quat(self.robot.get_ang(), inv_base_quat)
-        self.projected_gravity = transform_by_quat(self.global_gravity, inv_base_quat)
-        self.dof_pos[:] = self.robot.get_dofs_position(self.dof_idx)
-        self.dof_vel[:] = self.robot.get_dofs_velocity(self.dof_idx)
-
-        # Termination, rewards, and observations
-        terminations, timeouts = self._check_terminated()
-        rewards, rewards_logs = self._calculate_rewards()
-
-        # Reset environments that terminated or timed out
-        resets = timeouts | terminations
-        reset_idx = resets.nonzero(as_tuple=False).reshape((-1,))
-        self.reset(reset_idx)
+        # Termination, rewards
+        terminated, truncated, reset_env_idx = self.termination_manager.step()
+        rewards = self.reward_manager.step()
 
         # Command manager
         self.command_manager.step()
 
-        self.get_observations()
-        info = {
-            "logs": {
-                "episode": rewards_logs,
-                "step": {
-                    "Done / Terminations": terminations.float(),
-                    "Done / Timeouts": timeouts.float(),
-                    # **rewards_logs,
-                },
-            }
-        }
-        return self.obs_buf, rewards, terminations, timeouts, info
+        # Finish up
+        self.reset(reset_env_idx)
+        self._get_observations()
+        return self.obs_buf, rewards, terminated, truncated, {}
 
     def reset(
         self,
-        env_ids: Sequence[int] = None,
+        envs_idx: Sequence[int] = None,
     ) -> tuple[torch.Tensor, dict[str, Any]]:
-        """Reset one or more environments."""
-        super().reset(env_ids)
-        if env_ids is None:
-            env_ids = torch.arange(self.num_envs, device=gs.device)
+        """
+        Reset one or more environments.
+        """
+        super().reset(envs_idx)
+        if envs_idx is None:
+            envs_idx = torch.arange(self.num_envs, device=gs.device)
 
-        # reset base
-        self.base_pos[env_ids] = self.base_init_pos
-        self.base_quat[env_ids] = self.base_init_quat.reshape(1, -1)
-        self.robot.zero_all_dofs_velocity(env_ids)
-        self.robot.set_pos(self.base_pos[env_ids], zero_velocity=True, envs_idx=env_ids)
-        self.robot.set_quat(
-            self.base_quat[env_ids], zero_velocity=True, envs_idx=env_ids
-        )
+        if envs_idx.numel() > 0:
+            # Managers
+            self.command_manager.reset(envs_idx)
+            self.termination_manager.reset(envs_idx)
+            self.reward_manager.reset(envs_idx)
 
-        # reset dofs
-        self.dof_pos[env_ids] = self.default_dof_pos
-        self.dof_vel[env_ids] = 0.0
-        self.robot.set_dofs_position(
-            position=self.dof_pos[env_ids],
-            dofs_idx_local=self.dof_idx,
-            zero_velocity=True,
-            envs_idx=env_ids,
-        )
+            # Reset robot
+            self.base_pos[envs_idx] = self.base_init_pos
+            self.base_quat[envs_idx] = self.base_init_quat
+            self.dof_pos[envs_idx] = self.default_dof_pos
+            self.robot.zero_all_dofs_velocity(envs_idx)
+            self.robot.set_pos(self.base_pos[envs_idx], envs_idx=envs_idx)
+            self.robot.set_quat(self.base_quat[envs_idx], envs_idx=envs_idx)
+            self.robot.set_dofs_position(
+                position=self.dof_pos[envs_idx],
+                dofs_idx_local=self.dof_idx,
+                envs_idx=envs_idx,
+            )
 
-        self.base_lin_vel[env_ids] = 0
-        self.base_ang_vel[env_ids] = 0
-
-        # Set new command
-        self.command_manager.reset(env_ids)
-
-        obs = self.get_observations()
+        obs = self._get_observations()
         return obs, {}
 
     def render(self):
@@ -341,7 +307,23 @@ class SpiderRobotEnv(GenesisEnv):
         """Close the environment."""
         self.scene.reset()
 
-    def _set_actuator_positions(self, actions: torch.Tensor):
+    def _get_observations(self):
+        """Environment observations"""
+        self.obs_buf = torch.cat(
+            [
+                self.command_manager.command,  # 3
+                robot_ang_vel(self),  # 3
+                robot_lin_vel(self),  # 3
+                robot_projected_gravity(self),  # 3
+                self.robot.get_dofs_position(self.dof_idx),  # 24
+                self.robot.get_dofs_velocity(self.dof_idx),  # 24
+                self.actions,  # 24
+            ],
+            dim=-1,
+        )
+        return self.obs_buf
+
+    def _control_dof_position_from_actions(self, actions: torch.Tensor):
         """Convert actions to position commands, and send them to the actuators."""
         self.actions = actions.clamp(-1.0, 1.0)
         lower = self.actuator_limits_lower
@@ -361,100 +343,9 @@ class SpiderRobotEnv(GenesisEnv):
         # Set target positions
         self.robot.control_dofs_position(self.target_positions, self.dof_idx)
 
-    def get_observations(self):
-        """Environment observations"""
-        self.obs_buf = torch.cat(
-            [
-                self.command_manager.command,  # 3
-                self.base_ang_vel,  # 3
-                self.base_lin_vel,  # 3
-                self.projected_gravity,  # 3
-                self.dof_pos,  # 24
-                self.dof_vel,  # 24
-                self.actions,  # 24
-            ],
-            dim=-1,
-        )
-        return self.obs_buf
-
-    def _check_terminated(self):
-        """Check if episode should terminate (robot has fallen or become unstable)."""
-
-        # -- Timeout
-        timeouts = self.episode_length > self.max_episode_length_steps
-
-        # -- Termination
-
-        # Check if robot has flipped over
-        terminations = torch.abs(self.base_euler[:, 1]) > 45  # Degrees
-        terminations |= torch.abs(self.base_euler[:, 0]) > 45  # Degrees
-
-        # Fallen over
-        terminations |= self.base_pos[:, 2] < 0.05
-
-        return terminations, timeouts
-
-    def _calculate_rewards(self):
-        """Compute the total rewards"""
-
-        self.rew_buf[:] = 0.0
-        logs = dict()
-        for name, reward_func in self.reward_func.items():
-            rew = reward_func() * self.reward_weight[name]
-            self.rew_buf += rew
-            self._episode_rewards[name] += rew
-            logs[f"Rewards/{name}"] = self._episode_rewards[name]
-
-        return self.rew_buf, logs
-
-    def _track_episode_rewards(self, env_idx: Sequence[int]):
-        """Compute the total rewards"""
-        for key in REWARDS.keys():
-            # Get episode lengths and ensure they're valid
-            episode_lengths = self.episode_length[env_idx]
-
-            # Handle edge cases where episode lengths might be zero
-            valid_mask = episode_lengths > 0
-            if torch.any(valid_mask):
-                # Calculate average for each episode based on its actual length
-                episode_avg = torch.zeros_like(self._episode_rewards[key][env_idx])
-                episode_avg[valid_mask] = (
-                    self._episode_rewards[key][env_idx][valid_mask]
-                    / episode_lengths[valid_mask]
-                )
-                # Take the mean across valid episodes only
-                episode_mean = torch.mean(episode_avg[valid_mask])
-                self.track_data(f"Episode_Reward/{key}", episode_mean)
-
-            # reset episodic sum
-            self._episode_rewards[key][env_idx] = 0.0
-
-    def _reward_tracking_lin_vel(self):
-        # Tracking of linear velocity commands (xy axes)
-        command = self.command_manager.command
-        lin_vel_error = torch.sum(
-            torch.square(command[:, :2] - self.base_lin_vel[:, :2]), dim=1
-        )
-        return torch.exp(-lin_vel_error / COMMAND_REWARD_SIGMA)
-
-    def _reward_tracking_ang_vel(self):
-        # Tracking of angular velocity commands (yaw)
-        command = self.command_manager.command
-        ang_vel_error = torch.square(command[:, 2] - self.base_ang_vel[:, 2])
-        return torch.exp(-ang_vel_error / COMMAND_REWARD_SIGMA)
-
-    def _reward_lin_vel_z(self):
-        # Penalize z axis base linear velocity
-        return torch.square(self.base_lin_vel[:, 2])
-
-    def _reward_action_rate(self):
-        # Penalize changes in actions
-        return torch.sum(torch.square(self.last_actions - self.actions), dim=1)
-
-    def _reward_similar_to_default(self):
-        # Penalize joint poses far away from default pose
-        return torch.sum(torch.abs(self.dof_pos - self.default_dof_pos), dim=1)
-
-    def _reward_base_height(self):
-        # Penalize base height away from target
-        return torch.square(self.base_pos[:, 2] - TARGET_HEIGHT)
+    def _get_dof_idx(self) -> Sequence[int]:
+        """
+        Helper function used by the reward manager to get the DOF indices.
+        This is necessary since the rewards are defined before the scene is built and the DOF indices are known.
+        """
+        return self.dof_idx

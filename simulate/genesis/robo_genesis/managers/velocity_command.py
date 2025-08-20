@@ -1,20 +1,52 @@
-from typing import Tuple, Sequence
+from typing import Tuple, Sequence, TypedDict
 
 import os
 import torch
 import genesis as gs
 from genesis.vis.rasterizer_context import RasterizerContext
+
 from robo_genesis.genesis_env import GenesisEnv
+from robo_genesis.utils import robot_lin_vel
+from robo_genesis.managers.base import BaseManager
 
 Range = Tuple[float, float]
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 
-ARROW_RADIUS = 0.026
-ARROW_VEC_MAX = 0.15
+
+class DebugVisualizerConfig(TypedDict):
+    """Defines the configuration for the debug visualizer."""
+
+    envs_idx: Sequence[int]
+    """The indices of the environments to visualize. If None, all environments will be visualized."""
+
+    arrow_offset: float
+    """The vertical offset of the debug arrows from the top of the robot"""
+
+    arrow_radius: float
+    """The radius of the shaft of the debug arrows"""
+
+    arrow_max_length: float
+    """The maximum length of the debug arrows"""
+
+    commanded_color: Tuple[float, float, float, float]
+    """The color of the commanded velocity arrow"""
+
+    actual_color: Tuple[float, float, float, float]
+    """The color of the actual robot velocity arrow"""
 
 
-class VelocityCommandManager:
+DEFAULT_VISUALIZER_CONFIG: DebugVisualizerConfig = {
+    "envs_idx": None,
+    "arrow_offset": 0.01,
+    "arrow_radius": 0.02,
+    "arrow_max_length": 0.15,
+    "commanded_color": (0.0, 0.5, 0.0, 0.0),
+    "actual_color": (0.0, 0.0, 0.5, 0.0),
+}
+
+
+class VelocityCommandManager(BaseManager):
     """
     Generates a velocity command from uniform distribution.
     The command comprises of a linear velocity in x and y direction and an angular velocity around the z-axis.
@@ -69,12 +101,20 @@ class VelocityCommandManager:
 
                 # ...additional reward calculations here...
 
+    Debug Visualization:
+        If you set `debug_visualizer` to True, arrows will be rendered above your robot
+        showing the commanded velocity vs the actual velocity.
+        The commanded velocity is green and the actual velocity is blue.
 
+    Args:
+        env: The environment to control
+        lin_vel_x_range: The range of linear velocity in the x-direction
+        lin_vel_y_range: The range of linear velocity in the y-direction
+        ang_vel_z_range: The range of angular velocity in the z-direction
+        resample_time_s: The time interval between changing the command
+        debug_visualizer: Enable the debug arrow visualization
+        debug_visualizer_cfg: The configuration for the debug visualizer
     """
-
-    _command: torch.Tensor = None
-    _arrow_nodes: list = ()
-    _command_resample_steps: int
 
     def __init__(
         self,
@@ -82,56 +122,32 @@ class VelocityCommandManager:
         lin_vel_x_range: Range,
         lin_vel_y_range: Range,
         ang_vel_z_range: Range,
-        arrow_offset: float = 0.01,
         resample_time_s: float = 5.0,
         debug_visualizer: bool = False,
-        debug_visualizer_env_idx: Sequence[int] = None,
+        debug_visualizer_cfg: DebugVisualizerConfig = DEFAULT_VISUALIZER_CONFIG,
     ):
-        self.env = env
-        self.debug_visualizer = debug_visualizer
-        self.arrow_offset = arrow_offset
+        super().__init__(env)
         self.lin_vel_x_range = lin_vel_x_range
         self.lin_vel_y_range = lin_vel_y_range
         self.ang_vel_z_range = ang_vel_z_range
-        self.debug_visualizer_env_idx = debug_visualizer_env_idx
+        self.debug_visualizer = debug_visualizer
+        self.visualizer_cfg = {**DEFAULT_VISUALIZER_CONFIG, **debug_visualizer_cfg}
 
+        self._arrow_nodes: list = ()
         self._command = torch.zeros(env.num_envs, 3, device=gs.device)
-        self.resample_steps = int(resample_time_s / env.dt)
+        self._resample_steps = int(resample_time_s / env.dt)
 
     @property
     def command(self) -> torch.Tensor:
         """The desired base velocity command in the base frame. Shape is (num_envs, 3)."""
         return self._command
 
-    def construct_scene(self):
-        """Add the arrows to the scene"""
-
-        def make_arrow(color: Sequence[float]):
-            return self.env.scene.add_entity(
-                gs.morphs.Mesh(
-                    file=os.path.join(THIS_DIR, "../assets/arrow.stl"),
-                    pos=[0.0, 0.0, 0.0],
-                    quat=[1.0, 0.0, 0.0, 0.0],
-                    scale=self.arrow_scale,
-                    collision=False,
-                    fixed=True,
-                ),
-                surface=gs.surfaces.Rough(
-                    diffuse_texture=gs.textures.ColorTexture(
-                        color=color,
-                    ),
-                ),
-            )
-
-        self.target_arrow = make_arrow((0.0, 0.5, 0.0, 0.0))
-        self.actual_arrow = make_arrow((0.0, 0.0, 0.5, 0.0))
-
     def step(self):
         """The environment has been stepped"""
 
         # Resample commands, if necessary
         resample_command_envs = (
-            (self.env.episode_length % self.resample_steps == 0)
+            (self.env.episode_length % self._resample_steps == 0)
             .nonzero(as_tuple=False)
             .reshape((-1,))
         )
@@ -167,7 +183,9 @@ class VelocityCommandManager:
         self._arrow_nodes = []
 
         # Scale the arrow size based on the maximum target velocity range
-        scale_factor = ARROW_VEC_MAX / max(*self.lin_vel_x_range, *self.lin_vel_y_range)
+        scale_factor = self.visualizer_cfg["arrow_max_length"] / max(
+            *self.lin_vel_x_range, *self.lin_vel_y_range
+        )
 
         # Calculate the center of the robot
         aabb = self.env.robot.get_AABB()
@@ -181,7 +199,7 @@ class VelocityCommandManager:
         arrow_pos = torch.zeros(self.env.num_envs, 3, device=gs.device)
         arrow_pos[:, 0] = robot_x
         arrow_pos[:, 1] = robot_y
-        arrow_pos[:, 2] = robot_z + self.arrow_offset
+        arrow_pos[:, 2] = robot_z + self.visualizer_cfg["arrow_offset"]
         arrow_pos += torch.from_numpy(self.env.scene.envs_offset).to(gs.device)
 
         # Convert velocity command to vector direction
@@ -190,23 +208,29 @@ class VelocityCommandManager:
         vec[:, :] *= scale_factor
 
         # Actual robot velocity
-        actual_vec = self.env.robot.get_vel().clone()
+        actual_vec = robot_lin_vel(self.env).clone()
         actual_vec[:, 2] = 0.0
         actual_vec[:, :] *= scale_factor
 
         debug_envs = (
-            self.debug_visualizer_env_idx
-            if self.debug_visualizer_env_idx is not None
+            self.visualizer_cfg["envs_idx"]
+            if self.visualizer_cfg["envs_idx"] is not None
             else range(self.env.num_envs)
         )
         for i in debug_envs:
             # Target arrow
             self.draw_arrow(
-                rasterizer, pos=arrow_pos[i], vec=vec[i], color=[0.0, 0.5, 0.0]
+                rasterizer,
+                pos=arrow_pos[i],
+                vec=vec[i],
+                color=self.visualizer_cfg["commanded_color"],
             )
             # Actual arrow
             self.draw_arrow(
-                rasterizer, pos=arrow_pos[i], vec=actual_vec[i], color=[0.0, 0.0, 0.5]
+                rasterizer,
+                pos=arrow_pos[i],
+                vec=actual_vec[i],
+                color=self.visualizer_cfg["actual_color"],
             )
 
     def draw_arrow(
@@ -222,7 +246,7 @@ class VelocityCommandManager:
             pos=pos.cpu().numpy(),
             vec=vec.cpu().numpy(),
             color=color,
-            radius=ARROW_RADIUS,
+            radius=self.visualizer_cfg["arrow_radius"],
             persistent=True,
         )
         if node:

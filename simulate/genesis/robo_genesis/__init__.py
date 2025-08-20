@@ -5,7 +5,7 @@ from .wrappers import (
     VideoCameraConfig,
     VideoFollowRobotConfig,
 )
-from .managers import VelocityCommandManager
+from .managers import VelocityCommandManager, RewardManager, TerminationManager
 from .genesis_env import GenesisEnv
 
 __all__ = [
@@ -15,5 +15,7 @@ __all__ = [
     "VideoCameraConfig",
     "VideoFollowRobotConfig",
     "VelocityCommandManager",
+    "RewardManager",
+    "TerminationManager",
     "create_skrl_env",
 ]

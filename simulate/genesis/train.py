@@ -25,6 +25,7 @@ CAMERA_CONFIG: VideoCameraConfig = {
     "lookat": (0.0, 0.0, 0.0),
     "fov": 40,
     "env_idx": 0,
+    "debug": True,
 }
 CAMERA_FOLLOW_CONFIG: VideoFollowRobotConfig = {
     "fixed_axis": (None, None, None),
@@ -111,7 +112,7 @@ def record_video(cfg: dict, log_path: str, video_path: str):
     )
 
     # Update timesteps to only record the final video
-    cfg["trainer"]["timesteps"] = env.video_length_steps
+    cfg["trainer"]["timesteps"] = env._video_length_steps
 
     # Load best checkpoint
     # Otherwise load the latest checkpoint, with the highest number

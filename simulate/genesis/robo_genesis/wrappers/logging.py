@@ -48,20 +48,9 @@ class DataLoggerWrapper(Wrapper):
         self.key = log_key
         self.log_fn = logger_fn
         self.episode_length = torch.zeros(
-            (self.num_envs,), device=gs.device, dtype=gs.tc_int
+            (self.num_envs,), device=gs.device, dtype=torch.int32
         )
         self.episode_data = dict()
-
-    def set_data_tracker(self, track_data_fn: Callable[[str, float], None]):
-        """Set the function which logs data to tensorboard."""
-        self.log_fn = track_data_fn
-
-    def track_data(self, name: str, value: float):
-        """Log a single value to the logger function."""
-        if not self.log_fn:
-            print(f"Warning: No logger function set for logging data.")
-            return
-        self.log_fn(name, value)
 
     def log_episode_data(self, env_ids: Sequence[int]):
         """Log episode values."""
@@ -92,7 +81,7 @@ class DataLoggerWrapper(Wrapper):
 
                 # Take the mean across valid episodes only
                 episode_mean = torch.mean(episode_avg[valid_episodes]).cpu().item()
-                self.track_data(name, episode_mean)
+                self.env.track_data(name, episode_mean)
 
             # Reset episodic sum
             self.episode_data[name][env_ids] = 0.0
