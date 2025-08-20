@@ -76,7 +76,7 @@ def train(
     Train the agent.
     """
     #  Create environment
-    env = SpiderRobotEnv(num_envs=num_envs)
+    env = SpiderRobotEnv(num_envs=num_envs, headless=True)
     env = DataLoggerWrapper(env)
     env = VideoWrapper(
         env,

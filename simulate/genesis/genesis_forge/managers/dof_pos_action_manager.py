@@ -193,7 +193,7 @@ class DofPositionActionManager(BaseManager):
 
     def update(self):
         """
-        Some of the DOFs or values have changed, and we need to update the buffers.
+        This should be called anytime any of the config values have changed (pd_kp_cfg, pd_kv_cfg, max_force_cfg, default_pos_cfg)
         """
 
         # Get position Limits and convert to shape (num_envs, limit)
@@ -207,7 +207,7 @@ class DofPositionActionManager(BaseManager):
             self.env.robot.set_dofs_kp(kp_values, self.dofs_idx)
         if self.pd_kv_cfg is not None:
             kv_values = self._get_dof_value_array(self.pd_kv_cfg)
-            self.env.robot.set_dofs_kp(kv_values, self.dofs_idx)
+            self.env.robot.set_dofs_kv(kv_values, self.dofs_idx)
 
         # Max force
         # The value can either be a single float or a tuple range
@@ -237,8 +237,6 @@ class DofPositionActionManager(BaseManager):
                 dtype=gs.tc_float,
             )
 
-        self._has_initialized_dofs = True
-
     def reset(
         self,
         envs_idx: Sequence[int],
@@ -252,6 +250,7 @@ class DofPositionActionManager(BaseManager):
         # On first reset, initialize DOF values and buffers
         if not self._has_initialized_dofs:
             self.update()
+            self._has_initialized_dofs = True
 
         # Reset DOF positions
         if reset_to_default:
@@ -289,10 +288,10 @@ class DofPositionActionManager(BaseManager):
         lower = self._pos_limit_lower
         upper = self._pos_limit_upper
         offset = (upper + lower) * 0.5
-        self.target_positions = actions * (upper - lower) * 0.5 + offset
+        target_positions = actions * (upper - lower) * 0.5 + offset
 
         # Set target positions
-        self.env.robot.control_dofs_position(self.target_positions, self.dofs_idx)
+        self.env.robot.control_dofs_position(target_positions, self.dofs_idx)
 
     def _get_dof_value_array(self, values: DofValue) -> Sequence[Any]:
         """
