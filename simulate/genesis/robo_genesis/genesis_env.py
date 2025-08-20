@@ -19,15 +19,17 @@ class GenesisEnv:
     scene: gs.Scene = None
     robot: RigidEntity = None
     terrain: RigidEntity = None
-    action_space: spaces = None
-    observation_space: spaces = None
     headless: bool = True
     num_envs: int = 1
     num_steps: int = 0
 
+    action_space: spaces = None
+    observation_space: spaces = None
+
     actions: torch.Tensor = None
     last_actions: torch.Tensor = None
     episode_length: torch.Tensor = None
+    data_tracker_fn: Callable[[str, float], None] = None
 
     def __init__(
         self,
@@ -42,6 +44,17 @@ class GenesisEnv:
         self.headless = headless
         self.max_episode_length = math.ceil(max_episode_length_s / self.dt)
 
+    def set_data_tracker(self, track_data_fn: Callable[[str, float], None]):
+        """Define the data logger function."""
+        self.data_tracker_fn = track_data_fn
+
+    def track_data(self, name: str, value: float):
+        """Log a single value to tensorboard, or similar"""
+        if not self.data_tracker_fn:
+            print(f"Warning: No logger function set for logging data.")
+            return
+        self.data_tracker_fn(name, value)
+
     def construct_scene(self) -> gs.Scene:
         """
         Construct the genesis scene.
@@ -55,7 +68,7 @@ class GenesisEnv:
                 camera_fov=40,
                 max_FPS=60,
             ),
-            vis_options=gs.options.VisOptions(n_rendered_envs=1),
+            vis_options=gs.options.VisOptions(rendered_envs_idx=list(range(1))),
             rigid_options=gs.options.RigidOptions(
                 dt=self.dt,
                 constraint_solver=gs.constraint_solver.Newton,
@@ -127,7 +140,7 @@ class GenesisEnv:
             )
             self.last_actions = torch.zeros_like(self.actions, device=gs.device)
             self.episode_length = torch.zeros(
-                (self.num_envs,), device=gs.device, dtype=gs.tc_int
+                (self.num_envs,), device=gs.device, dtype=torch.int32
             )
 
         # Actions
@@ -145,8 +158,4 @@ class GenesisEnv:
 
     def render(self):
         """Not implemented."""
-        pass
-
-    def set_data_tracker(self, _track_data_fn: Callable[[str, float], None]):
-        """Set the function which logs data to tensorboard."""
         pass

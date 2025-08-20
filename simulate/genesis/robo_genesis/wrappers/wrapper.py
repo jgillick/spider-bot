@@ -87,3 +87,7 @@ class Wrapper:
     def set_data_tracker(self, _track_data_fn: Callable[[str, float], None]):
         """Set the function which logs data to tensorboard."""
         self.env.set_data_tracker(_track_data_fn)
+
+    def track_data(self, name: str, value: float):
+        """Log a single value to tensorboard, or similar"""
+        self.env.track_data(name, value)
