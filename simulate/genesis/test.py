@@ -1,4 +1,5 @@
 import os
+import torch
 import genesis as gs
 from genesis.engine.entities import RigidEntity
 
@@ -41,32 +42,16 @@ PD_KV = 0.5
 MAX_TORQUE = 8.0
 
 
-def get_center_above(entity: RigidEntity, height_offset=0.5):
-    aabb_tensor = entity.get_AABB()
-    min_coords = aabb_tensor[0]  # [min_x, min_y, min_z]
-    max_coords = aabb_tensor[1]  # [max_x, max_y, max_z]
-
-    # Calculate center coordinates
-    center_x = (min_coords[0] + max_coords[0]) / 2
-    center_y = (min_coords[1] + max_coords[1]) / 2
-    center_z = (min_coords[2] + max_coords[2]) / 2
-
-    # Position above the center (assuming z is vertical)
-    position_above = [center_x, center_y, center_z + height_offset]
-
-    return position_above
-
-
 def main():
     gs.init(backend=gs.cpu)
 
     scene = gs.Scene(show_viewer=True)
 
     # Ground plane
-    scene.add_entity(gs.morphs.Plane())
+    plane: RigidEntity = scene.add_entity(gs.morphs.Plane())
 
     # Robot
-    robot = scene.add_entity(
+    robot: RigidEntity = scene.add_entity(
         gs.morphs.MJCF(
             file=SPIDER_XML,
             pos=INITIAL_BODY_POSITION,
@@ -74,41 +59,8 @@ def main():
         ),
     )
 
-    # Arrow
-    # arrow = scene.add_entity(
-    #     gs.morphs.Mesh(
-    #         file="./genesis_forge/assets/arrow.stl",
-    #         pos=[0.0, 0.0, 0.0],
-    #         quat=[1.0, 0.0, 0.0, 0.0],
-    #         scale=0.02,
-    #         collision=False,
-    #         fixed=True,
-    #     ),
-    #     surface=gs.surfaces.Rough(
-    #         diffuse_texture=gs.textures.ColorTexture(
-    #             color=(0.0, 0.5, 0.0, 1.0),
-    #         ),
-    #     ),
-    # )
-
     # Build scene
     scene.build()
-
-    # Position arrow over robot
-    aabb = robot.get_AABB()
-    min_aabb = aabb[0]  # [min_x, min_y, min_z]
-    max_aabb = aabb[1]  # [max_x, max_y, max_z]
-    center_aabb_x = (min_aabb[0] + max_aabb[0]) / 2
-    center_aabb_y = (min_aabb[1] + max_aabb[1]) / 2
-    arrow_pos = [center_aabb_x, center_aabb_y, max_aabb[2] + 0.05]
-    # arrow.set_pos(arrow_pos)
-
-    scene.draw_debug_arrow(
-        arrow_pos, vec=(0.2, 0, 0), color=[0.0, 0.5, 0.0], radius=0.025
-    )
-    scene.draw_debug_arrow(
-        arrow_pos, vec=(0.15, 0, 0), color=[0.0, 0.0, 0.5], radius=0.026
-    )
 
     #  Init actuators
     dof_idx = [
@@ -117,8 +69,8 @@ def main():
 
     # Gains and torque limits
     num_actuators = len(INITIAL_JOINT_POSITIONS)
-    robot.set_dofs_kp([PD_KP] * num_actuators, dof_idx)
-    robot.set_dofs_kv([PD_KV] * num_actuators, dof_idx)
+    robot.set_dofs_kp([20] * num_actuators, dof_idx)
+    robot.set_dofs_kv([0.5] * num_actuators, dof_idx)
     robot.set_dofs_force_range(
         [-MAX_TORQUE] * num_actuators,
         [MAX_TORQUE] * num_actuators,
@@ -129,15 +81,28 @@ def main():
     robot.set_dofs_position(
         position=list(INITIAL_JOINT_POSITIONS.values()),
         dofs_idx_local=dof_idx,
-        zero_velocity=True,
     )
 
-    for i in range(1000):
-        if i == 20:
+    for i in range(100):
+        if i > 20:
             robot.control_dofs_position(
                 list(INITIAL_JOINT_POSITIONS.values()),
                 dof_idx,
             )
+
+        if i == 25:
+            contacts = robot.get_contacts()
+            print("Link A: ", contacts["link_a"])
+            print("Link B: ", contacts["link_b"])
+            print("Geom A: ", contacts["geom_a"])
+            print("Geom B: ", contacts["geom_b"])
+            print("Force: ", contacts["force_b"])
+            for i in range(len(contacts["link_a"])):
+                link_a = scene.rigid_solver.links[contacts["link_a"][i]]
+                link_b = scene.rigid_solver.links[contacts["link_b"][i]]
+                force_a = contacts["force_a"][i]
+                force_b = contacts["force_b"][i]
+                print(f"Contact: {link_a.name} <--> {link_b.name}")
 
         scene.step()
 

@@ -22,42 +22,8 @@ from genesis_forge.utils import robot_projected_gravity, robot_ang_vel, robot_li
 from genesis_forge.mdp import rewards, terminations
 
 
-TARGET_HEIGHT = 0.15
-PD_KP = 50.0
-PD_KV = 0.5
-MAX_TORQUE = 8.0
-
 INITIAL_BODY_POSITION = [0.0, 0.0, 0.135]
 INITIAL_QUAT = [1.0, 0.0, 0.0, 0.0]
-
-INIT_FEMUR_POS = 0.5
-INIT_TIBIA_POS = 0.6
-INIT_JOINT_POS = {
-    "Leg1_Hip": -1.0,
-    "Leg1_Femur": INIT_FEMUR_POS,
-    "Leg1_Tibia": INIT_TIBIA_POS,
-    "Leg2_Hip": -1.0,
-    "Leg2_Femur": INIT_FEMUR_POS,
-    "Leg2_Tibia": INIT_TIBIA_POS,
-    "Leg3_Hip": 1.0,
-    "Leg3_Femur": INIT_FEMUR_POS,
-    "Leg3_Tibia": INIT_TIBIA_POS,
-    "Leg4_Hip": 1.0,
-    "Leg4_Femur": INIT_FEMUR_POS,
-    "Leg4_Tibia": INIT_TIBIA_POS,
-    "Leg5_Hip": 1.0,
-    "Leg5_Femur": INIT_FEMUR_POS,
-    "Leg5_Tibia": INIT_TIBIA_POS,
-    "Leg6_Hip": 1.0,
-    "Leg6_Femur": INIT_FEMUR_POS,
-    "Leg6_Tibia": INIT_TIBIA_POS,
-    "Leg7_Hip": -1.0,
-    "Leg7_Femur": INIT_FEMUR_POS,
-    "Leg7_Tibia": INIT_TIBIA_POS,
-    "Leg8_Hip": -1.0,
-    "Leg8_Femur": INIT_FEMUR_POS,
-    "Leg8_Tibia": INIT_TIBIA_POS,
-}
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 SPIDER_XML = os.path.abspath(os.path.join(THIS_DIR, "../robot/SpiderBot.xml"))
@@ -72,7 +38,7 @@ class SpiderRobotEnv(GenesisEnv):
         self,
         num_envs: int = 1,
         dt: float = 1 / 100,
-        max_episode_length_s: int = 12,
+        max_episode_length_s: int = 18,
         headless: bool = True,
     ):
         super().__init__(num_envs, dt, max_episode_length_s, headless)
@@ -122,7 +88,7 @@ class SpiderRobotEnv(GenesisEnv):
                     "weight": -100.0,
                     "fn": rewards.base_height,
                     "params": {
-                        "target_height": TARGET_HEIGHT,
+                        "target_height": 0.15,
                     },
                 },
                 "Similar to default": {
