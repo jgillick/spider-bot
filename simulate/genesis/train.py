@@ -35,7 +35,7 @@ FINAL_VIDEO_DURATION_S = 10
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 
-parser = argparse.ArgumentParser()
+parser = argparse.ArgumentParser(add_help=True)
 parser.add_argument("-n", "--num_envs", type=int, default=600)
 parser.add_argument("--max_iterations", type=int, default=500)
 parser.add_argument("-d", "--device", type=str, default="gpu")
