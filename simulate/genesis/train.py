@@ -89,6 +89,7 @@ def record_video(cfg: dict, log_path: str, video_path: str):
         filename="best.mp4",
         video_length_s=FINAL_VIDEO_DURATION_S,
     )
+    env.build()
 
     # Update timesteps to only record the final video
     cfg["trainer"]["timesteps"] = env._video_length_steps
@@ -114,7 +115,6 @@ def record_video(cfg: dict, log_path: str, video_path: str):
 
     # Eval
     print("🎬 Recording video of best model...")
-    env.build()
     runner.run("eval")
     skrl_env.close()
 
