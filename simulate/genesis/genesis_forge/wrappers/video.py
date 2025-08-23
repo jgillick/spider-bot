@@ -2,82 +2,68 @@ import os
 import math
 import torch
 from genesis.vis.camera import Camera
-from typing import TypedDict, Tuple, Literal, Any, Sequence
+from typing import Tuple, Any
 
 from genesis_forge.wrappers.wrapper import Wrapper
 from genesis_forge.genesis_env import GenesisEnv
 
 
-class VideoCameraConfig(TypedDict):
-    """
-    The camera configuration for the video that will be passed
-    directly to scene.add_camera.
-    @see https://genesis-world.readthedocs.io/en/latest/api_reference/scene/scene.html#genesis.engine.scene.Scene.add_camera
-    """
-
-    model: Literal["pinhole", "thinlens"]
-    res: Tuple[int, int]
-    pos: Tuple[float, float, float]
-    lookat: Tuple[float, float, float]
-    fov: int
-    up: Tuple[float, float, float]
-    aperture: float
-    focus_dist: float
-    spp: int
-    denoise: bool
-    env_idx: int
-    debug: bool
-
-
-class VideoFollowRobotConfig(TypedDict):
-    """
-    The "follow_entity" configuration for the camera to follow the robot
-    """
-
-    fixed_axis: Tuple[float, float, float]
-    smoothing: float
-    fix_orientation: bool
-
-
-DEFAULT_CAMERA: VideoCameraConfig = {
-    "model": "pinhole",
-    "res": (1280, 960),
-    "pos": (0.5, 2.5, 3.5),
-    "lookat": (0.5, 0.5, 0.5),
-    "fov": 40,
-    "up": (0.0, 0.0, 1.0),
-    "aperture": 2.0,
-    "focus_dist": None,
-    "spp": 256,
-    "denoise": True,
-    "env_idx": 0,
-    "debug": True,
-}
-
-
 class VideoWrapper(Wrapper):
     """
-    Automatically record videos during training.
+    Automatically record videos during training at a regular step intervals.
+    To use this, you need to define a camera in the environment and assign it to a public attribute.
+    When you wrap the environment, you pass the name of the attribute to the wrapper (see the example below).
+
+    Args:
+        env: GenesisEnv
+        camera_attr: The attribute of the base environment that contains the camera to use for recording.
+        video_length_s: Length of each video, in seconds.
+        every_n_steps: Interval between each recording (in steps).
+        out_dir: Directory to save the videos to.
+        filename: The filename for the video.
+                  If None, the video will automatically be named for the current step.
+                  If defined, each video will overwrite the previous video with this name.
+
+    Example::
+        class MyEnv(GenesisEnv):
+            camera: Camera
+
+            def construct_scene(self) -> gs.Scene:
+                scene = super().construct_scene()
+                # Add robot...
+
+                # Assign a camera to the `camera` attribute
+                self.camera = scene.add_camera(pos=(-2.5, -1.5, 1.0))
+
+                return scene
+
+        def train():
+            env = MyEnv()
+            env = VideoWrapper(
+                env,
+                camera_attr="camera",
+                out_dir="./videos"
+            )
+            env.build()
+            ...training code...
     """
 
     def __init__(
         self,
         env: GenesisEnv,
+        camera_attr: str = "camera",
+        video_length_s: int = 8,
         every_n_steps: int = 500,
-        video_length_s: int = 5,
-        out_dir: str = "videos",
-        camera: VideoCameraConfig = DEFAULT_CAMERA,
-        follow_robot: VideoFollowRobotConfig = None,
+        out_dir: str = "./videos",
         filename: str = None,
     ):
         super().__init__(env)
-
+        self._cam = None
+        self._camera_attr = camera_attr
         self._out_dir = out_dir
         self._filename = filename
         self._every_n_steps = every_n_steps
         self._video_length_steps = math.ceil(video_length_s / self.dt)
-        self._camera_config = {**DEFAULT_CAMERA, **camera}
-        self._follow_robot = follow_robot
         self._current_step: int = 0
         self._is_recording: bool = False
         self._recording_steps_remaining: int = 0
@@ -85,33 +71,30 @@ class VideoWrapper(Wrapper):
 
         os.makedirs(self._out_dir, exist_ok=True)
 
-    def construct_scene(self):
-        """Add a camera to the scene."""
-        scene = super().construct_scene()
-        self.cam = scene.add_camera(**self._camera_config)
-
-    def build(self):
-        """Setup the camera to follow the robot."""
+    def build(self) -> None:
+        """Load the camera from the environment."""
         super().build()
-        if self._follow_robot:
-            self.cam.follow_entity(self.env.robot, **self._follow_robot)
+        self._cam = self.unwrapped.__getattribute__(self._camera_attr)
+        assert (
+            self._cam is not None
+        ), f"Camera not found at attribute: {self.unwrapped.__class__.__name__}.{self._camera_attr}"
 
     def start_recording(self):
         """Start recording a video."""
         self._is_recording = True
         self._recording_steps_remaining = self._video_length_steps
-        self.cam.start_recording()
-        self.cam.render()
+        self._cam.start_recording()
+        self._cam.render()
 
     def finish_recording(self):
         """Stop recording and save the video."""
-        if not self._is_recording:
+        if not self._is_recording and self._cam is not None:
             return
 
         # Save recording
         filename = self._filename or f"{self._next_start_step}.mp4"
         filepath = os.path.join(self._out_dir, filename)
-        self.cam.stop_recording(filepath, fps=60)
+        self._cam.stop_recording(filepath, fps=60)
 
         # Reset recording state
         self._is_recording = False
@@ -126,7 +109,7 @@ class VideoWrapper(Wrapper):
 
         # Currently recording
         if self._is_recording:
-            self.cam.render()
+            self._cam.render()
             self._recording_steps_remaining -= 1
             if self._recording_steps_remaining <= 0:
                 self.finish_recording()

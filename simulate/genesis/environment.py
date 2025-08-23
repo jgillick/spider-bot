@@ -10,6 +10,7 @@ from gymnasium import spaces
 from typing import Sequence, Any
 
 import genesis as gs
+from genesis.vis.camera import Camera
 
 from genesis_forge import GenesisEnv
 from genesis_forge.managers import (
@@ -33,6 +34,8 @@ class SpiderRobotEnv(GenesisEnv):
     """
     SpiderBot environment for Genesis
     """
+
+    camera: Camera = None
 
     def __init__(
         self,
@@ -149,6 +152,10 @@ class SpiderRobotEnv(GenesisEnv):
             (self.num_envs, 4), device=gs.device, dtype=gs.tc_float
         )
 
+    """
+    Properties
+    """
+
     @property
     def observation_space(self):
         return spaces.Box(
@@ -161,6 +168,10 @@ class SpiderRobotEnv(GenesisEnv):
     @property
     def action_space(self):
         return self.action_manager.action_space
+
+    """
+    Operations
+    """
 
     def construct_scene(self) -> gs.Scene:
         """Add the robot to the scene."""
@@ -175,6 +186,9 @@ class SpiderRobotEnv(GenesisEnv):
             ),
         )
 
+        # Add camera
+        self.camera = scene.add_camera(pos=(-2.5, -1.5, 1.0), fov=40, debug=True)
+
         return scene
 
     def build(self) -> None:
@@ -185,6 +199,10 @@ class SpiderRobotEnv(GenesisEnv):
         super().build()
         self.action_manager.build()
 
+        # Track robot with camera
+        self.camera.follow_entity(self.robot, fixed_axis=(None, None, 1.0))
+        self.camera.set_pose(lookat=self.robot.get_pos())
+
     def step(self, actions: torch.Tensor):
         """
         Perform a step in the environment.
@@ -194,6 +212,9 @@ class SpiderRobotEnv(GenesisEnv):
         # Execute the actions and a simulation step
         self.action_manager.step(actions)
         self.scene.step()
+
+        #  Keep the camera looking at the robot
+        self.camera.set_pose(lookat=self.robot.get_pos())
 
         # Termination, rewards
         terminated, truncated, reset_env_idx = self.termination_manager.step()
@@ -241,6 +262,10 @@ class SpiderRobotEnv(GenesisEnv):
     def close(self):
         """Close the environment."""
         self.scene.reset()
+
+    """
+    Implementation
+    """
 
     def _get_observations(self):
         """Environment observations"""

@@ -13,14 +13,15 @@ DofValue = Union[dict[str, Any], Any]
 
 def ensure_dof_pattern(value: DofValue) -> dict[str, Any]:
     """
-    Convert a DOF value to a dictionary of DOF name pattern to value.
-    If the value is not a dictionary, it is assigned to the ".*" pattern.
+    Ensures the value is a dictionary in the form: {<joint name or regex>: <value>}.
 
-    For example:
+    Example:
         >>> ensure_dof_pattern(50)
         {".*": 50}
         >>> ensure_dof_pattern({".*": 50})
         {".*": 50}
+        >>> ensure_dof_pattern({"knee_joint": 50})
+        {"knee_joint": 50}
 
     Args:
         value: The value to convert.
@@ -42,7 +43,7 @@ class DofPositionActionManager(BaseManager):
     Args:
         env: The environment to manage the DOF actuators for.
 
-    Example:
+    Example::
         class MyEnv(GenesisEnv):
             def __init__(self, *args, **kwargs):
                 super().__init__(*args, **kwargs)

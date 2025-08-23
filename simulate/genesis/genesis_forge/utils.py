@@ -11,7 +11,7 @@ from genesis.utils.geom import (
 from .genesis_env import GenesisEnv
 
 
-def robot_lin_vel(env: GenesisEnv):
+def robot_lin_vel(env: GenesisEnv) -> torch.Tensor:
     """
     Calculate the robot's linear velocity in the local frame.
 
@@ -22,12 +22,11 @@ def robot_lin_vel(env: GenesisEnv):
         torch.Tensor: Linear velocity in the local frame
     """
     robot = env.robot
-    base_quat = robot.get_quat()
-    inv_base_quat = inv_quat(base_quat)
+    inv_base_quat = inv_quat(robot.get_quat())
     return transform_by_quat(robot.get_vel(), inv_base_quat)
 
 
-def robot_ang_vel(env: GenesisEnv):
+def robot_ang_vel(env: GenesisEnv) -> torch.Tensor:
     """
     Calculate the robot's angular velocity in the local frame.
 
@@ -38,12 +37,11 @@ def robot_ang_vel(env: GenesisEnv):
         torch.Tensor: Angular velocity in the local frame
     """
     robot = env.robot
-    base_quat = robot.get_quat()
-    inv_base_quat = inv_quat(base_quat)
+    inv_base_quat = inv_quat(robot.get_quat())
     return transform_by_quat(robot.get_ang(), inv_base_quat)
 
 
-def robot_projected_gravity(env: GenesisEnv):
+def robot_projected_gravity(env: GenesisEnv) -> torch.Tensor:
     """
     Calculate the robot's projected gravity in the local frame.
 
@@ -54,18 +52,17 @@ def robot_projected_gravity(env: GenesisEnv):
         torch.Tensor: Projected gravity in the local frame
     """
     robot = env.robot
-    base_quat = robot.get_quat()
-    inv_base_quat = inv_quat(base_quat)
+    inv_base_quat = inv_quat(robot.get_quat())
     global_gravity = torch.tensor(
         [0.0, 0.0, -1.0], device=gs.device, dtype=gs.tc_float
-    ).repeat(base_quat.shape[0], 1)
+    ).repeat(robot.get_quat().shape[0], 1)
     return transform_by_quat(global_gravity, inv_base_quat)
 
 
 def robot_relative_quat(
     env: GenesisEnv,
     robot_upright_quat: Tuple[float, float, float, float] = [1.0, 0.0, 0.0, 0.0],
-):
+) -> torch.Tensor:
     """
     Calculate the robot's quaternion relative to a reference upright orientation.
 
@@ -86,11 +83,8 @@ def robot_relative_quat(
         robot_upright_quat, device=base_quat.device, dtype=base_quat.dtype
     )
     upright_quat = upright_quat.expand(base_quat.shape[0], -1)
-
-    # Calculate inverse of the reference upright quaternion
     inv_upright_quat = inv_quat(upright_quat)
 
     # Transform current quaternion to local frame (relative to upright reference)
     local_quat = transform_quat_by_quat(inv_upright_quat, base_quat)
-
     return local_quat
