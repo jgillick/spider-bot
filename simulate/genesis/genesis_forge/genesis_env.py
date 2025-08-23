@@ -23,9 +23,6 @@ class GenesisEnv:
     num_envs: int = 1
     num_steps: int = 0
 
-    action_space: spaces = None
-    observation_space: spaces = None
-
     actions: torch.Tensor = None
     last_actions: torch.Tensor = None
     episode_length: torch.Tensor = None
@@ -44,6 +41,31 @@ class GenesisEnv:
         self.headless = headless
         self.max_episode_length = math.ceil(max_episode_length_s / self.dt)
 
+    """
+    Properties
+    """
+
+    @property
+    def observation_space(self):
+        return None
+
+    @property
+    def action_space(self):
+        return None
+
+    @property
+    def unwrapped(self):
+        """Returns the base non-wrapped environment.
+
+        Returns:
+            Env: The base non-wrapped :class:`GenesisEnv` instance
+        """
+        return self
+
+    """
+    Utilities
+    """
+
     def set_data_tracker(self, track_data_fn: Callable[[str, float], None]):
         """Define the data logger function."""
         self.data_tracker_fn = track_data_fn
@@ -54,6 +76,10 @@ class GenesisEnv:
             print(f"Warning: No logger function set for logging data.")
             return
         self.data_tracker_fn(name, value)
+
+    """
+    Operations
+    """
 
     def construct_scene(self) -> gs.Scene:
         """
@@ -85,6 +111,8 @@ class GenesisEnv:
 
     def build(self) -> None:
         """Builds the scene once all entities have been added (via construct_scene). This operation is required before running the simulation."""
+        if self.scene is None:
+            self.construct_scene()
         self.scene.build(n_envs=self.num_envs)
 
     def get_observations(self) -> torch.Tensor:

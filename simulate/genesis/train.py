@@ -13,23 +13,10 @@ from genesis_forge import (
     create_skrl_env,
     DataLoggerWrapper,
     VideoWrapper,
-    VideoCameraConfig,
-    VideoFollowRobotConfig,
 )
 from environment import SpiderRobotEnv
 
 SKRL_CONFIG = "./ppo.yaml"
-
-CAMERA_CONFIG: VideoCameraConfig = {
-    "pos": (-2.5, -1.5, 1.0),
-    "lookat": (0.0, 0.0, 0.0),
-    "fov": 40,
-    "env_idx": 0,
-    "debug": True,
-}
-CAMERA_FOLLOW_CONFIG: VideoFollowRobotConfig = {
-    "fixed_axis": (None, None, None),
-}
 
 FINAL_VIDEO_DURATION_S = 10
 
@@ -78,13 +65,7 @@ def train(
     #  Create environment
     env = SpiderRobotEnv(num_envs=num_envs, headless=True)
     env = DataLoggerWrapper(env)
-    env = VideoWrapper(
-        env,
-        video_length_s=5,
-        out_dir=video_path,
-        camera=CAMERA_CONFIG,
-        follow_robot=CAMERA_FOLLOW_CONFIG,
-    )
+    env = VideoWrapper(env, video_length_s=12, out_dir=video_path)
     env.build()
 
     # Setup training runner
@@ -107,8 +88,6 @@ def record_video(cfg: dict, log_path: str, video_path: str):
         out_dir=video_path,
         filename="best.mp4",
         video_length_s=FINAL_VIDEO_DURATION_S,
-        camera=CAMERA_CONFIG,
-        follow_robot=CAMERA_FOLLOW_CONFIG,
     )
 
     # Update timesteps to only record the final video
@@ -147,7 +126,7 @@ def main():
 
     signal.signal(signal.SIGINT, shutdown)
 
-    # Processor backend
+    # Processor backend (GPU or CPU)
     backend = gs.gpu
     if args.device == "cpu":
         backend = gs.cpu

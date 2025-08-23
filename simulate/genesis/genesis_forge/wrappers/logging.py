@@ -15,8 +15,10 @@ class DataLoggerWrapper(Wrapper):
 
     Data can either be logged at each step, or at the end of each episode (at reset).
 
-    Example:
-    ```python
+    Args:
+        env
+
+    Example::
         def step(self, actions):
             # ... Do some step stuff
 
@@ -35,7 +37,6 @@ class DataLoggerWrapper(Wrapper):
 
             # Return
             return obs, rewards, terminations, timeouts, info
-    ```
     """
 
     key: str

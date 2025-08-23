@@ -23,6 +23,10 @@ class Wrapper:
                 f"Expected env to be a `GenesisEnv` or `Wrapper` but got {type(env)}"
             )
 
+    """
+    Properties
+    """
+
     @property
     def dt(self) -> float:
         """The time step of the environment."""
@@ -52,6 +56,18 @@ class Wrapper:
     def observation_space(self) -> spaces:
         """The observation space of the environment."""
         return self.env.observation_space
+
+    @property
+    def unwrapped(self) -> GenesisEnv:
+        """Returns the base environment of the wrapper.
+
+        This will be the bare :class:`GenesisEnv` environment, underneath all layers of wrappers.
+        """
+        return self.env.unwrapped
+
+    """
+    Operations
+    """
 
     def construct_scene(self) -> gs.Scene:
         """Uses the :meth:`construct_scene` of the :attr:`env` that can be overwritten to change the returned data."""
@@ -83,6 +99,10 @@ class Wrapper:
     def close(self):
         """Closes the wrapper and :attr:`env`."""
         return self.env.close()
+
+    """
+    Utilities
+    """
 
     def set_data_tracker(self, _track_data_fn: Callable[[str, float], None]):
         """Set the function which logs data to tensorboard."""
