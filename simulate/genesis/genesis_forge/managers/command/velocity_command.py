@@ -6,11 +6,17 @@ import genesis as gs
 
 from genesis_forge.genesis_env import GenesisEnv
 from genesis_forge.utils import robot_lin_vel
-from genesis_forge.managers.base import BaseManager
 
-Range = Tuple[float, float]
+from .command_manager import CommandManager, CommandRange
+
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
+class VelocityCommandRange(TypedDict):
+    lin_vel_x: CommandRange
+    lin_vel_y: CommandRange
+    ang_vel_z: CommandRange
 
 
 class DebugVisualizerConfig(TypedDict):
@@ -45,7 +51,7 @@ DEFAULT_VISUALIZER_CONFIG: DebugVisualizerConfig = {
 }
 
 
-class VelocityCommandManager(BaseManager):
+class VelocityCommandManager(CommandManager):
     """
     Generates a velocity command from uniform distribution.
     The command comprises of a linear velocity in x and y direction and an angular velocity around the z-axis.
@@ -63,9 +69,11 @@ class VelocityCommandManager(BaseManager):
                 self.command_manager = VelocityCommandManager(
                     self,
                     visualize=True,
-                    lin_vel_x_range=(-0.5, 0.5),
-                    lin_vel_y_range=(-0.5, 0.5),
-                    ang_vel_z_range=(-1.0, 1.0),
+                    range = {
+                        "lin_vel_x_range": (-1.0, 1.0),
+                        "lin_vel_y_range": (-1.0, 1.0),
+                        "ang_vel_z_range": (-0.5, 0.5),
+                    }
                 )
 
             def step(self, actions: torch.Tensor):
@@ -107,9 +115,8 @@ class VelocityCommandManager(BaseManager):
 
     Args:
         env: The environment to control
-        lin_vel_x_range: The range of linear velocity in the x-direction
-        lin_vel_y_range: The range of linear velocity in the y-direction
-        ang_vel_z_range: The range of angular velocity in the z-direction
+        range: The ranges of linear & angular velocities
+        standing_probability: The probability of all velocities being zero for an environment
         resample_time_s: The time interval between changing the command
         debug_visualizer: Enable the debug arrow visualization
         debug_visualizer_cfg: The configuration for the debug visualizer
@@ -118,55 +125,37 @@ class VelocityCommandManager(BaseManager):
     def __init__(
         self,
         env: GenesisEnv,
-        lin_vel_x_range: Range,
-        lin_vel_y_range: Range,
-        ang_vel_z_range: Range,
+        range: VelocityCommandRange,
         resample_time_s: float = 5.0,
+        standing_probability: float = 0.0,
         debug_visualizer: bool = False,
         debug_visualizer_cfg: DebugVisualizerConfig = DEFAULT_VISUALIZER_CONFIG,
     ):
-        super().__init__(env)
-        self.lin_vel_x_range = lin_vel_x_range
-        self.lin_vel_y_range = lin_vel_y_range
-        self.ang_vel_z_range = ang_vel_z_range
+        super().__init__(env, range=range, resample_time_s=resample_time_s)
+        self._arrow_nodes: list = []
+        self.standing_probability = standing_probability
         self.debug_visualizer = debug_visualizer
         self.visualizer_cfg = {**DEFAULT_VISUALIZER_CONFIG, **debug_visualizer_cfg}
 
-        self._arrow_nodes: list = []
-        self._command = torch.zeros(env.num_envs, 3, device=gs.device)
-        self._resample_steps = int(resample_time_s / env.dt)
-
-    @property
-    def command(self) -> torch.Tensor:
-        """The desired base velocity command in the base frame. Shape is (num_envs, 3)."""
-        return self._command
+        self._is_standing_env = torch.zeros(
+            env.num_envs, dtype=torch.bool, device=gs.device
+        )
 
     def step(self):
-        """The environment has been stepped"""
-
-        # Resample commands, if necessary
-        resample_command_envs = (
-            (self.env.episode_length % self._resample_steps == 0)
-            .nonzero(as_tuple=False)
-            .reshape((-1,))
-        )
-        self._resample_command(resample_command_envs)
-
-        # Render arrows
+        """Render the command arrows"""
+        super().step()
         self._render_arrows()
 
-    def reset(self, env_ids: Sequence[int] = None):
-        """One or more environments have been reset"""
-        if env_ids is None:
-            env_ids = torch.arange(self.env.num_envs, device=gs.device)
-        self._resample_command(env_ids)
-
     def _resample_command(self, env_ids: Sequence[int]):
-        """Create a new velocity commands for the given environment ids."""
+        """Overwrites commands for environments that should be standing still."""
+        super()._resample_command(env_ids)
+
         num = torch.empty(len(env_ids), device=gs.device)
-        self._command[env_ids, 0] = num.uniform_(*self.lin_vel_x_range)
-        self._command[env_ids, 1] = num.uniform_(*self.lin_vel_y_range)
-        self._command[env_ids, 2] = num.uniform_(*self.ang_vel_z_range)
+        self._is_standing_env[env_ids] = (
+            num.uniform_(0.0, 1.0) <= self.standing_probability
+        )
+        standing_envs_idx = self._is_standing_env.nonzero(as_tuple=False).flatten()
+        self._command[standing_envs_idx, :] = 0.0
 
     def _render_arrows(self):
         """Render the command arrows"""
@@ -180,7 +169,7 @@ class VelocityCommandManager(BaseManager):
 
         # Scale the arrow size based on the maximum target velocity range
         scale_factor = self.visualizer_cfg["arrow_max_length"] / max(
-            *self.lin_vel_x_range, *self.lin_vel_y_range
+            *self.range["lin_vel_x"], *self.range["lin_vel_y"], *self.range["ang_vel_z"]
         )
 
         # Calculate the center of the robot
@@ -199,7 +188,7 @@ class VelocityCommandManager(BaseManager):
         arrow_pos += torch.from_numpy(self.env.scene.envs_offset).to(gs.device)
 
         # Convert velocity command to vector direction
-        vec = self._command.clone()
+        vec = self.command.clone()
         vec[:, 2] = 0.0
         vec[:, :] *= scale_factor
 
@@ -233,6 +222,9 @@ class VelocityCommandManager(BaseManager):
         vec: torch.Tensor,
         color: Sequence[float],
     ):
+        # If velocity is zero, don't draw the arrow
+        if torch.all(vec == 0.0):
+            return
         try:
             node = self.env.scene.draw_debug_arrow(
                 pos=pos.cpu().numpy(),
