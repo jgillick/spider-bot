@@ -1,11 +1,15 @@
 import torch
-from typing import Sequence, Callable, Union
+from typing import Union
 from genesis_forge.genesis_env import GenesisEnv
-from genesis_forge.managers import VelocityCommandManager, DofPositionActionManager
+from genesis_forge.managers import (
+    VelocityCommandManager,
+    DofPositionActionManager,
+    ContactManager,
+)
 from genesis_forge.utils import robot_lin_vel, robot_ang_vel
 
 
-def base_height(env: GenesisEnv, target_height: float):
+def base_height(env: GenesisEnv, target_height: Union[float, torch.Tensor]):
     """
     Penalize base height away from target
 
@@ -110,3 +114,12 @@ def command_tracking_ang_vel(
     angular_vel = robot_ang_vel(env)
     ang_vel_error = torch.square(command[:, 2] - angular_vel[:, 2])
     return torch.exp(-ang_vel_error / sensitivity)
+
+
+def has_contact(_env: GenesisEnv, contact_manager: ContactManager, threshold=1.0):
+    """
+    Returns:
+        1 for each contact meeting the threshold
+    """
+    has_contact = contact_manager.contacts[:, :].norm(dim=-1) > threshold
+    return has_contact.sum(dim=1).float()

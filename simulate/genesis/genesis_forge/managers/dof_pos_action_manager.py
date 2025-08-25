@@ -48,6 +48,7 @@ class DofPositionActionManager(BaseManager):
             def __init__(self, *args, **kwargs):
                 super().__init__(*args, **kwargs)
 
+            def configuration_managers(self):
                 self.action_manager = DofPositionActionManager(
                     self,
                     joint_names=".*",
@@ -126,6 +127,10 @@ class DofPositionActionManager(BaseManager):
         else:
             raise TypeError(f"Invalid joint_names type: {type(joint_names)}")
 
+    """
+    Properties
+    """
+
     @property
     def dof_num(self) -> int:
         """
@@ -167,6 +172,10 @@ class DofPositionActionManager(BaseManager):
     def default_dofs_pos(self) -> torch.Tensor:
         """Return the default DOF positions."""
         return self._default_dofs_pos
+
+    """
+    Operations
+    """
 
     def build(self):
         """
@@ -240,7 +249,7 @@ class DofPositionActionManager(BaseManager):
 
     def reset(
         self,
-        envs_idx: Sequence[int],
+        envs_idx: Sequence[int] = None,
         reset_to_default: bool = True,
         zero_dofs_velocity: bool = True,
     ):
@@ -271,6 +280,10 @@ class DofPositionActionManager(BaseManager):
     def get_dofs_velocity(self):
         """Return the velocity of the enabled DOFs."""
         return self.env.robot.get_dofs_velocity(self.dofs_idx)
+
+    """
+    Implementation
+    """
 
     def _step_action_handler(self, actions: torch.Tensor):
         """Convert actions to position commands, and send them to the DOF actuators."""
