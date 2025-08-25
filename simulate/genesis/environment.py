@@ -18,6 +18,7 @@ from genesis_forge.managers import (
     RewardManager,
     TerminationManager,
     DofPositionActionManager,
+    ContactManager,
 )
 from genesis_forge.utils import robot_projected_gravity, robot_ang_vel, robot_lin_vel
 from genesis_forge.mdp import rewards, terminations
@@ -46,6 +47,26 @@ class SpiderRobotEnv(GenesisEnv):
     ):
         super().__init__(num_envs, dt, max_episode_length_s, headless)
 
+        # Cache position buffers
+        self.base_init_pos = torch.tensor(INITIAL_BODY_POSITION, device=gs.device)
+        self.base_init_quat = torch.tensor(INITIAL_QUAT, device=gs.device).reshape(
+            1, -1
+        )
+        self.base_pos = torch.zeros(
+            (self.num_envs, 3), device=gs.device, dtype=gs.tc_float
+        )
+        self.base_quat = torch.zeros(
+            (self.num_envs, 4), device=gs.device, dtype=gs.tc_float
+        )
+
+    """
+    Configuration
+    """
+
+    def configuration_managers(self):
+        """
+        Initialize all the configuration managers for the environment.
+        """
         # Define the DOF actuators
         self.action_manager = DofPositionActionManager(
             self,
@@ -68,14 +89,29 @@ class SpiderRobotEnv(GenesisEnv):
         # Command manager: instruct the robot to move in a certain direction
         self.command_manager = VelocityCommandManager(
             self,
-            lin_vel_x_range=[-1.0, 1.0],
-            lin_vel_y_range=[-1.0, 1.0],
-            ang_vel_z_range=[0.5, 0.5],
+            range={
+                "lin_vel_x": [-1.0, 1.0],
+                "lin_vel_y": [-1.0, 1.0],
+                "ang_vel_z": [-0.5, 0.5],
+            },
+            standing_probability=0.02,
             resample_time_s=5.0,
             debug_visualizer=True,
             debug_visualizer_cfg={
                 "envs_idx": [0],
             },
+        )
+
+        # -- Contact managers
+
+        # Legs should not come in contact with anything
+        self.leg_contact_manager = ContactManager(
+            self,
+            link_names=[
+                "Leg[1-8]_Femur",
+                "Leg[1-8]_Tibia_Leg",
+                "Leg[1-8]_Tibia_BadTouch",
+            ],
         )
 
         # Rewards
@@ -119,6 +155,13 @@ class SpiderRobotEnv(GenesisEnv):
                         "vel_cmd_manager": self.command_manager,
                     },
                 },
+                "Leg contact": {
+                    "weight": -0.001,
+                    "fn": rewards.has_contact,
+                    "params": {
+                        "contact_manager": self.leg_contact_manager,
+                    },
+                },
             },
         )
 
@@ -138,18 +181,6 @@ class SpiderRobotEnv(GenesisEnv):
                     },
                 },
             },
-        )
-
-        # Cache position buffers
-        self.base_init_pos = torch.tensor(INITIAL_BODY_POSITION, device=gs.device)
-        self.base_init_quat = torch.tensor(INITIAL_QUAT, device=gs.device).reshape(
-            1, -1
-        )
-        self.base_pos = torch.zeros(
-            (self.num_envs, 3), device=gs.device, dtype=gs.tc_float
-        )
-        self.base_quat = torch.zeros(
-            (self.num_envs, 4), device=gs.device, dtype=gs.tc_float
         )
 
     """
@@ -175,7 +206,12 @@ class SpiderRobotEnv(GenesisEnv):
 
     def construct_scene(self) -> gs.Scene:
         """Add the robot to the scene."""
-        scene = super().construct_scene()
+        scene = super().construct_scene(
+            rigid_options=gs.options.RigidOptions(
+                enable_collision=True,
+                enable_self_collision=True,
+            )
+        )
 
         # add robot
         self.robot = scene.add_entity(
@@ -215,6 +251,9 @@ class SpiderRobotEnv(GenesisEnv):
         self.action_manager.step(actions)
         self.scene.step()
 
+        # Calculate contact forces
+        self.leg_contact_manager.step()
+
         #  Keep the camera looking at the robot
         self.camera.set_pose(lookat=self.robot.get_pos())
 
@@ -247,6 +286,7 @@ class SpiderRobotEnv(GenesisEnv):
             self.termination_manager.reset(envs_idx)
             self.reward_manager.reset(envs_idx)
             self.action_manager.reset(envs_idx)
+            self.leg_contact_manager.reset(envs_idx)
 
             # Reset robot
             self.base_pos[envs_idx] = self.base_init_pos
