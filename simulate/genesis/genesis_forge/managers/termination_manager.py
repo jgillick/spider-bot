@@ -36,6 +36,7 @@ class TerminationManager(BaseManager):
             def __init__(self, *args, **kwargs):
                 super().__init__(*args, **kwargs)
 
+            def configuration_managers(self):
                 self.termination_manager = TerminationManager(
                     self,
                     term_cfg={

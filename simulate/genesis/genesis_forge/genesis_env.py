@@ -81,13 +81,15 @@ class GenesisEnv:
     Operations
     """
 
-    def construct_scene(self) -> gs.Scene:
+    def construct_scene(
+        self, rigid_options: gs.options.RigidOptions = None
+    ) -> gs.Scene:
         """
         Construct the genesis scene.
         """
         self.scene = gs.Scene(
             show_viewer=not self.headless,
-            sim_options=gs.options.SimOptions(dt=self.dt, substeps=1),
+            sim_options=gs.options.SimOptions(dt=self.dt),
             viewer_options=gs.options.ViewerOptions(
                 camera_pos=(-2.5, -1.5, 1.0),
                 camera_lookat=(0.0, 0.0, 0.0),
@@ -95,7 +97,8 @@ class GenesisEnv:
                 max_FPS=60,
             ),
             vis_options=gs.options.VisOptions(rendered_envs_idx=list(range(1))),
-            rigid_options=gs.options.RigidOptions(
+            rigid_options=rigid_options
+            or gs.options.RigidOptions(
                 constraint_solver=gs.constraint_solver.Newton,
                 enable_collision=True,
                 enable_joint_limit=True,
@@ -114,12 +117,14 @@ class GenesisEnv:
         if self.scene is None:
             self.construct_scene()
         self.scene.build(n_envs=self.num_envs)
+        self.configuration_managers()
 
-    def get_observations(self) -> torch.Tensor:
+    def configuration_managers(self):
         """
-        Get the observations for all parallel environments.
+        Initialize all the configuration managers for the environment.
+        This will be called after the scene is built.
         """
-        raise NotImplementedError
+        pass
 
     def step(
         self, actions: torch.Tensor
