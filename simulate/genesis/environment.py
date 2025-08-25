@@ -187,7 +187,9 @@ class SpiderRobotEnv(GenesisEnv):
         )
 
         # Add camera
-        self.camera = scene.add_camera(pos=(-2.5, -1.5, 1.0), fov=40, debug=True)
+        self.camera = scene.add_camera(
+            pos=(-2.5, -1.5, 1.0), res=(1280, 960), fov=40, debug=True
+        )
 
         return scene
 
