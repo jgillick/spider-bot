@@ -1,11 +1,11 @@
 import torch
-from typing import Sequence, Callable, Union
+from typing import Union
 from genesis_forge.genesis_env import GenesisEnv
 from genesis_forge.managers import VelocityCommandManager, DofPositionActionManager
 from genesis_forge.utils import robot_lin_vel, robot_ang_vel
 
 
-def base_height(env: GenesisEnv, target_height: float):
+def base_height(env: GenesisEnv, target_height: Union[float, torch.Tensor]):
     """
     Penalize base height away from target
 

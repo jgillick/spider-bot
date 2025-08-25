@@ -240,7 +240,7 @@ class DofPositionActionManager(BaseManager):
 
     def reset(
         self,
-        envs_idx: Sequence[int],
+        envs_idx: Sequence[int] = None,
         reset_to_default: bool = True,
         zero_dofs_velocity: bool = True,
     ):

@@ -68,9 +68,12 @@ class SpiderRobotEnv(GenesisEnv):
         # Command manager: instruct the robot to move in a certain direction
         self.command_manager = VelocityCommandManager(
             self,
-            lin_vel_x_range=[-1.0, 1.0],
-            lin_vel_y_range=[-1.0, 1.0],
-            ang_vel_z_range=[0.5, 0.5],
+            range={
+                "lin_vel_x": [-1.0, 1.0],
+                "lin_vel_y": [-1.0, 1.0],
+                "ang_vel_z": [-0.5, 0.5],
+            },
+            standing_probability=0.02,
             resample_time_s=5.0,
             debug_visualizer=True,
             debug_visualizer_cfg={
