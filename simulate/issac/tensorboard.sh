@@ -5,4 +5,4 @@
 
 source ./env.cfg
 
-$ISAACLAB_ROOT/isaaclab.sh -p -m tensorboard.main --logdir=logs/rsl_rl/spider_bot/ --bind_all
+$ISAACLAB_ROOT/isaaclab.sh -p -m tensorboard.main --logdir=logs/rsl_rl/spider_bot/
