@@ -206,7 +206,7 @@ class DofPositionActionManager(BaseManager):
             pos = self._add_random_noise(pos, noise)
         return pos
 
-    def get_dofs_velocity(self, noise: float = 0.0, clip: float = Tuple(float, float) = None):
+    def get_dofs_velocity(self, noise: float = 0.0, clip: Tuple[float, float] = None):
         """Return the velocity of the enabled DOFs."""
         vel = self.env.robot.get_dofs_velocity(self.dofs_idx)
         if noise > 0.0:
