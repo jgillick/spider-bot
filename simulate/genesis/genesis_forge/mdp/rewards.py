@@ -89,8 +89,10 @@ def command_tracking_lin_vel(
         torch.Tensor: Penalty for tracking of linear velocity commands (xy axes)
     """
     command = vel_cmd_manager.command
-    linear_vel = robot_lin_vel(env)
-    lin_vel_error = torch.sum(torch.square(command[:, :2] - linear_vel[:, :2]), dim=1)
+    linear_vel_local = robot_lin_vel(env)
+    lin_vel_error = torch.sum(
+        torch.square(command[:, :2] - linear_vel_local[:, :2]), dim=1
+    )
     return torch.exp(-lin_vel_error / sensitivity)
 
 
