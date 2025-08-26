@@ -42,7 +42,7 @@ class SpiderRobotEnv(GenesisEnv):
         self,
         num_envs: int = 1,
         dt: float = 1 / 100,
-        max_episode_length_s: int = 18,
+        max_episode_length_s: int = 12,
         headless: bool = True,
     ):
         super().__init__(num_envs, dt, max_episode_length_s, headless)

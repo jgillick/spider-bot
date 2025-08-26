@@ -18,7 +18,7 @@ from environment import SpiderRobotEnv
 
 SKRL_CONFIG = "./ppo.yaml"
 
-FINAL_VIDEO_DURATION_S = 10
+FINAL_VIDEO_DURATION_S = 15
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -65,7 +65,7 @@ def train(
     #  Create environment
     env = SpiderRobotEnv(num_envs=num_envs, headless=True)
     env = DataLoggerWrapper(env)
-    env = VideoWrapper(env, video_length_s=12, out_dir=video_path)
+    env = VideoWrapper(env, every_n_steps=500, video_length_s=12, out_dir=video_path)
     env.build()
 
     # Setup training runner
