@@ -7,7 +7,9 @@ import math
 import torch
 import genesis as gs
 from genesis.engine.entities import RigidEntity
-from typing import Sequence, Any, Callable
+from typing import Sequence, Any, Callable, Literal
+
+EnvMode = Literal["train", "eval", "play"]
 
 
 class GenesisEnv:
@@ -39,22 +41,27 @@ class GenesisEnv:
         self,
         num_envs: int = 1,
         dt: float = 1 / 100,
-        max_episode_length_s: int = 15,
+        max_episode_length_s: int | None = 15,
         max_episode_random_scaling: float = 0.0,
         headless: bool = True,
+        mode: EnvMode = "train",
     ):
         self.dt = dt
         self.device = gs.device
         self.num_envs = num_envs
         self.headless = headless
+        self.mode = mode
 
-        self._max_episode_random_scaling = max_episode_random_scaling / self.dt
-        self._base_max_episode_length = math.ceil(max_episode_length_s / self.dt)
-        self.max_episode_length = torch.tensor(
-            [self._base_max_episode_length] * self.num_envs,
-            device=gs.device,
-            dtype=gs.tc_int,
-        )
+        self._max_episode_random_scaling = 0.0
+        self._base_max_episode_length = None
+        if max_episode_length_s and max_episode_length_s > 0:
+            self._max_episode_random_scaling = max_episode_random_scaling / self.dt
+            self._base_max_episode_length = math.ceil(max_episode_length_s / self.dt)
+            self.max_episode_length = torch.tensor(
+                [self._base_max_episode_length] * self.num_envs,
+                device=gs.device,
+                dtype=gs.tc_int,
+            )
 
     """
     Properties
@@ -200,7 +207,11 @@ class GenesisEnv:
         self.episode_length[envs_idx] = 0
 
         # Randomize max episode length for env_ids
-        if len(envs_idx) > 0 and self._max_episode_random_scaling > 0.0:
+        if (
+            len(envs_idx) > 0
+            and self._max_episode_random_scaling > 0.0
+            and self._base_max_episode_length
+        ):
             scale = torch.rand((envs_idx.numel(),)) * self._max_episode_random_scaling
             self.max_episode_length[envs_idx] = torch.round(
                 self._base_max_episode_length + scale
