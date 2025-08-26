@@ -166,7 +166,7 @@ class SpiderRobotEnv(GenesisEnv):
                     },
                 },
                 "Leg contact": {
-                    "weight": -0.001,
+                    "weight": -0.2,
                     "fn": rewards.has_contact,
                     "params": {
                         "contact_manager": self.leg_contact_manager,
