@@ -160,19 +160,6 @@ class VelocityCommandManager(CommandManager):
             env.num_envs, dtype=torch.bool, device=gs.device
         )
 
-    @property
-    def command(self) -> torch.Tensor:
-        """
-        The desired velocity command in robot-relative (base) frame.
-
-        Returns:
-            Shape is (num_envs, 3) where:
-            - [:, 0]: Forward/backward velocity relative to robot's current orientation
-            - [:, 1]: Left/right velocity relative to robot's current orientation
-            - [:, 2]: Yaw angular velocity around robot's vertical axis
-        """
-        return self._command
-
     def step(self):
         """Render the command arrows"""
         super().step()

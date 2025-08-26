@@ -74,11 +74,11 @@ class RewardManager(BaseManager):
     def __init__(
         self,
         env: GenesisEnv,
-        reward_cfg: dict[str, RewardConfig],
+        cfg: dict[str, RewardConfig],
         logging_enabled: bool = True,
     ):
         super().__init__(env)
-        self.cfg = reward_cfg
+        self.cfg = cfg
         self.logging_enabled = logging_enabled
 
         self._reward_buf = torch.zeros(
