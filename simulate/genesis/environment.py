@@ -12,7 +12,7 @@ from typing import Sequence, Any
 import genesis as gs
 from genesis.vis.camera import Camera
 
-from genesis_forge import GenesisEnv
+from genesis_forge import GenesisEnv, EnvMode
 from genesis_forge.managers import (
     VelocityCommandManager,
     RewardManager,
@@ -42,8 +42,9 @@ class SpiderRobotEnv(GenesisEnv):
         self,
         num_envs: int = 1,
         dt: float = 1 / 100,
-        max_episode_length_s: int = 12,
+        max_episode_length_s: int | None = 12,
         headless: bool = True,
+        mode: EnvMode = "train",
     ):
         super().__init__(
             num_envs=num_envs,

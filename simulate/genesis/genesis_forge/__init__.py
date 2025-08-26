@@ -9,10 +9,11 @@ from .managers import (
     TerminationManager,
     DofPositionActionManager,
 )
-from .genesis_env import GenesisEnv
+from .genesis_env import GenesisEnv, EnvMode
 
 __all__ = [
     "GenesisEnv",
+    "EnvMode",
     "DataLoggerWrapper",
     "VideoWrapper",
     "VelocityCommandManager",
