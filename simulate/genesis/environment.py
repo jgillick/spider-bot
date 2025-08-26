@@ -81,9 +81,13 @@ class SpiderRobotEnv(GenesisEnv):
                 # Tibia joints
                 "Leg[1-8]_Tibia": 0.6,
             },
-            pd_kp={".*": 50},
-            pd_kv={".*": 0.5},
-            max_force={".*": 8.0},
+            pd_kp=50,
+            pd_kv=0.5,
+            max_force=8.0,
+            damping=5.0,
+            stiffness=10.0,
+            frictionloss=0.1,
+            reset_random_scale=0.2,
         )
 
         # Command manager: instruct the robot to move in a certain direction
@@ -235,7 +239,6 @@ class SpiderRobotEnv(GenesisEnv):
         This operation is required before running the simulation.
         """
         super().build()
-        self.action_manager.build()
 
         # Track robot with camera
         self.camera.follow_entity(self.robot, fixed_axis=(None, None, 1.0))
