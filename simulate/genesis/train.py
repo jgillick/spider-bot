@@ -2,9 +2,7 @@ import os
 import glob
 import signal
 import argparse
-import pickle
 import torch
-from datetime import datetime
 from skrl.utils.runner.torch import Runner
 
 import genesis as gs
@@ -13,6 +11,11 @@ from genesis_forge import (
     create_skrl_env,
     DataLoggerWrapper,
     VideoWrapper,
+)
+from genesis_forge.rl.skrl.utils import (
+    load_training_config,
+    save_env_snapshots,
+    get_latest_checkpoint,
 )
 from environment import SpiderRobotEnv
 
@@ -27,31 +30,6 @@ parser.add_argument("-n", "--num_envs", type=int, default=600)
 parser.add_argument("--max_iterations", type=int, default=500)
 parser.add_argument("-d", "--device", type=str, default="gpu")
 args = parser.parse_args()
-
-
-def load_training_config(max_iterations: int) -> dict:
-    """
-    Load the configuration from the yaml file.
-    """
-    cfg = Runner.load_cfg_from_yaml(SKRL_CONFIG)
-
-    # Logging directory
-    log_base_dir = os.path.join(THIS_DIR, "logs")
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    experiment_name = f"{timestamp}_{cfg['agent']['class']}"
-    log_path = os.path.join(log_base_dir, experiment_name)
-    os.makedirs(log_path, exist_ok=False)
-
-    # Update configuration
-    cfg["agent"]["experiment"]["directory"] = log_base_dir
-    cfg["agent"]["experiment"]["experiment_name"] = experiment_name
-    if max_iterations:
-        cfg["trainer"]["timesteps"] = max_iterations * cfg["agent"]["rollouts"]
-
-    # Save config to logging directory
-    pickle.dump([cfg], open(f"{log_path}/cfg.pkl", "wb"))
-
-    return cfg, log_path
 
 
 def train(
@@ -95,18 +73,10 @@ def record_video(cfg: dict, log_path: str, video_path: str):
     cfg["trainer"]["timesteps"] = env._video_length_steps
 
     # Load best checkpoint
-    # Otherwise load the latest checkpoint, with the highest number
-    checkpoint_dir = os.path.join(log_path, "checkpoints")
-    checkpoint_path = os.path.join(checkpoint_dir, "best_agent.pt")
-    if not os.path.exists(checkpoint_path):
-        checkpoint_files = glob.glob(os.path.join(checkpoint_dir, "agent_*.pt"))
-        if len(checkpoint_files) == 0:
-            print(
-                f"Warning: No checkpoint files found at '{checkpoint_dir}' (you might need to train more)."
-            )
-            return
-        checkpoint_files.sort()
-        checkpoint_path = checkpoint_files[-1]
+    checkpoint_path = get_latest_checkpoint(log_path)
+    if checkpoint_path is None:
+        print(f"ERROR: No checkpoint found in '{log_path}'.")
+        return
 
     # Setup runner
     skrl_env = create_skrl_env(env)
@@ -134,9 +104,10 @@ def main():
     gs.init(logging_level="warning", backend=backend)
 
     # Load training configuration
-    cfg, log_path = load_training_config(args.max_iterations)
+    cfg, log_path = load_training_config(SKRL_CONFIG, args.max_iterations)
     video_path = os.path.join(log_path, "videos")
     print(f"Logging to: {log_path}")
+    save_env_snapshots(log_path, cfg)
 
     # Train agent
     train(cfg, args.num_envs, video_path)
