@@ -232,46 +232,30 @@ class DofPositionActionManager(BaseManager):
 
         # Set DOF values with random scaling
         if self._kp_values is not None:
-            self._kp_values = (
-                self._kp_values + torch.randn_like(self._kp_values) * self._rnd_scale
-            )
-            self.env.robot.set_dofs_kp(self._kp_values, self.dofs_idx, envs_idx)
+            kp = self._add_random_noise(self._kp_values[envs_idx])
+            self.env.robot.set_dofs_kp(kp, self.dofs_idx, envs_idx)
         if self._kv_values is not None:
-            self._kv_values = (
-                self._kv_values + torch.randn_like(self._kv_values) * self._rnd_scale
-            )
-            self.env.robot.set_dofs_kv(self._kp_values, self.dofs_idx, envs_idx)
+            kv = self._add_random_noise(self._kv_values[envs_idx])
+            self.env.robot.set_dofs_kv(kv, self.dofs_idx, envs_idx)
         if self._damping_values is not None:
-            self._damping_values = (
-                self._damping_values
-                + torch.randn_like(self._damping_values) * self._rnd_scale
-            )
-            self.env.robot.set_dofs_damping(
-                self._damping_values, self.dofs_idx, envs_idx
-            )
+            damping = self._add_random_noise(self._damping_values[envs_idx])
+            self.env.robot.set_dofs_damping(damping, self.dofs_idx, envs_idx)
         if self._stiffness_values is not None:
-            self._stiffness_values = (
-                self._stiffness_values
-                + torch.randn_like(self._stiffness_values) * self._rnd_scale
-            )
-            self.env.robot.set_dofs_stiffness(
-                self._stiffness_values, self.dofs_idx, envs_idx
-            )
+            stiffness = self._add_random_noise(self._stiffness_values[envs_idx])
+            self.env.robot.set_dofs_stiffness(stiffness, self.dofs_idx, envs_idx)
         if self._frictionloss_values is not None:
-            self._frictionloss_values = (
-                self._frictionloss_values
-                + torch.randn_like(self._frictionloss_values) * self._rnd_scale
-            )
+            frictionloss = self._add_random_noise(self._frictionloss_values[envs_idx])
             # TODO: Waiting for this to land in the Genesis release
             # self.env.robot.set_dofs_frictionloss(
-            #     self._frictionloss_values, self.dofs_idx, envs_idx
+            #     self._frictionloss_values[envs_idx], self.dofs_idx, envs_idx
             # )
 
         # Reset DOF positions with random scaling
         if reset_to_default:
+            # Get the selected environments' positions
+            position = self._add_random_noise(self._dofs_pos_buffer[envs_idx])
             self.env.robot.set_dofs_position(
-                position=self._dofs_pos_buffer[envs_idx]
-                + torch.randn_like(self._dofs_pos_buffer) * self._rnd_scale,
+                position=position
                 dofs_idx_local=self.dofs_idx,
                 envs_idx=envs_idx,
             )
@@ -348,6 +332,29 @@ class DofPositionActionManager(BaseManager):
                 dtype=gs.tc_float,
             )
 
+    def build(self):
+        """Expand DOF value tensors to match the number of environments."""
+        if self._kp_values is not None:
+            self._kp_values = self._kp_values.unsqueeze(0).expand(self.env.num_envs, -1)
+        if self._kv_values is not None:
+            self._kv_values = self._kv_values.unsqueeze(0).expand(self.env.num_envs, -1)
+        if self._damping_values is not None:
+            self._damping_values = self._damping_values.unsqueeze(0).expand(
+                self.env.num_envs, -1
+            )
+        if self._stiffness_values is not None:
+            self._stiffness_values = self._stiffness_values.unsqueeze(0).expand(
+                self.env.num_envs, -1
+            )
+        if self._frictionloss_values is not None:
+            self._frictionloss_values = self._frictionloss_values.unsqueeze(0).expand(
+                self.env.num_envs, -1
+            )
+        if self._default_dofs_pos is not None:
+            self._default_dofs_pos = self._default_dofs_pos.unsqueeze(0).expand(
+                self.env.num_envs, -1
+            )
+
     def _step_action_handler(self, actions: torch.Tensor):
         """Convert actions to position commands, and send them to the DOF actuators."""
 
@@ -396,3 +403,9 @@ class DofPositionActionManager(BaseManager):
         """
         values = self._get_dof_value_array(values)
         return torch.tensor(values, device=gs.device, dtype=gs.tc_float)
+
+    def _add_random_noise(self, values: torch.Tensor) -> torch.Tensor:
+        """
+        Add random noise to the values.
+        """
+        return values + torch.randn_like(values) * self._rnd_scale
