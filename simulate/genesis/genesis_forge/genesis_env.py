@@ -14,6 +14,13 @@ from typing import Sequence, Any, Callable
 class GenesisEnv:
     """
     Base vectorized environment for Genesis.
+
+    Args:
+        num_envs: Number of parallel environments.
+        dt: Simulation time step.
+        max_episode_length_s: Maximum episode length in seconds.
+        max_episode_random_scaling: Scale the maximum episode length by this amount (+/-) so that not all environments reset at the same time.
+        headless: Whether to run the environment in headless mode.
     """
 
     scene: gs.Scene = None
@@ -26,6 +33,7 @@ class GenesisEnv:
     actions: torch.Tensor = None
     last_actions: torch.Tensor = None
     episode_length: torch.Tensor = None
+    max_episode_length: torch.Tensor = None
     data_tracker_fn: Callable[[str, float], None] = None
 
     def __init__(
@@ -33,13 +41,21 @@ class GenesisEnv:
         num_envs: int = 1,
         dt: float = 1 / 100,
         max_episode_length_s: int = 15,
+        max_episode_random_scaling: float = 0.1,
         headless: bool = True,
     ):
         self.dt = dt
         self.device = gs.device
         self.num_envs = num_envs
         self.headless = headless
-        self.max_episode_length = math.ceil(max_episode_length_s / self.dt)
+
+        self._max_episode_random_scaling = max_episode_random_scaling / self.dt
+        self._base_max_episode_length = math.ceil(max_episode_length_s / self.dt)
+        self.max_episode_length = torch.tensor(
+            [self._base_max_episode_length] * self.num_envs,
+            device=gs.device,
+            dtype=gs.tc_int,
+        )
 
     """
     Properties
@@ -151,17 +167,19 @@ class GenesisEnv:
 
     def reset(
         self,
-        env_ids: Sequence[int] = None,
+        envs_idx: Sequence[int] = None,
     ) -> tuple[torch.Tensor, dict[str, Any]]:
         """
         Reset one or all parallel environments.
 
         Args:
-            env_ids: The environment ids to reset. If None, all environments are reset.
+            envs_idx: The environment ids to reset. If None, all environments are reset.
 
         Returns:
             A batch of observations and info from the vectorized environment.
         """
+        if envs_idx is None:
+            envs_idx = torch.arange(self.num_envs, device=gs.device)
 
         # Initial reset, set buffers
         if self.num_steps == 0:
@@ -176,11 +194,18 @@ class GenesisEnv:
             )
 
         # Actions
-        self.actions[env_ids] = 0.0
-        self.last_actions[env_ids] = 0.0
+        self.actions[envs_idx] = 0.0
+        self.last_actions[envs_idx] = 0.0
 
         # Episode length
-        self.episode_length[env_ids] = 0
+        self.episode_length[envs_idx] = 0
+
+        # Randomize max episode length for env_ids
+        if len(envs_idx) > 0 and self._max_episode_random_scaling > 0.0:
+            scale = torch.rand((envs_idx.numel(),)) * self._max_episode_random_scaling
+            self.max_episode_length[envs_idx] = torch.round(
+                self._base_max_episode_length + scale
+            ).to(gs.tc_int)
 
         return None, None
 
