@@ -138,7 +138,7 @@ class DofPositionActionManager(BaseManager):
         self._quiet_action_errors = quiet_action_errors
         self._action_handler = action_handler
         self._enabled_dof = None
-        self._rnd_scale = reset_random_scale
+        self._rnd_scale = reset_random_scale if self.env.mode != "play" else 0.0
 
         if isinstance(joint_names, str):
             self._joint_name_cfg = [joint_names]
@@ -199,13 +199,30 @@ class DofPositionActionManager(BaseManager):
     DOF Getters
     """
 
-    def get_dofs_position(self):
+    def get_dofs_position(self, noise: float = 0.0):
         """Return the position of the enabled DOFs."""
-        return self.env.robot.get_dofs_position(self.dofs_idx)
+        pos = self.env.robot.get_dofs_position(self.dofs_idx)
+        if noise > 0.0:
+            pos = self._add_random_noise(pos, noise)
+        return pos
 
-    def get_dofs_velocity(self):
+    def get_dofs_velocity(self, noise: float = 0.0, clip: float = Tuple(float, float) = None):
         """Return the velocity of the enabled DOFs."""
-        return self.env.robot.get_dofs_velocity(self.dofs_idx)
+        vel = self.env.robot.get_dofs_velocity(self.dofs_idx)
+        if noise > 0.0:
+            vel = self._add_random_noise(vel, noise)
+        if clip is not None:
+            vel = vel.clamp(**clip)
+        return vel
+
+    def get_dofs_force(self, noise: float = 0.0, clip_to_max_force: bool = False):
+        """Return the force of the enabled DOFs."""
+        force = self.env.robot.get_dofs_force(self.dofs_idx)
+        if noise > 0.0:
+            force = self._add_random_noise(force, noise)
+        if clip_to_max_force:
+            force = force.clamp(-self._max_force_cfg, self._max_force_cfg)
+        return force
 
     """
     Operations
@@ -232,19 +249,21 @@ class DofPositionActionManager(BaseManager):
 
         # Set DOF values with random scaling
         if self._kp_values is not None:
-            kp = self._add_random_noise(self._kp_values)
+            kp = self._add_random_noise(self._kp_values, self._rnd_scale)
             self.env.robot.set_dofs_kp(kp, self.dofs_idx, envs_idx)
         if self._kv_values is not None:
-            kv = self._add_random_noise(self._kv_values)
+            kv = self._add_random_noise(self._kv_values, self._rnd_scale)
             self.env.robot.set_dofs_kv(kv, self.dofs_idx, envs_idx)
         if self._damping_values is not None:
-            damping = self._add_random_noise(self._damping_values)
+            damping = self._add_random_noise(self._damping_values, self._rnd_scale)
             self.env.robot.set_dofs_damping(damping, self.dofs_idx, envs_idx)
         if self._stiffness_values is not None:
-            stiffness = self._add_random_noise(self._stiffness_values)
+            stiffness = self._add_random_noise(self._stiffness_values, self._rnd_scale)
             self.env.robot.set_dofs_stiffness(stiffness, self.dofs_idx, envs_idx)
         if self._frictionloss_values is not None:
-            frictionloss = self._add_random_noise(self._frictionloss_values)
+            frictionloss = self._add_random_noise(
+                self._frictionloss_values, self._rnd_scale
+            )
             # TODO: Waiting for this to land in the Genesis release
             # self.env.robot.set_dofs_frictionloss(
             #     self._frictionloss_values[envs_idx], self.dofs_idx, envs_idx
@@ -252,7 +271,9 @@ class DofPositionActionManager(BaseManager):
 
         # Reset DOF positions with random scaling
         if reset_to_default:
-            position = self._add_random_noise(self._dofs_pos_buffer[envs_idx])
+            position = self._add_random_noise(
+                self._dofs_pos_buffer[envs_idx], self._rnd_scale
+            )
             self.env.robot.set_dofs_position(
                 position=position,
                 dofs_idx_local=self.dofs_idx,
@@ -403,10 +424,10 @@ class DofPositionActionManager(BaseManager):
         values = self._get_dof_value_array(values)
         return torch.tensor(values, device=gs.device, dtype=gs.tc_float)
 
-    def _add_random_noise(self, values: torch.Tensor) -> torch.Tensor:
+    def _add_random_noise(
+        self, values: torch.Tensor, noise_scale: float = 0.0
+    ) -> torch.Tensor:
         """
-        Add random noise to the values, if the environment mode is not "play".
+        Add random noise to the tensor values
         """
-        if self.env.mode == "play":
-            return values
-        return values + torch.randn_like(values) * self._rnd_scale
+        return values + torch.randn_like(values) * noise_scale

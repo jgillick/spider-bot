@@ -113,9 +113,7 @@ class SpiderRobotEnv(GenesisEnv):
             },
         )
 
-        # -- Contact managers
-
-        # Legs should not come in contact with anything
+        # Contact managers: Legs should not come in contact with anything
         self.leg_contact_manager = ContactManager(
             self,
             link_names=[
@@ -129,7 +127,7 @@ class SpiderRobotEnv(GenesisEnv):
         self.reward_manager = RewardManager(
             self,
             logging_enabled=True,
-            reward_cfg={
+            cfg={
                 "Linear Z velocity": {
                     "weight": -1.0,
                     "fn": rewards.lin_vel_z,
@@ -167,7 +165,7 @@ class SpiderRobotEnv(GenesisEnv):
                     },
                 },
                 "Leg contact": {
-                    "weight": -0.2,
+                    "weight": -0.15,
                     "fn": rewards.has_contact,
                     "params": {
                         "contact_manager": self.leg_contact_manager,
@@ -322,9 +320,6 @@ class SpiderRobotEnv(GenesisEnv):
     def _get_observations(self):
         """Environment observations"""
 
-        dof_force = self.robot.get_dofs_force(
-            dofs_idx_local=self.action_manager.dofs_idx
-        )
         self.obs_buf = torch.cat(
             [
                 self.command_manager.command,  # 3
@@ -332,9 +327,9 @@ class SpiderRobotEnv(GenesisEnv):
                 robot_lin_vel(self),  # 3
                 robot_projected_gravity(self),  # 3
                 self.actions,  # 24
-                self.action_manager.get_dofs_position(),  # 24
-                dof_force,  # 24
-                # self.action_manager.get_dofs_velocity(),  # 24
+                self.action_manager.get_dofs_position(noise=0.01),  # 24
+                self.action_manager.get_dofs_force(noise=0.01),  # 24
+                # self.action_manager.get_dofs_velocity(noise=0.1),  # 24
             ],
             dim=-1,
         )
