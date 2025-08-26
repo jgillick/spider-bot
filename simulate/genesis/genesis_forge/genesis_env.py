@@ -7,7 +7,6 @@ import math
 import torch
 import genesis as gs
 from genesis.engine.entities import RigidEntity
-from gymnasium import spaces
 from typing import Sequence, Any, Callable
 
 
@@ -41,7 +40,7 @@ class GenesisEnv:
         num_envs: int = 1,
         dt: float = 1 / 100,
         max_episode_length_s: int = 15,
-        max_episode_random_scaling: float = 0.1,
+        max_episode_random_scaling: float = 0.0,
         headless: bool = True,
     ):
         self.dt = dt
