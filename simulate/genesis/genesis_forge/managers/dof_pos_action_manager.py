@@ -232,19 +232,19 @@ class DofPositionActionManager(BaseManager):
 
         # Set DOF values with random scaling
         if self._kp_values is not None:
-            kp = self._add_random_noise(self._kp_values[envs_idx])
+            kp = self._add_random_noise(self._kp_values)
             self.env.robot.set_dofs_kp(kp, self.dofs_idx, envs_idx)
         if self._kv_values is not None:
-            kv = self._add_random_noise(self._kv_values[envs_idx])
+            kv = self._add_random_noise(self._kv_values)
             self.env.robot.set_dofs_kv(kv, self.dofs_idx, envs_idx)
         if self._damping_values is not None:
-            damping = self._add_random_noise(self._damping_values[envs_idx])
+            damping = self._add_random_noise(self._damping_values)
             self.env.robot.set_dofs_damping(damping, self.dofs_idx, envs_idx)
         if self._stiffness_values is not None:
-            stiffness = self._add_random_noise(self._stiffness_values[envs_idx])
+            stiffness = self._add_random_noise(self._stiffness_values)
             self.env.robot.set_dofs_stiffness(stiffness, self.dofs_idx, envs_idx)
         if self._frictionloss_values is not None:
-            frictionloss = self._add_random_noise(self._frictionloss_values[envs_idx])
+            frictionloss = self._add_random_noise(self._frictionloss_values)
             # TODO: Waiting for this to land in the Genesis release
             # self.env.robot.set_dofs_frictionloss(
             #     self._frictionloss_values[envs_idx], self.dofs_idx, envs_idx
@@ -252,10 +252,9 @@ class DofPositionActionManager(BaseManager):
 
         # Reset DOF positions with random scaling
         if reset_to_default:
-            # Get the selected environments' positions
             position = self._add_random_noise(self._dofs_pos_buffer[envs_idx])
             self.env.robot.set_dofs_position(
-                position=position
+                position=position,
                 dofs_idx_local=self.dofs_idx,
                 envs_idx=envs_idx,
             )
