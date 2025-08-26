@@ -203,7 +203,7 @@ class SpiderRobotEnv(GenesisEnv):
         return spaces.Box(
             low=-np.inf,
             high=np.inf,
-            shape=(108,),
+            shape=(84,),
             dtype=np.float32,
         )
 
@@ -333,8 +333,8 @@ class SpiderRobotEnv(GenesisEnv):
                 robot_projected_gravity(self),  # 3
                 self.actions,  # 24
                 self.action_manager.get_dofs_position(),  # 24
-                self.action_manager.get_dofs_velocity(),  # 24
                 dof_force,  # 24
+                # self.action_manager.get_dofs_velocity(),  # 24
             ],
             dim=-1,
         )
