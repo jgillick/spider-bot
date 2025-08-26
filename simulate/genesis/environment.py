@@ -12,7 +12,7 @@ from typing import Sequence, Any
 import genesis as gs
 from genesis.vis.camera import Camera
 
-from genesis_forge import GenesisEnv
+from genesis_forge import GenesisEnv, EnvMode
 from genesis_forge.managers import (
     VelocityCommandManager,
     RewardManager,
@@ -42,8 +42,9 @@ class SpiderRobotEnv(GenesisEnv):
         self,
         num_envs: int = 1,
         dt: float = 1 / 100,
-        max_episode_length_s: int = 12,
+        max_episode_length_s: int | None = 12,
         headless: bool = True,
+        mode: EnvMode = "train",
     ):
         super().__init__(
             num_envs=num_envs,
@@ -202,7 +203,7 @@ class SpiderRobotEnv(GenesisEnv):
         return spaces.Box(
             low=-np.inf,
             high=np.inf,
-            shape=(108,),
+            shape=(84,),
             dtype=np.float32,
         )
 
@@ -332,8 +333,8 @@ class SpiderRobotEnv(GenesisEnv):
                 robot_projected_gravity(self),  # 3
                 self.actions,  # 24
                 self.action_manager.get_dofs_position(),  # 24
-                self.action_manager.get_dofs_velocity(),  # 24
                 dof_force,  # 24
+                # self.action_manager.get_dofs_velocity(),  # 24
             ],
             dim=-1,
         )

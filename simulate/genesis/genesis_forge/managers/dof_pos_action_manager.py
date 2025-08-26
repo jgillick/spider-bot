@@ -393,7 +393,7 @@ class DofPositionActionManager(BaseManager):
             for i, name in enumerate(self._enabled_dof.keys()):
                 if not is_set[i] and re.match(pattern, name):
                     is_set[i] = True
-                    value_arr[i] = values[pattern]
+                    value_arr[i] = value
         return value_arr
 
     def _get_dof_value_tensor(self, values: DofValue) -> torch.Tensor:
@@ -405,6 +405,8 @@ class DofPositionActionManager(BaseManager):
 
     def _add_random_noise(self, values: torch.Tensor) -> torch.Tensor:
         """
-        Add random noise to the values.
+        Add random noise to the values, if the environment mode is not "play".
         """
+        if self.env.mode == "play":
+            return values
         return values + torch.randn_like(values) * self._rnd_scale
