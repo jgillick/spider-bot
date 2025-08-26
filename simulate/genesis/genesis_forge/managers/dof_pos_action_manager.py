@@ -3,15 +3,16 @@ import torch
 import genesis as gs
 import numpy as np
 from gymnasium import spaces
-from typing import Sequence, Union, Any, Callable
+from typing import Sequence, Any, Callable, TypedDict, Tuple
 
 from genesis_forge.genesis_env import GenesisEnv
 from genesis_forge.managers.base import BaseManager
 
-DofValue = Union[dict[str, Any], Any]
+DofValue = dict[str, float] | float
+"""Mapping of DOF name (literal or regex) to value."""
 
 
-def ensure_dof_pattern(value: DofValue) -> dict[str, Any]:
+def ensure_dof_pattern(value: DofValue) -> dict[str, Any] | None:
     """
     Ensures the value is a dictionary in the form: {<joint name or regex>: <value>}.
 
@@ -29,6 +30,8 @@ def ensure_dof_pattern(value: DofValue) -> dict[str, Any]:
     Returns:
         A dictionary of DOF name pattern to value.
     """
+    if value is None:
+        return None
     if isinstance(value, dict):
         return value
     return {".*": value}
@@ -42,6 +45,19 @@ class DofPositionActionManager(BaseManager):
 
     Args:
         env: The environment to manage the DOF actuators for.
+        joint_names: The joint names to manage.
+        default_pos: The default DOF positions.
+        pd_kp: The PD kp values.
+        pd_kv: The PD kv values.
+        max_force: The max force values.
+        damping: The damping values.
+        stiffness: The stiffness values.
+        frictionloss: The frictionloss values.
+        reset_random_scale: Scale all DOF values on reset by this amount +/-.
+        action_handler: A function to handle the actions.
+        quiet_action_errors: Whether to quiet action errors.
+        randomization_cfg: The randomization configuration used to randomize the DOF values across all environments and between resets.
+        resample_randomization_s: The time interval to resample the randomization values.
 
     Example::
         class MyEnv(GenesisEnv):
@@ -69,10 +85,6 @@ class DofPositionActionManager(BaseManager):
             @property
             def action_space(self):
                 return self.action_manager.action_space
-
-            def build(self):
-                super().build()
-                self.action_manager.build()
 
             def step(self, actions: torch.Tensor):
                 super().step(actions)
@@ -102,23 +114,31 @@ class DofPositionActionManager(BaseManager):
     def __init__(
         self,
         env: GenesisEnv,
-        joint_names: Union[Sequence[str], str] = ".*",
+        joint_names: Sequence[str] | str = ".*",
         default_pos: DofValue = {".*": 0.0},
         pd_kp: DofValue = None,
         pd_kv: DofValue = None,
         max_force: DofValue = None,
+        damping: DofValue = None,
+        stiffness: DofValue = None,
+        frictionloss: DofValue = None,
+        reset_random_scale: float = 0.0,
         action_handler: Callable[[torch.Tensor], None] = None,
         quiet_action_errors: bool = False,
     ):
         super().__init__(env)
         self._has_initialized_dofs = False
-        self.default_pos_cfg = ensure_dof_pattern(default_pos)
-        self.pd_kp_cfg = ensure_dof_pattern(pd_kp)
-        self.pd_kv_cfg = ensure_dof_pattern(pd_kv)
-        self.max_force_cfg = ensure_dof_pattern(max_force)
-        self.quiet_action_errors = quiet_action_errors
-        self.action_handler = action_handler
+        self._default_pos_cfg = ensure_dof_pattern(default_pos)
+        self._pd_kp_cfg = ensure_dof_pattern(pd_kp)
+        self._pd_kv_cfg = ensure_dof_pattern(pd_kv)
+        self._max_force_cfg = ensure_dof_pattern(max_force)
+        self._damping_cfg = ensure_dof_pattern(damping)
+        self._stiffness_cfg = ensure_dof_pattern(stiffness)
+        self._frictionloss_cfg = ensure_dof_pattern(frictionloss)
+        self._quiet_action_errors = quiet_action_errors
+        self._action_handler = action_handler
         self._enabled_dof = None
+        self._rnd_scale = reset_random_scale
 
         if isinstance(joint_names, str):
             self._joint_name_cfg = [joint_names]
@@ -126,6 +146,8 @@ class DofPositionActionManager(BaseManager):
             self._joint_name_cfg = joint_names
         else:
             raise TypeError(f"Invalid joint_names type: {type(joint_names)}")
+
+        self._init_buffers()
 
     """
     Properties
@@ -174,15 +196,93 @@ class DofPositionActionManager(BaseManager):
         return self._default_dofs_pos
 
     """
+    DOF Getters
+    """
+
+    def get_dofs_position(self):
+        """Return the position of the enabled DOFs."""
+        return self.env.robot.get_dofs_position(self.dofs_idx)
+
+    def get_dofs_velocity(self):
+        """Return the velocity of the enabled DOFs."""
+        return self.env.robot.get_dofs_velocity(self.dofs_idx)
+
+    """
     Operations
     """
 
-    def build(self):
+    def step(self, actions: torch.Tensor) -> None:
         """
-        Fetch the joint information from the robot and create the DOF indices.
+        Convert the actions into DOF positions and set the DOF actuators.
         """
-        self._enabled_dof = dict()
+        if self._action_handler is not None:
+            self._action_handler(actions)
+        else:
+            self._step_action_handler(actions)
 
+    def reset(
+        self,
+        envs_idx: Sequence[int] = None,
+        reset_to_default: bool = True,
+        zero_dofs_velocity: bool = True,
+    ):
+        """Reset the DOF positions."""
+        if envs_idx is None:
+            envs_idx = torch.arange(self.num_envs, device=gs.device)
+
+        # Set DOF values with random scaling
+        if self._kp_values is not None:
+            self._kp_values = (
+                self._kp_values + torch.randn_like(self._kp_values) * self._rnd_scale
+            )
+            self.env.robot.set_dofs_kp(self._kp_values, self.dofs_idx, envs_idx)
+        if self._kv_values is not None:
+            self._kv_values = (
+                self._kv_values + torch.randn_like(self._kv_values) * self._rnd_scale
+            )
+            self.env.robot.set_dofs_kv(self._kp_values, self.dofs_idx, envs_idx)
+        if self._damping_values is not None:
+            self._damping_values = (
+                self._damping_values
+                + torch.randn_like(self._damping_values) * self._rnd_scale
+            )
+            self.env.robot.set_dofs_damping(
+                self._damping_values, self.dofs_idx, envs_idx
+            )
+        if self._stiffness_values is not None:
+            self._stiffness_values = (
+                self._stiffness_values
+                + torch.randn_like(self._stiffness_values) * self._rnd_scale
+            )
+            self.env.robot.set_dofs_stiffness(
+                self._stiffness_values, self.dofs_idx, envs_idx
+            )
+        if self._frictionloss_values is not None:
+            self._frictionloss_values = (
+                self._frictionloss_values
+                + torch.randn_like(self._frictionloss_values) * self._rnd_scale
+            )
+            # TODO: Waiting for this to land in the Genesis release
+            # self.env.robot.set_dofs_frictionloss(
+            #     self._frictionloss_values, self.dofs_idx, envs_idx
+            # )
+
+        # Reset DOF positions with random scaling
+        if reset_to_default:
+            self.env.robot.set_dofs_position(
+                position=self._dofs_pos_buffer[envs_idx]
+                + torch.randn_like(self._dofs_pos_buffer) * self._rnd_scale,
+                dofs_idx_local=self.dofs_idx,
+                envs_idx=envs_idx,
+            )
+
+    """
+    Implementation
+    """
+
+    def _init_buffers(self):
+        """Define the buffers for the DOF values."""
+        self._enabled_dof = dict()
         for joint in self.env.robot.joints:
             if joint.type != gs.JOINT_TYPE.REVOLUTE:
                 continue
@@ -192,37 +292,36 @@ class DofPositionActionManager(BaseManager):
                     self._enabled_dof[name] = joint.dof_start
                     break
 
-    def step(self, actions: torch.Tensor) -> None:
-        """
-        Convert the actions into DOF positions and set the DOF actuators.
-        """
-        if self.action_handler is not None:
-            self.action_handler(actions)
-        else:
-            self._step_action_handler(actions)
-
-    def update(self):
-        """
-        This should be called anytime any of the config values have changed (pd_kp_cfg, pd_kv_cfg, max_force_cfg, default_pos_cfg)
-        """
-
         # Get position Limits and convert to shape (num_envs, limit)
         lower, upper = self.env.robot.get_dofs_limit(self.dofs_idx)
         self._pos_limit_lower = lower.unsqueeze(0).expand(self.env.num_envs, -1)
         self._pos_limit_upper = upper.unsqueeze(0).expand(self.env.num_envs, -1)
 
         # Set DOF values
-        if self.pd_kp_cfg is not None:
-            kp_values = self._get_dof_value_array(self.pd_kp_cfg)
-            self.env.robot.set_dofs_kp(kp_values, self.dofs_idx)
-        if self.pd_kv_cfg is not None:
-            kv_values = self._get_dof_value_array(self.pd_kv_cfg)
-            self.env.robot.set_dofs_kv(kv_values, self.dofs_idx)
+        self._kp_values = None
+        self._kv_values = None
+        self._damping_values = None
+        self._stiffness_values = None
+        self._frictionloss_values = None
+        self._max_force_values = None
+        if self._pd_kp_cfg is not None:
+            self._kp_values = self._get_dof_value_tensor(self._pd_kp_cfg)
+        if self._pd_kv_cfg is not None:
+            self._kv_values = self._get_dof_value_tensor(self._pd_kv_cfg)
+        if self._damping_cfg is not None:
+            self._damping_values = self._get_dof_value_tensor(self._damping_cfg)
+        if self._stiffness_cfg is not None:
+            self._stiffness_values = self._get_dof_value_tensor(self._stiffness_cfg)
+        if self._frictionloss_cfg is not None:
+            self._frictionloss_values = self._get_dof_value_tensor(
+                self._frictionloss_cfg
+            )
 
         # Max force
         # The value can either be a single float or a tuple range
-        if self.max_force_cfg is not None:
-            max_force = self._get_dof_value_array(self.max_force_cfg)
+        self._force_range = None
+        if self._max_force_cfg is not None:
+            max_force = self._get_dof_value_array(self._max_force_cfg)
 
             # Convert values to upper and lower arrays
             force_upper = [0.0] * self.dof_num
@@ -235,61 +334,25 @@ class DofPositionActionManager(BaseManager):
                     force_lower[i] = -value
                     force_upper[i] = value
 
-            self.env.robot.set_dofs_force_range(force_lower, force_upper, self.dofs_idx)
+            _force_range = (
+                torch.tensor(force_lower, device=gs.device),
+                torch.tensor(force_upper, device=gs.device),
+            )
 
-        # Assign default DOF positions to a tensor buffer for resetting
-        if self.default_pos_cfg is not None:
-            default_pos = self._get_dof_value_array(self.default_pos_cfg)
-            self._default_dofs_pos = torch.tensor(default_pos, device=gs.device)
+        # Default DOF positions
+        if self._default_pos_cfg is not None:
+            self._default_dofs_pos = self._get_dof_value_tensor(self._default_pos_cfg)
             self._dofs_pos_buffer = torch.zeros(
                 (self.env.num_envs, self.num_actions),
                 device=gs.device,
                 dtype=gs.tc_float,
             )
 
-    def reset(
-        self,
-        envs_idx: Sequence[int] = None,
-        reset_to_default: bool = True,
-        zero_dofs_velocity: bool = True,
-    ):
-        """Reset the DOF positions."""
-        if envs_idx is None:
-            envs_idx = torch.arange(self.num_envs, device=gs.device)
-
-        # On first reset, initialize DOF values and buffers
-        if not self._has_initialized_dofs:
-            self.update()
-            self._has_initialized_dofs = True
-
-        # Reset DOF positions
-        if reset_to_default:
-            self._dofs_pos_buffer[envs_idx] = self._default_dofs_pos
-            if zero_dofs_velocity:
-                self.env.robot.zero_all_dofs_velocity(envs_idx)
-            self.env.robot.set_dofs_position(
-                position=self._dofs_pos_buffer[envs_idx],
-                dofs_idx_local=self.dofs_idx,
-                envs_idx=envs_idx,
-            )
-
-    def get_dofs_position(self):
-        """Return the position of the enabled DOFs."""
-        return self.env.robot.get_dofs_position(self.dofs_idx)
-
-    def get_dofs_velocity(self):
-        """Return the velocity of the enabled DOFs."""
-        return self.env.robot.get_dofs_velocity(self.dofs_idx)
-
-    """
-    Implementation
-    """
-
     def _step_action_handler(self, actions: torch.Tensor):
         """Convert actions to position commands, and send them to the DOF actuators."""
 
         # Validate actions
-        if not self.quiet_action_errors:
+        if not self._quiet_action_errors:
             if torch.isnan(actions).any():
                 print(f"ERROR: NaN actions received! Actions: {actions}")
             if torch.isinf(actions).any():
@@ -326,3 +389,10 @@ class DofPositionActionManager(BaseManager):
                     is_set[i] = True
                     value_arr[i] = values[pattern]
         return value_arr
+
+    def _get_dof_value_tensor(self, values: DofValue) -> torch.Tensor:
+        """
+        Wrapper for _get_dof_value_array that returns a tensor.
+        """
+        values = self._get_dof_value_array(values)
+        return torch.tensor(values, device=gs.device, dtype=gs.tc_float)

@@ -244,8 +244,9 @@ class ContactManager(BaseManager):
 
         # Filter contacts by with_link_ids if specified
         if self._with_link_ids is not None:
-            with_links = torch.tensor(self._with_link_ids, device=force.device)
-            with_links = with_links.view(1, 1, len(self._with_link_ids))
+            with_links = self._with_link_ids.to(force.device)
+            n_with_links = with_links.shape[0]
+            with_links = with_links.view(1, 1, n_with_links)
 
             # Check if either link_a or link_b is in with_link_ids
             link_a_expanded = link_a.unsqueeze(-1)
@@ -263,12 +264,12 @@ class ContactManager(BaseManager):
         all_forces = torch.cat([force, force], dim=1)
 
         # Convert target_link_ids to tensor for broadcasting
-        n_target_links = len(self._target_link_ids)
-        target_links = torch.tensor(self._target_link_ids, device=force.device)
+        target_links = self._target_link_ids.to(force.device)
+        n_target_links = target_links.shape[0]
         target_links = target_links.view(1, 1, n_target_links)
-        all_links = all_links.unsqueeze(-1)
 
         # Create mask for where each target link appears
+        all_links = all_links.unsqueeze(-1)
         mask = all_links == target_links
 
         # Apply mask and sum
