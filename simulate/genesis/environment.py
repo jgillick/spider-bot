@@ -45,7 +45,13 @@ class SpiderRobotEnv(GenesisEnv):
         max_episode_length_s: int = 12,
         headless: bool = True,
     ):
-        super().__init__(num_envs, dt, max_episode_length_s, headless)
+        super().__init__(
+            num_envs=num_envs,
+            dt=dt,
+            max_episode_length_s=max_episode_length_s,
+            max_episode_random_scaling=0.1,
+            headless=headless,
+        )
 
         # Cache position buffers
         self.base_init_pos = torch.tensor(INITIAL_BODY_POSITION, device=gs.device)
@@ -84,10 +90,10 @@ class SpiderRobotEnv(GenesisEnv):
             pd_kp=50,
             pd_kv=0.5,
             max_force=8.0,
-            damping=5.0,
-            stiffness=10.0,
+            damping=0.5,
+            stiffness=0.5,
             frictionloss=0.1,
-            reset_random_scale=0.2,
+            reset_random_scale=0.1,
         )
 
         # Command manager: instruct the robot to move in a certain direction
@@ -196,7 +202,7 @@ class SpiderRobotEnv(GenesisEnv):
         return spaces.Box(
             low=-np.inf,
             high=np.inf,
-            shape=(84,),
+            shape=(108,),
             dtype=np.float32,
         )
 
@@ -314,15 +320,20 @@ class SpiderRobotEnv(GenesisEnv):
 
     def _get_observations(self):
         """Environment observations"""
+
+        dof_force = self.robot.get_dofs_force(
+            dofs_idx_local=self.action_manager.dofs_idx
+        )
         self.obs_buf = torch.cat(
             [
                 self.command_manager.command,  # 3
                 robot_ang_vel(self),  # 3
                 robot_lin_vel(self),  # 3
                 robot_projected_gravity(self),  # 3
+                self.actions,  # 24
                 self.action_manager.get_dofs_position(),  # 24
                 self.action_manager.get_dofs_velocity(),  # 24
-                self.actions,  # 24
+                dof_force,  # 24
             ],
             dim=-1,
         )
