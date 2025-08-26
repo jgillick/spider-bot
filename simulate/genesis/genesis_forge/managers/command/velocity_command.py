@@ -5,7 +5,7 @@ import torch
 import genesis as gs
 
 from genesis_forge.genesis_env import GenesisEnv
-from genesis_forge.utils import robot_lin_vel
+from genesis_forge.utils import robot_lin_vel, transform_by_quat
 
 from .command_manager import CommandManager, CommandRange
 
@@ -55,6 +55,19 @@ class VelocityCommandManager(CommandManager):
     """
     Generates a velocity command from uniform distribution.
     The command comprises of a linear velocity in x and y direction and an angular velocity around the z-axis.
+
+    IMPORTANT: The velocity commands are interpreted as robot-relative coordinates:
+    - X-axis: Forward/backward relative to robot's current orientation
+    - Y-axis: Left/right relative to robot's current orientation
+    - Z-axis: Yaw rotation around robot's vertical axis
+
+    When connected to a joystick:
+    - "Forward" always means "forward relative to robot's current facing direction"
+    - "Left" always means "left relative to robot's current facing direction"
+    - This behavior is independent of the robot's orientation in world coordinates
+
+    The commands are kept in robot-relative (base) frame and only transformed to world
+    coordinates for visualization purposes, following the IsaacLab pattern.
 
     To use the manager:
         1. Create the manager in your environment's init method
@@ -113,7 +126,11 @@ class VelocityCommandManager(CommandManager):
     Debug Visualization:
         If you set `debug_visualizer` to True, arrows will be rendered above your robot
         showing the commanded velocity vs the actual velocity.
-        The commanded velocity is green and the actual velocity is blue.
+
+        Arrow meanings:
+        - GREEN: Commanded velocity (robot-relative, transformed to world coordinates for visualization)
+          When joystick is "forward", this arrow points in the robot's forward direction
+        - BLUE: Actual robot velocity in world coordinates
 
     Args:
         env: The environment to control
@@ -143,13 +160,28 @@ class VelocityCommandManager(CommandManager):
             env.num_envs, dtype=torch.bool, device=gs.device
         )
 
+    @property
+    def command(self) -> torch.Tensor:
+        """
+        The desired velocity command in robot-relative (base) frame.
+
+        Returns:
+            Shape is (num_envs, 3) where:
+            - [:, 0]: Forward/backward velocity relative to robot's current orientation
+            - [:, 1]: Left/right velocity relative to robot's current orientation
+            - [:, 2]: Yaw angular velocity around robot's vertical axis
+        """
+        return self._command
+
     def step(self):
         """Render the command arrows"""
         super().step()
         self._render_arrows()
 
     def _resample_command(self, env_ids: Sequence[int]):
-        """Overwrites commands for environments that should be standing still."""
+        """
+        Overwrites commands for environments that should be standing still.
+        """
         super()._resample_command(env_ids)
 
         num = torch.empty(len(env_ids), device=gs.device)
@@ -160,7 +192,12 @@ class VelocityCommandManager(CommandManager):
         self._command[standing_envs_idx, :] = 0.0
 
     def _render_arrows(self):
-        """Render the command arrows"""
+        """
+        Render the command arrows showing velocity commands and actual robot velocities.
+
+        The commanded velocity arrow (green) shows the robot-relative velocity command
+        transformed to world coordinates for visualization. The blue arrow is the robot's actual velocity.
+        """
         if not self.debug_visualizer:
             return
 
@@ -189,12 +226,15 @@ class VelocityCommandManager(CommandManager):
         arrow_pos[:, 2] = robot_z + self.visualizer_cfg["arrow_offset"]
         arrow_pos += torch.from_numpy(self.env.scene.envs_offset).to(gs.device)
 
-        # Convert velocity command to vector direction
-        vec = self.command.clone()
-        vec[:, 2] = 0.0
-        vec[:, :] *= scale_factor
+        # Get robot orientation (quaternion) for coordinate transformation
+        robot_quat = self.env.robot.get_quat()
 
-        # Actual robot velocity
+        # Transform robot-relative velocity commands to world coordinates for visualization
+        vec_world = self._resolve_xy_velocity_to_world_frame(
+            self.command[:, :2], robot_quat, scale_factor
+        )
+
+        # Actual robot velocity (already in world coordinates)
         actual_vec = robot_lin_vel(self.env).clone()
         actual_vec[:, 2] = 0.0
         actual_vec[:, :] *= scale_factor
@@ -205,20 +245,52 @@ class VelocityCommandManager(CommandManager):
             else range(self.env.num_envs)
         )
         for i in debug_envs:
-            # Target arrow
-            self.draw_arrow(
+            # Target arrow (robot-relative command transformed to world coordinates for visualization)
+            self._draw_arrow(
                 pos=arrow_pos[i],
-                vec=vec[i],
+                vec=vec_world[i],
                 color=self.visualizer_cfg["commanded_color"],
             )
             # Actual arrow
-            self.draw_arrow(
+            self._draw_arrow(
                 pos=arrow_pos[i],
                 vec=actual_vec[i],
                 color=self.visualizer_cfg["actual_color"],
             )
 
-    def draw_arrow(
+    def _resolve_xy_velocity_to_world_frame(
+        self, xy_velocity: torch.Tensor, robot_quat: torch.Tensor, scale_factor: float
+    ) -> torch.Tensor:
+        """
+        Converts robot-relative XY velocity commands to world coordinates for visualization.
+
+        This method follows the IsaacLab pattern:
+        1. Takes robot-relative velocity commands (base frame)
+        2. Transforms them to world coordinates using the robot's current orientation
+        3. Scales them for visualization
+
+        Args:
+            xy_velocity: Robot-relative velocity commands in base frame, shape (num_envs, 2)
+            robot_quat: Robot's current orientation quaternion, shape (num_envs, 4)
+            scale_factor: Scaling factor for visualization
+
+        Returns:
+            World-frame velocity vectors scaled for visualization, shape (num_envs, 3)
+        """
+        # Create 3D velocity tensor with Z component zeroed for 2D visualization
+        vec_3d = torch.zeros(xy_velocity.shape[0], 3, device=xy_velocity.device)
+        vec_3d[:, :2] = xy_velocity
+
+        # Transform from robot-relative (base) frame to world frame using quaternion
+        # This is the inverse of what robot_lin_vel does
+        vec_world = transform_by_quat(vec_3d, robot_quat)
+
+        # Scale the transformed world velocity vector
+        vec_world[:, :] *= scale_factor
+
+        return vec_world
+
+    def _draw_arrow(
         self,
         pos: torch.Tensor,
         vec: torch.Tensor,
