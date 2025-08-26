@@ -1,4 +1,6 @@
 import os
+import time
+from pprint import pprint
 import torch
 import genesis as gs
 from genesis.engine.entities import RigidEntity
@@ -8,33 +10,63 @@ SPIDER_XML = os.path.abspath(os.path.join(THIS_DIR, "../robot/SpiderBot.xml"))
 
 INITIAL_BODY_POSITION = [0.0, 0.0, 0.14]
 INITIAL_QUAT = [1.0, 0.0, 0.0, 0.0]
-FEMUR_INIT_POSITION = 0.5
-TIBIA_INIT_POSITION = 0.6
-INITIAL_JOINT_POSITIONS = {
+STABLE_FEMUR = 0.5
+STABLE_TIBIA = 0.6
+
+STABLE_POS = {
     "Leg1_Hip": -1.0,
-    "Leg1_Femur": FEMUR_INIT_POSITION,
-    "Leg1_Tibia": TIBIA_INIT_POSITION,
+    "Leg1_Femur": STABLE_FEMUR,
+    "Leg1_Tibia": STABLE_TIBIA,
     "Leg2_Hip": -1.0,
-    "Leg2_Femur": FEMUR_INIT_POSITION,
-    "Leg2_Tibia": TIBIA_INIT_POSITION,
+    "Leg2_Femur": STABLE_FEMUR,
+    "Leg2_Tibia": STABLE_TIBIA,
     "Leg3_Hip": 1.0,
-    "Leg3_Femur": FEMUR_INIT_POSITION,
-    "Leg3_Tibia": TIBIA_INIT_POSITION,
+    "Leg3_Femur": STABLE_FEMUR,
+    "Leg3_Tibia": STABLE_TIBIA,
     "Leg4_Hip": 1.0,
-    "Leg4_Femur": FEMUR_INIT_POSITION,
-    "Leg4_Tibia": TIBIA_INIT_POSITION,
+    "Leg4_Femur": STABLE_FEMUR,
+    "Leg4_Tibia": STABLE_TIBIA,
     "Leg5_Hip": 1.0,
-    "Leg5_Femur": FEMUR_INIT_POSITION,
-    "Leg5_Tibia": TIBIA_INIT_POSITION,
+    "Leg5_Femur": STABLE_FEMUR,
+    "Leg5_Tibia": STABLE_TIBIA,
     "Leg6_Hip": 1.0,
-    "Leg6_Femur": FEMUR_INIT_POSITION,
-    "Leg6_Tibia": TIBIA_INIT_POSITION,
+    "Leg6_Femur": STABLE_FEMUR,
+    "Leg6_Tibia": STABLE_TIBIA,
     "Leg7_Hip": -1.0,
-    "Leg7_Femur": FEMUR_INIT_POSITION,
-    "Leg7_Tibia": TIBIA_INIT_POSITION,
+    "Leg7_Femur": STABLE_FEMUR,
+    "Leg7_Tibia": STABLE_TIBIA,
     "Leg8_Hip": -1.0,
-    "Leg8_Femur": FEMUR_INIT_POSITION,
-    "Leg8_Tibia": TIBIA_INIT_POSITION,
+    "Leg8_Femur": STABLE_FEMUR,
+    "Leg8_Tibia": STABLE_TIBIA,
+}
+
+GROUND_FEMUR = 0.01
+GROUND_TIBIA = 2.6
+GROUND_POSE = {
+    "Leg1_Hip": -1.0,
+    "Leg1_Femur": GROUND_FEMUR,
+    "Leg1_Tibia": GROUND_TIBIA,
+    "Leg2_Hip": -1.0,
+    "Leg2_Femur": GROUND_FEMUR,
+    "Leg2_Tibia": GROUND_TIBIA,
+    "Leg3_Hip": 1.0,
+    "Leg3_Femur": GROUND_FEMUR,
+    "Leg3_Tibia": GROUND_TIBIA,
+    "Leg4_Hip": 1.0,
+    "Leg4_Femur": GROUND_FEMUR,
+    "Leg4_Tibia": GROUND_TIBIA,
+    "Leg5_Hip": 1.0,
+    "Leg5_Femur": GROUND_FEMUR,
+    "Leg5_Tibia": GROUND_TIBIA,
+    "Leg6_Hip": 1.0,
+    "Leg6_Femur": GROUND_FEMUR,
+    "Leg6_Tibia": GROUND_TIBIA,
+    "Leg7_Hip": -1.0,
+    "Leg7_Femur": GROUND_FEMUR,
+    "Leg7_Tibia": GROUND_TIBIA,
+    "Leg8_Hip": -1.0,
+    "Leg8_Femur": GROUND_FEMUR,
+    "Leg8_Tibia": GROUND_TIBIA,
 }
 
 PD_KP = 50.0
@@ -43,9 +75,19 @@ MAX_TORQUE = 8.0
 
 
 def main():
-    gs.init(backend=gs.cpu)
+    gs.init(
+        backend=gs.cpu,
+        logging_level="warning",
+    )
 
-    scene = gs.Scene(show_viewer=True)
+    scene = gs.Scene(
+        show_viewer=True,
+        rigid_options=gs.options.RigidOptions(
+            constraint_solver=gs.constraint_solver.Newton,
+            enable_collision=True,
+            # enable_multi_contact=False,
+        ),
+    )
 
     # Ground plane
     plane: RigidEntity = scene.add_entity(gs.morphs.Plane())
@@ -60,15 +102,14 @@ def main():
     )
 
     # Build scene
-    scene.build()
+    N_ENVS = 1
+    scene.build(n_envs=N_ENVS)
 
     #  Init actuators
-    dof_idx = [
-        robot.get_joint(name).dof_start for name in INITIAL_JOINT_POSITIONS.keys()
-    ]
+    dof_idx = [robot.get_joint(name).dof_start for name in STABLE_POS.keys()]
 
     # Gains and torque limits
-    num_actuators = len(INITIAL_JOINT_POSITIONS)
+    num_actuators = len(STABLE_POS)
     robot.set_dofs_kp([20] * num_actuators, dof_idx)
     robot.set_dofs_kv([0.5] * num_actuators, dof_idx)
     robot.set_dofs_force_range(
@@ -78,31 +119,29 @@ def main():
     )
 
     # Initial dof positions
+    stable_pos = torch.tensor(
+        [list(STABLE_POS.values()) for _ in range(N_ENVS)],
+        device=gs.device,
+    )
+    ground_pos = torch.tensor(
+        [list(GROUND_POSE.values()) for _ in range(N_ENVS)],
+        device=gs.device,
+    )
     robot.set_dofs_position(
-        position=list(INITIAL_JOINT_POSITIONS.values()),
+        position=ground_pos,
         dofs_idx_local=dof_idx,
     )
 
     for i in range(100):
-        if i > 20:
+        if i > 50:
+            print("Resetting to stable position")
             robot.control_dofs_position(
-                list(INITIAL_JOINT_POSITIONS.values()),
+                stable_pos,
                 dof_idx,
             )
-
-        if i == 25:
-            contacts = robot.get_contacts()
-            print("Link A: ", contacts["link_a"])
-            print("Link B: ", contacts["link_b"])
-            print("Geom A: ", contacts["geom_a"])
-            print("Geom B: ", contacts["geom_b"])
-            print("Force: ", contacts["force_b"])
-            for i in range(len(contacts["link_a"])):
-                link_a = scene.rigid_solver.links[contacts["link_a"][i]]
-                link_b = scene.rigid_solver.links[contacts["link_b"][i]]
-                force_a = contacts["force_a"][i]
-                force_b = contacts["force_b"][i]
-                print(f"Contact: {link_a.name} <--> {link_b.name}")
+        if i % 10 == 0:
+            force = robot.get_dofs_force(dofs_idx_local=dof_idx)
+            pprint(torch.round(force))
 
         scene.step()
 
