@@ -77,6 +77,9 @@ class CommandManager(BaseManager):
 
     def step(self):
         """Resample the command if necessary"""
+        if not self.enabled:
+            return
+
         resample_command_envs = (
             (self.env.episode_length % self._resample_steps == 0)
             .nonzero(as_tuple=False)
@@ -86,6 +89,8 @@ class CommandManager(BaseManager):
 
     def reset(self, env_ids: Sequence[int] = None):
         """One or more environments have been reset"""
+        if not self.enabled:
+            return
         if env_ids is None:
             env_ids = torch.arange(self.env.num_envs, device=gs.device)
         self._resample_command(env_ids)

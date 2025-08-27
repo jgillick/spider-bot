@@ -171,11 +171,15 @@ class ContactManager(BaseManager):
 
     def step(self):
         super().step()
+        if not self.enabled:
+            return
         self._calculate_contact_forces()
         self._calculate_air_time()
 
     def reset(self, envs_idx: list[int] | None = None):
         super().reset(envs_idx)
+        if not self.enabled:
+            return
         if envs_idx is None:
             envs_idx = torch.arange(self.num_envs, device=gs.device)
 

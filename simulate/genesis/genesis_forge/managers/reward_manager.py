@@ -101,6 +101,9 @@ class RewardManager(BaseManager):
             The rewards for the environments. Shape is (num_envs,).
         """
         self._reward_buf[:] = 0.0
+        if not self.enabled:
+            return self._reward_buf
+
         self._episode_length += 1
         for name, cfg in self.cfg.items():
             fn = cfg["fn"]
@@ -120,7 +123,7 @@ class RewardManager(BaseManager):
 
     def reset(self, envs_idx: Sequence[int] = None):
         """Log the reward mean values at the end of the episode"""
-        if not self.logging_enabled:
+        if not self.logging_enabled or not self.enabled:
             return
         if envs_idx is None:
             envs_idx = torch.arange(self.env.num_envs, device=gs.device)

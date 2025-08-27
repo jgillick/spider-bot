@@ -9,12 +9,15 @@ class BaseManager:
     """
 
     env: GenesisEnv
+    enabled: bool = True
 
     def __init__(
         self,
         env: GenesisEnv,
+        enabled: bool = True,
     ):
         self.env = env
+        self.enabled = True
 
     def construct_scene(self):
         """Called when the scene is constructed"""

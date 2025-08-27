@@ -1,5 +1,4 @@
 import os
-import glob
 import signal
 import argparse
 import torch
@@ -71,6 +70,8 @@ def record_video(cfg: dict, log_path: str, video_path: str):
 
     # Update timesteps to only record the final video
     cfg["trainer"]["timesteps"] = env._video_length_steps
+    cfg["agent"]["experiment"]["write_interval"] = 0  # don't log to TensorBoard
+    cfg["agent"]["experiment"]["checkpoint_interval"] = 0
 
     # Load best checkpoint
     checkpoint_path = get_latest_checkpoint(log_path)

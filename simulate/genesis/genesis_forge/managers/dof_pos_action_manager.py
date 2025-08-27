@@ -232,6 +232,8 @@ class DofPositionActionManager(BaseManager):
         """
         Convert the actions into DOF positions and set the DOF actuators.
         """
+        if not self.enabled:
+            return
         if self._action_handler is not None:
             self._action_handler(actions)
         else:
@@ -244,6 +246,8 @@ class DofPositionActionManager(BaseManager):
         zero_dofs_velocity: bool = True,
     ):
         """Reset the DOF positions."""
+        if not self.enabled:
+            return
         if envs_idx is None:
             envs_idx = torch.arange(self.num_envs, device=gs.device)
 
@@ -258,7 +262,9 @@ class DofPositionActionManager(BaseManager):
             damping = self._add_random_noise(self._damping_values, self._noise_scale)
             self.env.robot.set_dofs_damping(damping, self.dofs_idx, envs_idx)
         if self._stiffness_values is not None:
-            stiffness = self._add_random_noise(self._stiffness_values, self._noise_scale)
+            stiffness = self._add_random_noise(
+                self._stiffness_values, self._noise_scale
+            )
             self.env.robot.set_dofs_stiffness(stiffness, self.dofs_idx, envs_idx)
         if self._frictionloss_values is not None:
             frictionloss = self._add_random_noise(

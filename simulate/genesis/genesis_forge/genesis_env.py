@@ -200,11 +200,12 @@ class GenesisEnv:
             )
 
         # Actions
-        self.actions[envs_idx] = 0.0
-        self.last_actions[envs_idx] = 0.0
+        if envs_idx.numel() > 0:
+            self.actions[envs_idx] = 0.0
+            self.last_actions[envs_idx] = 0.0
 
-        # Episode length
-        self.episode_length[envs_idx] = 0
+            # Episode length
+            self.episode_length[envs_idx] = 0
 
         # Randomize max episode length for env_ids
         if (
