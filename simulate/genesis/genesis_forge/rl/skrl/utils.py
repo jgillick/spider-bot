@@ -9,7 +9,7 @@ from skrl.utils.runner.torch import Runner
 
 
 def load_training_config(
-    yaml_path: str, max_iterations: int, log_base_dir: str | None = "./logs"
+    yaml_path: str, max_iterations: int = None, log_base_dir: str | None = "./logs"
 ) -> tuple[dict, str]:
     """
     Load the training configuration from the yaml file.

@@ -1,14 +1,10 @@
-"""Logitech F310/F710 Gamepad class that uses HID under the hood.
+"""Logitech F310/F710 Gamepad configuration class."""
 
-Adapted from: https://github.com/google-deepmind/mujoco_playground/blob/a873d53765a4c83572cf44fa74768ab62ceb7be1/mujoco_playground/experimental/sim2sim/gamepad_reader.py.
-"""
-
-import threading
 import time
 from enum import Enum
 import argparse
 
-from .base import BaseGamepad
+from .base import BaseGamepad, Button
 
 
 class LogitechGamepadProduct(Enum):
@@ -16,40 +12,61 @@ class LogitechGamepadProduct(Enum):
     F710 = 1
 
 
+VENDOR_ID = 0x046D
+
 LOGITECH_GAMEPADS = {
     "F710": {
         "product_id": 0xC219,
-        "lin_x_axis": 1,
-        "lin_y_axis": 2,
-        "ang_z_axis": 3,
+        "mapping": [
+            {"axis": 0, "data": 1},
+            {"axis": 1, "data": 2},
+            {"axis": 2, "data": 3},
+            {"axis": 3, "data": 4},
+            # TODO: Need to map all buttons
+        ],
     },
     "F310": {
         "product_id": 0xC216,
-        "lin_x_axis": 0,
-        "lin_y_axis": 1,
-        "ang_z_axis": 2,
+        "mapping": [
+            {"axis": 0, "data": 0},
+            {"axis": 1, "data": 1},
+            {"axis": 2, "data": 2},
+            {"axis": 3, "data": 3},
+            {"button": Button.A, "data": 4, "bitmask": 32},
+            {"button": Button.B, "data": 4, "bitmask": 64},
+            {"button": Button.X, "data": 4, "bitmask": 16},
+            {"button": Button.Y, "data": 4, "bitmask": 128},
+            {"button": Button.LB, "data": 5, "bitmask": 1},
+            {"button": Button.RB, "data": 5, "bitmask": 2},
+            {"button": Button.LT, "data": 5, "bitmask": 4},
+            {"button": Button.RT, "data": 5, "bitmask": 8},
+            {"button": Button.BACK, "data": 5, "bitmask": 16},
+            {"button": Button.START, "data": 5, "bitmask": 32},
+            {"button": Button.MODE, "data": 6, "bitmask": 8},
+            {"button": Button.LEFT_JOYSTICK, "data": 5, "bitmask": 65},
+            {"button": Button.RIGHT_JOYSTICK, "data": 5, "bitmask": 128},
+        ],
     },
 }
 
-VENDOR_ID = 0x046D
-
 
 class LogitechGamepad(BaseGamepad):
-    """Implementation for Logitech gamepads."""
+    """
+    Connect to a Logitech gamepad.
+
+    Args:
+        product: The product to connect to.
+    """
 
     def __init__(self, product: LogitechGamepadProduct, *args, **kwargs):
-        self._cfg = LOGITECH_GAMEPADS[product.name]
+        self.cfg = LOGITECH_GAMEPADS[product.name]
         super().__init__(
-            vendor_id=VENDOR_ID, product_id=self._cfg["product_id"], *args, **kwargs
+            vendor_id=VENDOR_ID,
+            product_id=self.cfg["product_id"],
+            mapping=self.cfg["mapping"],
+            *args,
+            **kwargs,
         )
-
-    def update_command(self, data):
-        """
-        Process the gamepad data and set vx, vy, and wz to values from -1 to 1
-        """
-        self.vx = -(data[self._cfg["lin_x_axis"]] - 128) / 128.0
-        self.vy = -(data[self._cfg["lin_y_axis"]] - 128) / 128.0
-        self.wz = -(data[self._cfg["ang_z_axis"]] - 128) / 128.0
 
 
 if __name__ == "__main__":
@@ -60,7 +77,6 @@ if __name__ == "__main__":
     product = LogitechGamepadProduct.F710
     if args.product.upper() == "F310":
         product = LogitechGamepadProduct.F310
-    gamepad = LogitechGamepad(product)
+    gamepad = LogitechGamepad(product, debug=True)
     while True:
-        print(gamepad.get_command())
         time.sleep(1.0)

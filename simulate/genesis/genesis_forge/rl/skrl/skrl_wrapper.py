@@ -69,6 +69,10 @@ class SkrlEnvWapper(SkrlWrapper):
         """Close the environment"""
         return self._env.close()
 
+    def build(self) -> None:
+        """Build the environment"""
+        self._env.build()
+
 
 def create_skrl_env(env: Any) -> SkrlEnvWapper:
     """Create a skrl environment from a Genesis environment"""

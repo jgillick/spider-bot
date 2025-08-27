@@ -113,6 +113,8 @@ class TerminationManager(BaseManager):
         self._term_data = dict()
         self._terminated_buf[:] = False
         self._truncated_buf[:] = False
+        if not self.enabled:
+            return self._terminated_buf, self._truncated_buf, torch.tensor([])
 
         for name, cfg in self.term_cfg.items():
             fn = cfg["fn"]
@@ -142,7 +144,7 @@ class TerminationManager(BaseManager):
     def reset(self, env_ids: Sequence[int] = None):
         """Track terminated/truncated environments."""
         super().reset(env_ids)
-        if not self.logging_enabled:
+        if not self.logging_enabled or not self.enabled:
             return
 
         for name, value in self._term_data.items():

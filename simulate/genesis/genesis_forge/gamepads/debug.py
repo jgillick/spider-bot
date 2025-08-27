@@ -1,7 +1,7 @@
 import time
 import argparse
 
-from .base import BaseGamepad
+from .base import BaseGamepad, GamepadState
 
 
 class DebugGamepad(BaseGamepad):
@@ -12,8 +12,10 @@ class DebugGamepad(BaseGamepad):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def update_command(self, data):
+    def parse_data(self, data) -> GamepadState:
         print(data)
+        # print([bin(d) for d in data])
+        return GamepadState()
 
 
 if __name__ == "__main__":
