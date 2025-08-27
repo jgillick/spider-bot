@@ -326,9 +326,9 @@ class SpiderRobotEnv(GenesisEnv):
                 robot_ang_vel(self),  # 3
                 robot_lin_vel(self),  # 3
                 robot_projected_gravity(self),  # 3
-                self.actions,  # 24
                 self.action_manager.get_dofs_position(noise=0.01),  # 24
                 self.action_manager.get_dofs_velocity(noise=0.1),  # 24
+                self.actions,  # 24
                 # self.action_manager.get_dofs_force(noise=0.01, clip_to_max_force=True),  # 24
             ],
             dim=-1,
