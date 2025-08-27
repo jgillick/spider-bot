@@ -93,24 +93,34 @@ def play():
     # Play
     states, _infos = env.reset()
     timestep = 0
-    while True:
-        timestep += 1
-        # Get actions from agent
-        (actions, _prob, outputs) = runner.agent.act(
-            states, timestep=timestep, timesteps=0
-        )
-        actions = outputs.get("mean_actions", actions)
+    try:
+        while True:
+            timestep += 1
+            # Get actions from agent
+            (actions, _prob, outputs) = runner.agent.act(
+                states, timestep=timestep, timesteps=0
+            )
+            actions = outputs.get("mean_actions", actions)
 
-        # Perform step
-        next_states, _rewards, terminated, truncated, _infos = env.step(actions)
-        env.render()
+            # Perform step
+            next_states, _rewards, terminated, truncated, _infos = env.step(actions)
+            env.render()
 
-        # Check for termination/truncation
-        if terminated.any() or truncated.any():
-            states, _infos = env.reset()
-            timestep = 0
-        else:
-            states = next_states
+            # Check for termination/truncation
+            if terminated.any() or truncated.any():
+                states, _infos = env.reset()
+                timestep = 0
+            else:
+                states = next_states
+    except KeyboardInterrupt:
+        pass
+    except gs.GenesisException as e:
+        if e.message != "Viewer closed.":
+            raise e
+    except Exception as e:
+        raise e
+    env.close()
+    gamepad.stop()
 
 
 if __name__ == "__main__":
