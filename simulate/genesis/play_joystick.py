@@ -34,12 +34,6 @@ parser.add_argument("dir", help="The training output directory.")
 args = parser.parse_args()
 
 
-def get_checkpoint_file():
-    if os.path.isfile(args.dir):
-        return args.file
-    return get_latest_checkpoint(args.dir)
-
-
 def get_training_config():
     cfg = os.path.join(args.dir, "cfg.pkl")
     if not os.path.exists(cfg):
@@ -54,7 +48,7 @@ def play():
     """Play a trained agent."""
 
     # Load training files
-    checkpoint_path = get_checkpoint_file()
+    checkpoint_path = get_latest_checkpoint(args.dir)
     if checkpoint_path is None:
         print(f"ERROR: No training agent checkpoint found in '{args.dir}'.")
         return
@@ -82,14 +76,14 @@ def play():
     env.leg_contact_manager.enabled = False
     env.action_manager.noise_scale = 0.0
     env.command_manager.use_gamepad(
-        gamepad, lin_vel_x_axis=0, lin_vel_y_axis=1, ang_vel_z_axis=2
+        gamepad, lin_vel_y_axis=0, lin_vel_x_axis=1, ang_vel_z_axis=2
     )
 
     # Setup runner configuration
-    cfg["trainer"]["headless"] = False
     cfg["trainer"]["close_environment_at_exit"] = False
     cfg["agent"]["experiment"]["write_interval"] = 0  # don't log to TensorBoard
     cfg["agent"]["experiment"]["checkpoint_interval"] = 0
+    cfg["agent"]["random_timesteps"] = -1
 
     env = SkrlEnvWapper(env)
     runner = Runner(env, cfg)
@@ -98,18 +92,23 @@ def play():
 
     # Play
     states, _infos = env.reset()
+    timestep = 0
     while True:
+        timestep += 1
         # Get actions from agent
-        outputs = runner.agent.act(states, timestep=0, timesteps=0)
-        actions = outputs[-1].get("mean_actions", outputs[0])
+        (actions, _prob, outputs) = runner.agent.act(
+            states, timestep=timestep, timesteps=0
+        )
+        actions = outputs.get("mean_actions", actions)
 
         # Perform step
         next_states, _rewards, terminated, truncated, _infos = env.step(actions)
         env.render()
 
-        # check for termination/truncation
+        # Check for termination/truncation
         if terminated.any() or truncated.any():
             states, _infos = env.reset()
+            timestep = 0
         else:
             states = next_states
 

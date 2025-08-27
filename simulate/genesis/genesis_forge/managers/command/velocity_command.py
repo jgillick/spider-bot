@@ -187,8 +187,8 @@ class VelocityCommandManager(CommandManager):
     def use_gamepad(
         self,
         gamepad: BaseGamepad,
-        lin_vel_x_axis: int = 0,
-        lin_vel_y_axis: int = 1,
+        lin_vel_y_axis: int = 0,
+        lin_vel_x_axis: int = 1,
         ang_vel_z_axis: int = 2,
     ):
         """
