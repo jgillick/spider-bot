@@ -82,6 +82,7 @@ def record_video(cfg: dict, log_path: str, video_path: str):
     skrl_env = create_skrl_env(env)
     runner = Runner(skrl_env, cfg)
     runner.agent.load(checkpoint_path)
+    env.set_data_tracker(runner.agent.track_data)
 
     # Eval
     print("🎬 Recording video of best model...")

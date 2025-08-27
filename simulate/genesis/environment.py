@@ -24,7 +24,7 @@ from genesis_forge.utils import robot_projected_gravity, robot_ang_vel, robot_li
 from genesis_forge.mdp import rewards, terminations
 
 
-INITIAL_BODY_POSITION = [0.0, 0.0, 0.135]
+INITIAL_BODY_POSITION = [0.0, 0.0, 0.14]
 INITIAL_QUAT = [1.0, 0.0, 0.0, 0.0]
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -91,10 +91,10 @@ class SpiderRobotEnv(GenesisEnv):
             pd_kp=50,
             pd_kv=0.5,
             max_force=8.0,
-            damping=0.5,
-            stiffness=0.5,
+            # damping=0.5,
+            stiffness=0.1,
             frictionloss=0.1,
-            reset_random_scale=0.1,
+            noise_scale=0.02,
         )
 
         # Command manager: instruct the robot to move in a certain direction
@@ -140,7 +140,7 @@ class SpiderRobotEnv(GenesisEnv):
                     },
                 },
                 "Similar to default": {
-                    "weight": -0.1,
+                    "weight": -0.05,
                     "fn": rewards.dof_similar_to_default,
                     "params": {
                         "dof_action_manager": self.action_manager,
@@ -164,13 +164,13 @@ class SpiderRobotEnv(GenesisEnv):
                         "vel_cmd_manager": self.command_manager,
                     },
                 },
-                "Leg contact": {
-                    "weight": -0.15,
-                    "fn": rewards.has_contact,
-                    "params": {
-                        "contact_manager": self.leg_contact_manager,
-                    },
-                },
+                # "Leg contact": {
+                #     "weight": -0.15,
+                #     "fn": rewards.has_contact,
+                #     "params": {
+                #         "contact_manager": self.leg_contact_manager,
+                #     },
+                # },
             },
         )
 
@@ -328,8 +328,8 @@ class SpiderRobotEnv(GenesisEnv):
                 robot_projected_gravity(self),  # 3
                 self.actions,  # 24
                 self.action_manager.get_dofs_position(noise=0.01),  # 24
-                self.action_manager.get_dofs_force(noise=0.01),  # 24
-                # self.action_manager.get_dofs_velocity(noise=0.1),  # 24
+                self.action_manager.get_dofs_velocity(noise=0.1),  # 24
+                # self.action_manager.get_dofs_force(noise=0.01, clip_to_max_force=True),  # 24
             ],
             dim=-1,
         )
