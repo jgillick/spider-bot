@@ -6,7 +6,7 @@ from genesis_forge.managers import (
     DofPositionActionManager,
     ContactManager,
 )
-from genesis_forge.utils import robot_lin_vel, robot_ang_vel
+from genesis_forge.utils import robot_lin_vel, robot_ang_vel, robot_projected_gravity
 
 
 def base_height(env: GenesisEnv, target_height: Union[float, torch.Tensor]):
@@ -125,3 +125,23 @@ def has_contact(_env: GenesisEnv, contact_manager: ContactManager, threshold=1.0
     """
     has_contact = contact_manager.contacts[:, :].norm(dim=-1) > threshold
     return has_contact.sum(dim=1).float()
+
+
+def flat_orientation_l2(env: GenesisEnv):
+    """
+    Penalize non-flat base orientation using L2 squared kernel.
+    This is computed by penalizing the xy-components of the projected gravity vector.
+
+    Args:
+        env: The Genesis environment containing the robot
+
+    Returns:
+        torch.Tensor: Penalty for non-flat base orientation
+    """
+    # Get the projected gravity vector in the robot's base frame
+    # This represents how "tilted" the robot is from upright
+    projected_gravity = robot_projected_gravity(env)
+
+    # Penalize the xy-components (horizontal tilt) using L2 squared kernel
+    # A flat orientation means these components should be close to zero
+    return torch.sum(torch.square(projected_gravity[:, :2]), dim=1)
