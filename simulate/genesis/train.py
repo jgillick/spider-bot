@@ -42,7 +42,7 @@ def train(
     #  Create environment
     env = SpiderRobotEnv(num_envs=num_envs, headless=True)
     env = DataLoggerWrapper(env)
-    env = VideoWrapper(env, every_n_steps=500, video_length_s=12, out_dir=video_path)
+    env = VideoWrapper(env, video_length_sec=12, out_dir=video_path)
     env.build()
 
     # Setup training runner
@@ -64,7 +64,7 @@ def record_video(cfg: dict, log_path: str, video_path: str):
         env,
         out_dir=video_path,
         filename="best.mp4",
-        video_length_s=FINAL_VIDEO_DURATION_S,
+        video_length_sec=FINAL_VIDEO_DURATION_S,
     )
     env.build()
 
