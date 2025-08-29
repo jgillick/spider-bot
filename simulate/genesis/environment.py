@@ -14,6 +14,7 @@ from genesis.vis.camera import Camera
 
 from genesis_forge import GenesisEnv, EnvMode
 from genesis_forge.managers import (
+    CommandManager,
     VelocityCommandManager,
     RewardManager,
     TerminationManager,
@@ -42,17 +43,19 @@ class SpiderRobotEnv(GenesisEnv):
         self,
         num_envs: int = 1,
         dt: float = 1 / 100,
-        max_episode_length_s: int | None = 12,
+        max_episode_length_s: int | None = 8,
         headless: bool = True,
         mode: EnvMode = "train",
     ):
         super().__init__(
             num_envs=num_envs,
             dt=dt,
-            max_episode_length_s=max_episode_length_s,
+            max_episode_length_sec=max_episode_length_s,
             max_episode_random_scaling=0.1,
             headless=headless,
         )
+
+        self._curriculum_phase = 1
 
         # Cache position buffers
         self.base_init_pos = torch.tensor(INITIAL_BODY_POSITION, device=gs.device)
@@ -98,12 +101,19 @@ class SpiderRobotEnv(GenesisEnv):
         )
 
         # Command manager: instruct the robot to move in a certain direction
-        self.command_manager = VelocityCommandManager(
+        self.height_command = CommandManager(
             self,
+            range={
+                "height": [0.12, 0.14],
+            },
+        )
+        self.velocity_command = VelocityCommandManager(
+            self,
+            # Starting ranges should be small, while robot is learning to stand
             range={
                 "lin_vel_x": [-1.0, 1.0],
                 "lin_vel_y": [-1.0, 1.0],
-                "ang_vel_z": [-0.5, 0.5],
+                "ang_vel_z": [-1.0, 1.0],
             },
             standing_probability=0.02,
             resample_time_s=5.0,
@@ -114,13 +124,17 @@ class SpiderRobotEnv(GenesisEnv):
         )
 
         # Contact managers: Legs should not come in contact with anything
-        self.leg_contact_manager = ContactManager(
+        self.bad_touch_contact = ContactManager(
             self,
             link_names=[
-                "Leg[1-8]_Femur",
-                "Leg[1-8]_Tibia_Leg",
                 "Leg[1-8]_Tibia_BadTouch",
             ],
+        )
+        self.foot_contact_manager = ContactManager(
+            self,
+            link_names=[
+                "Leg[1-8]_Tibia_Foot"
+           ],
         )
 
         # Rewards
@@ -133,14 +147,15 @@ class SpiderRobotEnv(GenesisEnv):
                     "fn": rewards.lin_vel_z,
                 },
                 "Base height": {
-                    "weight": -100.0,
+                    "weight": -200.0,
                     "fn": rewards.base_height,
                     "params": {
-                        "target_height": 0.15,
+                        "target_height": 0.14,
+                        # "height_command": self.height_command,
                     },
                 },
                 "Similar to default": {
-                    "weight": -0.05,
+                    "weight": -0.1,
                     "fn": rewards.dof_similar_to_default,
                     "params": {
                         "dof_action_manager": self.action_manager,
@@ -154,23 +169,43 @@ class SpiderRobotEnv(GenesisEnv):
                     "weight": 2.0,
                     "fn": rewards.command_tracking_lin_vel,
                     "params": {
-                        "vel_cmd_manager": self.command_manager,
+                        "vel_cmd_manager": self.velocity_command,
                     },
                 },
                 "Cmd angular velocity": {
                     "weight": 1.0,
                     "fn": rewards.command_tracking_ang_vel,
                     "params": {
-                        "vel_cmd_manager": self.command_manager,
+                        "vel_cmd_manager": self.velocity_command,
                     },
                 },
-                # "Leg contact": {
-                #     "weight": -0.15,
-                #     "fn": rewards.has_contact,
-                #     "params": {
-                #         "contact_manager": self.leg_contact_manager,
-                #     },
-                # },
+                "Flat orientation": {
+                    "weight": -5.0,
+                    "fn": rewards.flat_orientation_l2,
+                },
+                "Bad touch": {
+                    "weight": 0.0, #-1.0,
+                    "fn": rewards.has_contact,
+                    "params": {
+                        "contact_manager": self.bad_touch_contact,
+                    },
+                },
+                "Foot contact (some)": {
+                    "weight": 0.0, #0.5,
+                    "fn": rewards.has_contact,
+                    "params": {
+                        "contact_manager": self.foot_contact_manager,
+                        "min_contacts": 4,
+                    },
+                },
+                "Foot contact (all)": {
+                    "weight": 0.0, #0.01,
+                    "fn": rewards.has_contact,
+                    "params": {
+                        "contact_manager": self.foot_contact_manager,
+                        "min_contacts": 8,
+                    },
+                },
             },
         )
 
@@ -218,7 +253,7 @@ class SpiderRobotEnv(GenesisEnv):
         scene = super().construct_scene(
             rigid_options=gs.options.RigidOptions(
                 enable_collision=True,
-                enable_self_collision=True,
+                enable_self_collision=False,
             )
         )
 
@@ -254,28 +289,38 @@ class SpiderRobotEnv(GenesisEnv):
         Perform a step in the environment.
         """
         super().step(actions)
+        info = {"logs": {}}
 
         # Execute the actions and a simulation step
         self.action_manager.step(actions)
         self.scene.step()
 
         # Calculate contact forces
-        self.leg_contact_manager.step()
+        self.bad_touch_contact.step()
+        self.foot_contact_manager.step()
 
         #  Keep the camera looking at the robot
         self.camera.set_pose(lookat=self.robot.get_pos())
 
         # Termination, rewards
         terminated, truncated, reset_env_idx = self.termination_manager.step()
-        rewards = self.reward_manager.step()
+        reward = self.reward_manager.step()
 
         # Command manager
-        self.command_manager.step()
+        self.velocity_command.step()
+
+        # Update curriculum
+        self._update_curriculum(info)
+
+        # Log metrics
+        info["logs"]["Metrics / Leg Contact"] = rewards.has_contact(self, self.bad_touch_contact)
+        info["logs"]["Metrics / Foot Contact"] = rewards.has_contact(self, self.foot_contact_manager)
+        info["logs"]["Metrics / Curriculum level"] = self._curriculum_phase
 
         # Finish up
         self.reset(reset_env_idx)
         self._get_observations()
-        return self.obs_buf, rewards, terminated, truncated, {}
+        return self.obs_buf, reward, terminated, truncated, info
 
     def reset(
         self,
@@ -290,11 +335,13 @@ class SpiderRobotEnv(GenesisEnv):
 
         if envs_idx.numel() > 0:
             # Managers
-            self.command_manager.reset(envs_idx)
+            self.height_command.reset(envs_idx)
+            self.velocity_command.reset(envs_idx)
             self.termination_manager.reset(envs_idx)
             self.reward_manager.reset(envs_idx)
             self.action_manager.reset(envs_idx)
-            self.leg_contact_manager.reset(envs_idx)
+            self.bad_touch_contact.reset(envs_idx)
+            self.foot_contact_manager.reset(envs_idx)
 
             # Reset robot
             self.base_pos[envs_idx] = self.base_init_pos
@@ -317,12 +364,25 @@ class SpiderRobotEnv(GenesisEnv):
     Implementation
     """
 
+    def _update_curriculum(self, info: dict[str, Any]):
+        """
+        Update the training curriculum based on the current step or environment performance.
+        """
+        # We've learned to stand, let's try to walk
+        if self.step_count == 20_000:
+            self._curriculum_phase += 1
+            self.set_max_episode_length(round(self.max_episode_length * 1.5))
+            self.reward_manager.cfg["Similar to default"]["weight"] = 0.0
+            self.reward_manager.cfg["Bad touch"]["weight"] = -1.0
+            self.reward_manager.cfg["Foot contact (some)"]["weight"] = 0.5
+            self.reward_manager.cfg["Foot contact (all)"]["weight"] = 0.01
+
     def _get_observations(self):
         """Environment observations"""
 
         self.obs_buf = torch.cat(
             [
-                self.command_manager.command,  # 3
+                self.velocity_command.command,  # 3
                 robot_ang_vel(self),  # 3
                 robot_lin_vel(self),  # 3
                 robot_projected_gravity(self),  # 3
