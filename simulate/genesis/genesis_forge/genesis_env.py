@@ -5,9 +5,11 @@ Focuses on core objectives with progressive difficulty
 
 import math
 import torch
+import numpy as np
 import genesis as gs
+from gymnasium import spaces
 from genesis.engine.entities import RigidEntity
-from typing import Sequence, Any, Callable, Literal
+from typing import Any, Callable, Literal
 
 EnvMode = Literal["train", "eval", "play"]
 
@@ -34,8 +36,11 @@ class GenesisEnv:
     actions: torch.Tensor = None
     last_actions: torch.Tensor = None
     episode_length: torch.Tensor = None
-    max_episode_length: torch.Tensor = None
     data_tracker_fn: Callable[[str, float], None] = None
+    observation_space: spaces.Space | None = None
+
+    max_episode_length: torch.Tensor = None
+    """The max episode length, in steps, for each environment."""
 
     def __init__(
         self,
@@ -52,6 +57,7 @@ class GenesisEnv:
         self.headless = headless
         self.mode = mode
 
+        self._max_episode_length_sec = 0.0
         self._max_episode_random_scaling = 0.0
         self._base_max_episode_length = None
         if max_episode_length_sec and max_episode_length_sec > 0:
@@ -62,10 +68,6 @@ class GenesisEnv:
     """
     Properties
     """
-
-    @property
-    def observation_space(self):
-        return None
 
     @property
     def action_space(self):
@@ -79,6 +81,11 @@ class GenesisEnv:
             Env: The base non-wrapped :class:`GenesisEnv` instance
         """
         return self
+    
+    @property
+    def max_episode_length_sec(self) -> int | None:
+        """The max episode length, in seconds, for each environment."""
+        return self._max_episode_length_sec
 
     """
     Utilities
@@ -105,6 +112,7 @@ class GenesisEnv:
         Returns:
             The maximum episode length in steps.
         """
+        self._max_episode_length_sec = max_episode_length_sec
         self._base_max_episode_length = math.ceil(max_episode_length_sec / self.dt)
         return self._base_max_episode_length
 
@@ -147,15 +155,21 @@ class GenesisEnv:
         """Builds the scene once all entities have been added (via construct_scene). This operation is required before running the simulation."""
         if self.scene is None:
             self.construct_scene()
+            
         self.scene.build(n_envs=self.num_envs)
-        self.configuration_managers()
 
-    def configuration_managers(self):
-        """
-        Initialize all the configuration managers for the environment.
-        This will be called after the scene is built.
-        """
-        pass
+        # Set observation space from first observation
+        obs = self.observations()
+        self.observation_space = spaces.Box(
+            low=-np.inf,
+            high=np.inf,
+            shape=(obs.shape[1],),
+            dtype=np.float32,
+        )
+
+    def observations(self) -> torch.Tensor:
+        """Generate a list of observations for each environment."""
+        return torch.zeros((self.num_envs, 1), device=gs.device)
 
     def step(
         self, actions: torch.Tensor
@@ -182,7 +196,7 @@ class GenesisEnv:
 
     def reset(
         self,
-        envs_idx: Sequence[int] = None,
+        envs_idx: list[int] = None,
     ) -> tuple[torch.Tensor, dict[str, Any]]:
         """
         Reset one or all parallel environments.

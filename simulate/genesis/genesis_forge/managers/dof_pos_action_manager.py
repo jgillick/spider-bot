@@ -64,7 +64,6 @@ class DofPositionActionManager(BaseManager):
             def __init__(self, *args, **kwargs):
                 super().__init__(*args, **kwargs)
 
-            def configuration_managers(self):
                 self.action_manager = DofPositionActionManager(
                     self,
                     joint_names=".*",
@@ -85,6 +84,9 @@ class DofPositionActionManager(BaseManager):
             @property
             def action_space(self):
                 return self.action_manager.action_space
+
+            def build(self):
+                super().build()
 
             def step(self, actions: torch.Tensor):
                 super().step(actions)
@@ -127,7 +129,7 @@ class DofPositionActionManager(BaseManager):
         quiet_action_errors: bool = False,
     ):
         super().__init__(env)
-        self._has_initialized_dofs = False
+        self._has_initialized = False
         self._default_pos_cfg = ensure_dof_pattern(default_pos)
         self._pd_kp_cfg = ensure_dof_pattern(pd_kp)
         self._pd_kv_cfg = ensure_dof_pattern(pd_kv)
@@ -147,7 +149,6 @@ class DofPositionActionManager(BaseManager):
         else:
             raise TypeError(f"Invalid joint_names type: {type(joint_names)}")
 
-        self._init_buffers()
 
     """
     Properties
@@ -158,6 +159,7 @@ class DofPositionActionManager(BaseManager):
         """
         Get the number of DOF that are enabled.
         """
+        self._init_buffers()
         assert (
             self._enabled_dof is not None
         ), "DofPositionActionManager not initialized. You need to call <DofPositionActionManager>.build() in the build phase of the environment."
@@ -176,6 +178,7 @@ class DofPositionActionManager(BaseManager):
         """
         If using the default action handler, the action space is [-1, 1].
         """
+        self._init_buffers()
         return spaces.Box(
             low=-1.0,
             high=1.0,
@@ -188,11 +191,13 @@ class DofPositionActionManager(BaseManager):
         """
         Get the indices of the DOF that are enabled (via joint_names).
         """
+        self._init_buffers()
         return list(self._enabled_dof.values())
 
     @property
     def default_dofs_pos(self) -> torch.Tensor:
         """Return the default DOF positions."""
+        self._init_buffers()
         return self._default_dofs_pos
 
     """
@@ -250,6 +255,7 @@ class DofPositionActionManager(BaseManager):
             return
         if envs_idx is None:
             envs_idx = torch.arange(self.num_envs, device=gs.device)
+        self._init_buffers()
 
         # Set DOF values with random scaling
         if self._kp_values is not None:
@@ -296,6 +302,11 @@ class DofPositionActionManager(BaseManager):
 
     def _init_buffers(self):
         """Define the buffers for the DOF values."""
+        if self._has_initialized:
+            return
+        self._has_initialized = True
+
+        # Get enabled DOFs
         self._enabled_dof = dict()
         for joint in self.env.robot.joints:
             if joint.type != gs.JOINT_TYPE.REVOLUTE:
@@ -305,9 +316,10 @@ class DofPositionActionManager(BaseManager):
                 if re.match(pattern, name):
                     self._enabled_dof[name] = joint.dof_start
                     break
+        dofs_idx = list(self._enabled_dof.values())
 
         # Get position Limits and convert to shape (num_envs, limit)
-        lower, upper = self.env.robot.get_dofs_limit(self.dofs_idx)
+        lower, upper = self.env.robot.get_dofs_limit(dofs_idx)
         self._pos_limit_lower = lower.unsqueeze(0).expand(self.env.num_envs, -1)
         self._pos_limit_upper = upper.unsqueeze(0).expand(self.env.num_envs, -1)
 

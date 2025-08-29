@@ -79,6 +79,10 @@ class Wrapper:
             self.construct_scene()
         self.env.build()
 
+    def observations(self) -> torch.Tensor:
+        """Generate a list of observations for each environment."""
+        return self.env.observations()
+
     def step(
         self, actions: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, dict[str, Any]]:
