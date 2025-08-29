@@ -25,3 +25,34 @@ pip install -r requirements.txt
 ```bash
 python ./train.py
 ```
+
+## Play 
+
+You can play the trained agent with a Logitech gamepad.
+
+First, you need to make sure that HIDAPI is installed on your machine.
+https://github.com/libusb/hidapi?tab=readme-ov-file#installing-hidapi
+
+Then:
+
+```bash
+python ./play_joystick.py ./logs/<TRAINING DIR>
+```
+
+### Troubleshooting
+
+If you have trouble connecting to the gamepad on linux, you might need to update the udev rules:
+
+Create the file: `/etc/udev/rules.d/100-hidapi.rules`
+
+```
+SUBSYSTEM=="usb", ATTR{idVendor}=="046d", ATTR{idProduct}=="c216", MODE="0660", GROUP="plugdev", TAG+="uaccess", TAG+="udev-acl", SYMLINK+="logitech_f310%n"
+KERNEL=="hidraw*", ATTRS{idVendor}=="046d", ATTRS{idProduct}=="c216", MODE="0660", GROUP="plugdev", TAG+="uaccess", TAG+="udev-acl"
+```
+
+Then
+
+```bash
+sudo chmod 644 /etc/udev/rules.d/00-hidapi.rules
+sudo udevadm control --reload-rules
+```
