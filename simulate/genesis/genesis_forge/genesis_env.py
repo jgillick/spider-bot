@@ -19,7 +19,7 @@ class GenesisEnv:
     Args:
         num_envs: Number of parallel environments.
         dt: Simulation time step.
-        max_episode_length_s: Maximum episode length in seconds.
+        max_episode_length_sec: Maximum episode length in seconds.
         max_episode_random_scaling: Scale the maximum episode length by this amount (+/-) so that not all environments reset at the same time.
         headless: Whether to run the environment in headless mode.
     """
@@ -29,7 +29,7 @@ class GenesisEnv:
     terrain: RigidEntity = None
     headless: bool = True
     num_envs: int = 1
-    num_steps: int = 0
+    step_count: int = 0
 
     actions: torch.Tensor = None
     last_actions: torch.Tensor = None
@@ -41,7 +41,7 @@ class GenesisEnv:
         self,
         num_envs: int = 1,
         dt: float = 1 / 100,
-        max_episode_length_s: int | None = 15,
+        max_episode_length_sec: int | None = 10,
         max_episode_random_scaling: float = 0.0,
         headless: bool = True,
         mode: EnvMode = "train",
@@ -54,14 +54,10 @@ class GenesisEnv:
 
         self._max_episode_random_scaling = 0.0
         self._base_max_episode_length = None
-        if max_episode_length_s and max_episode_length_s > 0:
+        if max_episode_length_sec and max_episode_length_sec > 0:
             self._max_episode_random_scaling = max_episode_random_scaling / self.dt
-            self._base_max_episode_length = math.ceil(max_episode_length_s / self.dt)
-            self.max_episode_length = torch.tensor(
-                [self._base_max_episode_length] * self.num_envs,
-                device=gs.device,
-                dtype=gs.tc_int,
-            )
+            self.max_episode_length = torch.zeros((self.num_envs,), device=gs.device, dtype=gs.tc_int)
+            self.max_episode_length[:] = self.set_max_episode_length(max_episode_length_sec)
 
     """
     Properties
@@ -98,6 +94,19 @@ class GenesisEnv:
             print(f"Warning: No logger function set for logging data.")
             return
         self.data_tracker_fn(name, value)
+
+    def set_max_episode_length(self, max_episode_length_sec: int) -> int:
+        """
+        Set or change the maximum episode length.
+
+        Args:
+            max_episode_length_sec: The maximum episode length in seconds.
+
+        Returns:
+            The maximum episode length in steps.
+        """
+        self._base_max_episode_length = math.ceil(max_episode_length_sec / self.dt)
+        return self._base_max_episode_length
 
     """
     Operations
@@ -160,7 +169,7 @@ class GenesisEnv:
         Returns:
             Batch of (observations, rewards, terminations, truncations, infos)
         """
-        self.num_steps += 1
+        self.step_count += 1
         self.episode_length += 1
 
         if self.actions is not None:
@@ -188,7 +197,7 @@ class GenesisEnv:
             envs_idx = torch.arange(self.num_envs, device=gs.device)
 
         # Initial reset, set buffers
-        if self.num_steps == 0:
+        if self.step_count == 0:
             self.actions = torch.zeros(
                 (self.num_envs, self.action_space.shape[0]),
                 device=gs.device,
