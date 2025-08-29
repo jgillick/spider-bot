@@ -73,9 +73,9 @@ def play():
     env.build()
     env.reward_manager.enabled = False
     env.termination_manager.enabled = False
-    env.leg_contact_manager.enabled = False
+    env.bad_touch_contact.enabled = False
     env.action_manager.noise_scale = 0.0
-    env.command_manager.use_gamepad(
+    env.velocity_command.use_gamepad(
         gamepad, lin_vel_y_axis=0, lin_vel_x_axis=1, ang_vel_z_axis=2
     )
 
