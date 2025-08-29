@@ -1,9 +1,16 @@
+"""
+Termination functions for the Genesis environment.
+Each of these should return a boolean tensor indicating which environments should terminate, in the tensor shape (num_envs,).
+"""
 import torch
 from genesis_forge.genesis_env import GenesisEnv
 from genesis_forge.utils import robot_projected_gravity
+from genesis_forge.managers import (
+    ContactManager,
+)
 
 
-def timeout(env: GenesisEnv):
+def timeout(env: GenesisEnv) -> torch.Tensor:
     """
     Terminate the environment if the episode length exceeds the maximum episode length.
     """
@@ -64,3 +71,19 @@ def root_height_below_minimum(
     """
     base_pos = env.robot.get_pos()
     return base_pos[:, 2] < minimum_height
+
+def has_contact(_env: GenesisEnv, contact_manager: ContactManager, threshold=1.0, min_contacts=1) -> torch.Tensor:
+    """
+    One or more links in the contact manager are in contact with something.
+
+    Args:
+        env: The Genesis environment containing the robot
+        contact_manager: The contact manager to check for contact
+        threshold: The force threshold, per contact, for contact detection (default: 1.0)
+        min_contacts: The minimum number of contacts required to terminate (default: 1)
+
+    Returns:
+        True for each environment that has contact
+    """
+    has_contact = contact_manager.contacts[:, :].norm(dim=-1) > threshold
+    return has_contact.sum(dim=1) >= min_contacts
