@@ -100,7 +100,8 @@ class VideoWrapper(Wrapper):
         self._current_step: int = 0
         self._current_episode: int = 0
         self._recording_start_step: int = 0
-        self._recording_steps_remaining: int = 0
+        self._recording_stop_step: int = 0
+        self._next_frame_step: int = 0
         self._is_recording: bool = False
 
         self._cam = None
@@ -108,7 +109,8 @@ class VideoWrapper(Wrapper):
         self._out_dir = out_dir
         self._filename = filename
         self._video_length_steps = math.ceil(video_length_sec / self.dt)
-        self._fps = fps
+        self._steps_per_frame = round(1.0 / fps / self.dt)
+        self._actual_fps = round(1.0 / self.dt / self._steps_per_frame)
         self._env_idx = env_idx
 
         if episode_trigger is None and step_trigger is None:
@@ -134,6 +136,8 @@ class VideoWrapper(Wrapper):
         self, actions: torch.Tensor
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, dict[str, Any]]:
         """Record a video image at each step."""
+        self._check_recording_trigger()
+
         (
             observations,
             rewards,
@@ -148,13 +152,11 @@ class VideoWrapper(Wrapper):
         truncated = False if truncateds is None else truncateds[self._env_idx]
         if terminated or truncated:
             self._current_episode += 1
-        self._check_recording_trigger()
 
-        # Render this frame, if recording
+        # If recording, render the frame
         if self._is_recording:
-            self._cam.render()
-            self._recording_steps_remaining -= 1
-            if self._recording_steps_remaining <= 0:
+            self._render_step()
+            if self._recording_stop_step <= self._current_step:
                 self.finish_recording()
 
 
@@ -176,9 +178,10 @@ class VideoWrapper(Wrapper):
         """Start recording a video."""
         self._is_recording = True
         self._recording_start_step = self._current_step
-        self._recording_steps_remaining = self._video_length_steps
+        self._next_frame_step = self._current_step
+        self._recording_stop_step = self._current_step + self._video_length_steps
         self._cam.start_recording()
-        self._cam.render()
+        self._render_step()
 
     def finish_recording(self):
         """Stop recording and save the video."""
@@ -188,11 +191,20 @@ class VideoWrapper(Wrapper):
         # Save recording
         filename = self._filename or f"{self._recording_start_step}.mp4"
         filepath = os.path.join(self._out_dir, filename)
-        self._cam.stop_recording(filepath, fps=self._fps)
+        self._cam.stop_recording(filepath, fps=self._actual_fps)
 
         # Reset recording state
         self._is_recording = False
-        self._recording_steps_remaining = 0
+        self._recording_stop_step = 0
+    
+
+    def _render_step(self):
+        """Render a frame of the video."""
+        if not self._is_recording:
+            return
+        if self._current_step >= self._next_frame_step:
+            self._cam.render()
+            self._next_frame_step = self._current_step + self._steps_per_frame
 
     def _check_recording_trigger(self) -> bool:
         """Check if a recording should be started"""
