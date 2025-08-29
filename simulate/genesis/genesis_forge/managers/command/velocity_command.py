@@ -8,16 +8,16 @@ from genesis_forge.genesis_env import GenesisEnv
 from genesis_forge.utils import robot_lin_vel, transform_by_quat
 from genesis_forge.gamepads import BaseGamepad
 
-from .command_manager import CommandManager, CommandRange
+from .command_manager import CommandManager, CommandRangeValue
 
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 class VelocityCommandRange(TypedDict):
-    lin_vel_x: CommandRange
-    lin_vel_y: CommandRange
-    ang_vel_z: CommandRange
+    lin_vel_x: CommandRangeValue
+    lin_vel_y: CommandRangeValue
+    ang_vel_z: CommandRangeValue
 
 
 class DebugVisualizerConfig(TypedDict):
@@ -136,11 +136,15 @@ class VelocityCommandManager(CommandManager):
     Args:
         env: The environment to control
         range: The ranges of linear & angular velocities
-        standing_probability: The probability of all velocities being zero for an environment
+        standing_probability: The probability of all velocities being zero for an environment (0.0 = never, 1.0 = always)
         resample_time_s: The time interval between changing the command
         debug_visualizer: Enable the debug arrow visualization
         debug_visualizer_cfg: The configuration for the debug visualizer
     """
+
+    standing_probability: float
+    debug_visualizer: bool
+    visualizer_cfg: DebugVisualizerConfig
 
     def __init__(
         self,
@@ -151,7 +155,7 @@ class VelocityCommandManager(CommandManager):
         debug_visualizer: bool = False,
         debug_visualizer_cfg: DebugVisualizerConfig = DEFAULT_VISUALIZER_CONFIG,
     ):
-        super().__init__(env, range=range, resample_time_s=resample_time_s)
+        super().__init__(env, range=range, resample_time_sec=resample_time_s)
         self._arrow_nodes: list = []
         self._gamepad_cfg = None
         self.standing_probability = standing_probability
@@ -244,7 +248,7 @@ class VelocityCommandManager(CommandManager):
 
         # Scale the arrow size based on the maximum target velocity range
         scale_factor = self.visualizer_cfg["arrow_max_length"] / max(
-            *self.range["lin_vel_x"], *self.range["lin_vel_y"], *self.range["ang_vel_z"]
+            *self._range["lin_vel_x"], *self._range["lin_vel_y"], *self._range["ang_vel_z"]
         )
 
         # Calculate the center of the robot
@@ -365,8 +369,8 @@ class VelocityCommandManager(CommandManager):
         def convert_to_range(value: float, min: float, max: float) -> float:
             return (value - -1) * (max - min) / 2 + min
 
-        cmd[:, 0] = convert_to_range(lin_vel_x, *self.range["lin_vel_x"])
-        cmd[:, 1] = convert_to_range(lin_vel_y, *self.range["lin_vel_y"])
-        cmd[:, 2] = convert_to_range(ang_vel_z, *self.range["ang_vel_z"])
+        cmd[:, 0] = convert_to_range(lin_vel_x, *self._range["lin_vel_x"])
+        cmd[:, 1] = convert_to_range(lin_vel_y, *self._range["lin_vel_y"])
+        cmd[:, 2] = convert_to_range(ang_vel_z, *self._range["ang_vel_z"])
 
         return cmd
