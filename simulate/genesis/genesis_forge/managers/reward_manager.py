@@ -84,14 +84,6 @@ class RewardManager(BaseManager):
         self._reward_buf = torch.zeros(
             (env.num_envs,), device=gs.device, dtype=gs.tc_float
         )
-        self._episode_length = torch.zeros(
-            (self.env.num_envs,), device=gs.device, dtype=torch.int32
-        )
-        self._episode_data: dict[str, torch.Tensor] = dict()
-        for name in self.cfg.keys():
-            self._episode_data[name] = torch.zeros(
-                (env.num_envs,), device=gs.device, dtype=gs.tc_float
-            )
 
     def step(self) -> torch.Tensor:
         """
@@ -104,7 +96,6 @@ class RewardManager(BaseManager):
         if not self.enabled:
             return self._reward_buf
 
-        self._episode_length += 1
         for name, cfg in self.cfg.items():
             fn = cfg["fn"]
             weight = cfg.get("weight", 0.0)
@@ -113,37 +104,11 @@ class RewardManager(BaseManager):
             # Don't calculate reward if the weight is zero
             if weight == 0:
                 continue
+            
             weight = weight * self.env.dt
-
             value = fn(self.env, **params) * weight
             self._reward_buf += value
-            self._episode_data[name] += value
+            if self.logging_enabled:
+                self.env.track_data(f"Rewards / {name}", value.mean().cpu().item())
 
         return self._reward_buf
-
-    def reset(self, envs_idx: Sequence[int] = None):
-        """Log the reward mean values at the end of the episode"""
-        if not self.logging_enabled or not self.enabled:
-            return
-        if envs_idx is None:
-            envs_idx = torch.arange(self.env.num_envs, device=gs.device)
-
-        episode_lengths = self._episode_length[envs_idx]
-        valid_episodes = episode_lengths > 0
-        for name, value in self._episode_data.items():
-            # Log episodes with at least one step (otherwise it could cause a divide by zero error)
-            if torch.any(valid_episodes):
-                # Calculate average for each episode based on its actual length
-                episode_avg = torch.zeros_like(value[envs_idx])
-                episode_avg[valid_episodes] = (
-                    value[envs_idx][valid_episodes] / episode_lengths[valid_episodes]
-                )
-
-                # Take the mean across valid episodes only
-                episode_mean = torch.mean(episode_avg[valid_episodes]).cpu().item()
-                self.env.track_data(f"Rewards / {name}", episode_mean)
-
-            # Reset episodic sum
-            self._episode_data[name][envs_idx] = 0.0
-
-        self._episode_length[envs_idx] = 0
