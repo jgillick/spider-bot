@@ -22,7 +22,7 @@ models:
     network:
       - name: net
         input: STATES
-        layers: [512, 256, 128]
+        layers: [256, 256, 128]
         activations: elu
     output: ACTIONS
   value: # see deterministic_model parameters
@@ -31,7 +31,7 @@ models:
     network:
       - name: net
         input: STATES
-        layers: [512, 256, 128]
+        layers: [256, 256, 128]
         activations: elu
     output: ONE
 
@@ -45,7 +45,9 @@ memory:
 # https://skrl.readthedocs.io/en/latest/api/agents/ppo.html
 agent:
   class: PPO
-  rollouts: 125 # num_steps_per_env
+  # Target training batch size of ~98,304 (98,304 / num parallel envs = num_steps_per_env)
+  # Based on: https://ar5iv.labs.arxiv.org/html/2109.11978
+  rollouts: 66
   learning_epochs: 5
   mini_batches: 4
   discount_factor: 0.99
@@ -73,5 +75,5 @@ agent:
   # logging and checkpoint
   experiment:
     directory: "logs"
-    write_interval: auto
+    write_interval: 1000
     checkpoint_interval: auto
