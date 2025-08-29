@@ -30,7 +30,7 @@ class CommandManager(BaseManager):
                 # ...handle actions and rewards calculations ...
 
                 self.command_manager.step()
-
+                obs = self.get_observations()
                 return obs, rewards, terminations, timeouts, info
 
 
@@ -39,6 +39,7 @@ class CommandManager(BaseManager):
                 # ...do reset logic here...
 
                 self.command_manager.reset(envs_ids)
+                obs = self.get_observations()
                 return obs, info
 
             def calculate_rewards():
@@ -47,11 +48,15 @@ class CommandManager(BaseManager):
                 height_reward = torch.square(base_pos[:, 2] - target_height)
 
                 # ...additional reward calculations here...
-
-    Debug Visualization:
-        If you set `debug_visualizer` to True, arrows will be rendered above your robot
-        showing the commanded velocity vs the actual velocity.
-        The commanded velocity is green and the actual velocity is blue.
+            
+            def get_observations(self):
+                return torch.cat(
+                    [
+                        self.command_manager.command,
+                        # ...additional observations here...
+                    ],
+                    dim=-1,
+                )
 
     Args:
         env: The environment to control
