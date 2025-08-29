@@ -14,18 +14,18 @@ class ContactManager(BaseManager):
     Args:
         env: The environment to track the contact forces for.
         link_names: The names, or name regex patterns, of the entity links to track the contact forces for.
-        entity: The entity which contains the links we're tracking. Defaults to `env.robot`.
+        entity_attr: The environment attribute which contains the entity with the links we're tracking. Defaults to `robot`.
+        with_entity_attr: Filter the contact forces to only include contacts with the entity assigned to this environment attribute.
+        with_links_names: Filter the contact forces to only include contacts with these links.
         track_air_time: Whether to track the air time of the entity link contacts.
         air_time_contact_threshold: When track_air_time is True, this is the threshold for the contact forces to be considered.
-        with_entity: Filter the contact forces to only include contacts with this entity.
-        with_links_names: Filter the contact forces to only include contacts with these links.
 
     Example:
+
         class MyEnv(GenesisEnv):
             def __init__(self, *args, **kwargs):
                 super().__init__(*args, **kwargs)
 
-            def configuration_managers(self):
                 self.contact_manager = ContactManager(
                     self,
                     link_names=[".*_Foot"],
@@ -33,26 +33,58 @@ class ContactManager(BaseManager):
 
             def step(self, actions: torch.Tensor):
                 super().step(actions)
-
                 self.contact_manager.step()
-
                 return obs, rewards, terminations, timeouts, info
 
             def reset(self, envs_idx: list[int] | None = None):
                 super().reset(envs_idx)
-
                 self.contact_manager.reset(envs_idx)
-
                 return obs, info
 
             def calculate_rewards():
-                # Reward for each foot in contact
+                # Reward for each foot in contact with something with at least 1.0N force
                 CONTACT_THRESHOLD = 1.0
                 CONTACT_WEIGHT = 0.005
                 has_contact = self.contact_manager.contacts[:,:].norm(dim=-1) > CONTACT_THRESHOLD
                 contact_reward = has_contact.sum(dim=1).float() * CONTACT_WEIGHT
 
                 # ...additional reward calculations here...
+    
+    Entity Filtering:
+
+        class MyEnv(GenesisEnv):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+
+                # Track all contacts between the robot's feet and the terrain
+                # See entity initialization in the construct_scene method below
+                self.contact_manager = ContactManager(
+                    self,
+                    entity_attr="robot",
+                    link_names=[".*_Foot"],
+                    with_entity_attr="terrain",
+                )
+            
+            def construct_scene(self) -> gs.Scene:
+                scene = super().construct_scene()
+                
+                # Add terrain
+                self.terrain = scene.add_entity(
+                    gs.morphs.Plane(),
+                )
+
+                # add robot
+                self.robot = scene.add_entity(
+                    gs.morphs.MJCF(
+                        file=ROBOT_XML,
+                        pos=INITIAL_BODY_POSITION,
+                        quat=INITIAL_QUAT,
+                    ),
+                )
+
+                return scene
+
+            # ...other operations here...
     """
 
     contacts: torch.Tensor | None = None
@@ -74,35 +106,22 @@ class ContactManager(BaseManager):
         self,
         env: GenesisEnv,
         link_names: list[str],
-        entity: RigidEntity = None,
+        entity_attr: RigidEntity = 'robot',
+        with_entity_attr: RigidEntity = None,
+        with_links_names: list[int] = None,
         track_air_time: bool = False,
         air_time_contact_threshold: float = 1.0,
-        with_entity: RigidEntity = None,
-        with_links_names: list[int] = None,
     ):
         super().__init__(env)
+        self._initialized = False
         self._link_names = link_names
         self._air_time_contact_threshold = air_time_contact_threshold
         self._track_air_time = track_air_time
-
-        # Get the link indices
-        entity = entity or env.robot
-        self._target_link_ids = self._get_links_idx(entity, link_names)
+        self._entity_attr = entity_attr
+        self._with_entity_attr = with_entity_attr
+        self._with_links_names = with_links_names
         self._with_link_ids = None
-        if with_entity or with_links_names:
-            with_entity = with_entity or env.robot
-            self._with_link_ids = self._get_links_idx(with_entity, with_links_names)
-
-        # Initialize buffers
-        link_count = len(self._target_link_ids)
-        self.contacts = torch.zeros((env.num_envs, link_count, 3), device=gs.device)
-        if self._track_air_time:
-            self.last_air_time = torch.zeros(
-                (self.env.num_envs, link_count), device=gs.device
-            )
-            self.current_air_time = torch.zeros_like(self.last_air_time)
-            self.last_contact_time = torch.zeros_like(self.last_air_time)
-            self.current_contact_time = torch.zeros_like(self.last_air_time)
+        self._target_link_ids = None
 
     """
     Helper Methods
@@ -169,19 +188,17 @@ class ContactManager(BaseManager):
     Operations
     """
 
-    def step(self):
-        super().step()
-        if not self.enabled:
-            return
-        self._calculate_contact_forces()
-        self._calculate_air_time()
-
     def reset(self, envs_idx: list[int] | None = None):
         super().reset(envs_idx)
         if not self.enabled:
             return
         if envs_idx is None:
             envs_idx = torch.arange(self.num_envs, device=gs.device)
+
+        # Initialize link indices and buffers
+        if not self._initialized:
+            self._initialize()
+            self._initialized = True
 
         # reset the current air time
         if self._track_air_time:
@@ -190,9 +207,52 @@ class ContactManager(BaseManager):
             self.last_air_time[envs_idx] = 0.0
             self.last_contact_time[envs_idx] = 0.0
 
+    def step(self):
+        super().step()
+        if not self.enabled:
+            return
+        assert self._initialized, f"{self} is not initialized. Did you forget to add it to your reset function?"
+        self._calculate_contact_forces()
+        self._calculate_air_time()
+
     """
     Implementation
     """
+    
+    def __repr__(self):
+        attrs = [f"link_names={self._link_names}"]
+        if self._entity_attr:
+            attrs.append(f"entity_attr={self._entity_attr}")
+        if self._with_entity_attr:
+            attrs.append(f"with_entity_attr={self._with_entity_attr}")
+        if self._with_links_names:
+            attrs.append(f"with_links_names={self._with_links_names}")
+        if self._track_air_time:
+            attrs.append(f"track_air_time={self._track_air_time}")
+            if self._air_time_contact_threshold:
+                attrs.append(f"air_time_contact_threshold={self._air_time_contact_threshold}")
+        attrs_str = ", ".join(attrs)
+        return f"{self.__class__.__name__}({attrs_str})"
+
+    def _initialize(self):
+        # Get the link indices
+        entity = self.env.__getattribute__(self._entity_attr)
+        self._target_link_ids = self._get_links_idx(entity, self._link_names)
+        if self._with_entity_attr or self._with_links_names:
+            with_entity_attr = self._with_entity_attr if self._with_entity_attr is not None else 'robot'
+            with_entity = self.env.__getattribute__(with_entity_attr)
+            self._with_link_ids = self._get_links_idx(with_entity, self._with_links_names)
+
+        # Initialize buffers
+        link_count = self._target_link_ids.shape[0]
+        self.contacts = torch.zeros((self.env.num_envs, link_count, 3), device=gs.device)
+        if self._track_air_time:
+            self.last_air_time = torch.zeros(
+                (self.env.num_envs, link_count), device=gs.device
+            )
+            self.current_air_time = torch.zeros_like(self.last_air_time)
+            self.last_contact_time = torch.zeros_like(self.last_air_time)
+            self.current_contact_time = torch.zeros_like(self.last_air_time)
 
     def _get_links_idx(
         self, entity: RigidEntity, names: list[str] = None
@@ -209,7 +269,7 @@ class ContactManager(BaseManager):
         """
         # If link names are not defined, assume all links
         if names is None:
-            return [link.idx for link in entity.links]
+            return torch.tensor([link.idx for link in entity.links], device=gs.device)
 
         ids = []
         for pattern in names:
