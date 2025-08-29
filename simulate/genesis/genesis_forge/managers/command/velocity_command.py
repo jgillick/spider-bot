@@ -62,21 +62,13 @@ class VelocityCommandManager(CommandManager):
     - Y-axis: Left/right relative to robot's current orientation
     - Z-axis: Yaw rotation around robot's vertical axis
 
-    When connected to a joystick:
-    - "Forward" always means "forward relative to robot's current facing direction"
-    - "Left" always means "left relative to robot's current facing direction"
-    - This behavior is independent of the robot's orientation in world coordinates
-
-    The commands are kept in robot-relative (base) frame and only transformed to world
-    coordinates for visualization purposes, following the IsaacLab pattern.
-
     To use the manager:
         1. Create the manager in your environment's init method
         2. Call it in your step method (`self.command_manager.step()`)
         3. Call it in your reset method  (`self.command_manager.reset(env_ids)`)
         4. Get the target velocity command with the `command` property for your reward and observation functions
 
-    Example:
+    Example::
         class MyEnv(GenesisEnv):
             def __init__(self, *args, **kwargs):
                 super().__init__(*args, **kwargs)
@@ -97,7 +89,7 @@ class VelocityCommandManager(CommandManager):
                 # ...handle actions and rewards calculations ...
 
                 self.command_manager.step()
-
+                obs = self.get_observations()
                 return obs, rewards, terminations, timeouts, info
 
 
@@ -106,6 +98,7 @@ class VelocityCommandManager(CommandManager):
                 # ...do reset logic here...
 
                 self.command_manager.reset(envs_ids)
+                obs = self.get_observations()
                 return obs, info
 
             def calculate_rewards():
@@ -123,6 +116,15 @@ class VelocityCommandManager(CommandManager):
                 ang_vel_reward = torch.exp(-ang_vel_error / 0.25)
 
                 # ...additional reward calculations here...
+            
+            def get_observations(self):
+                return torch.cat(
+                    [
+                        self.command_manager.command,
+                        # ...additional observations here...
+                    ],
+                    dim=-1,
+                )
 
     Debug Visualization:
         If you set `debug_visualizer` to True, arrows will be rendered above your robot
@@ -132,7 +134,7 @@ class VelocityCommandManager(CommandManager):
         - GREEN: Commanded velocity (robot-relative, transformed to world coordinates for visualization)
           When joystick is "forward", this arrow points in the robot's forward direction
         - BLUE: Actual robot velocity in world coordinates
-
+    
     Args:
         env: The environment to control
         range: The ranges of linear & angular velocities
