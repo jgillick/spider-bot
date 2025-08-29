@@ -36,7 +36,6 @@ class RewardManager(BaseManager):
             def __init__(self, *args, **kwargs):
                 super().__init__(*args, **kwargs)
 
-            def configuration_managers(self):
                 self.reward_manager = RewardManager(
                     self,
                     term_cfg={

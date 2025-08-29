@@ -22,7 +22,6 @@ class CommandManager(BaseManager):
             def __init__(self, *args, **kwargs):
                 super().__init__(*args, **kwargs)
 
-            def configuration_managers(self):
                 self.height_command = CommandManager(self, range=(0.1, 0.2))
 
             def step(self, actions: torch.Tensor):

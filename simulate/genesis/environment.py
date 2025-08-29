@@ -43,7 +43,7 @@ class SpiderRobotEnv(GenesisEnv):
         self,
         num_envs: int = 1,
         dt: float = 1 / 100,
-        max_episode_length_s: int | None = 8,
+        max_episode_length_s: int | None = 6,
         headless: bool = True,
         mode: EnvMode = "train",
     ):
@@ -69,13 +69,8 @@ class SpiderRobotEnv(GenesisEnv):
             (self.num_envs, 4), device=gs.device, dtype=gs.tc_float
         )
 
-    """
-    Configuration
-    """
-
-    def configuration_managers(self):
         """
-        Initialize all the configuration managers for the environment.
+        Configuration
         """
         # Define the DOF actuators
         self.action_manager = DofPositionActionManager(
@@ -94,26 +89,25 @@ class SpiderRobotEnv(GenesisEnv):
             pd_kp=50,
             pd_kv=0.5,
             max_force=8.0,
-            # damping=0.5,
-            stiffness=0.1,
-            frictionloss=0.1,
-            noise_scale=0.02,
+            # stiffness=0.1,
+            # frictionloss=0.1,
+            # noise_scale=0.02,
         )
 
         # Command manager: instruct the robot to move in a certain direction
         self.height_command = CommandManager(
             self,
             range={
-                "height": [0.12, 0.14],
+                "height": [0.12, 0.15],
             },
         )
         self.velocity_command = VelocityCommandManager(
             self,
             # Starting ranges should be small, while robot is learning to stand
             range={
-                "lin_vel_x": [-1.0, 1.0],
-                "lin_vel_y": [-1.0, 1.0],
-                "ang_vel_z": [-1.0, 1.0],
+                "lin_vel_x": [-0.5, 0.5],
+                "lin_vel_y": [-0.5, 0.5],
+                "ang_vel_z": [-0.5, 0.5],
             },
             standing_probability=0.02,
             resample_time_s=5.0,
@@ -143,55 +137,55 @@ class SpiderRobotEnv(GenesisEnv):
             logging_enabled=True,
             cfg={
                 "Linear Z velocity": {
-                    "weight": -1.0,
+                    "weight": -10.0,
                     "fn": rewards.lin_vel_z,
                 },
                 "Base height": {
-                    "weight": -200.0,
+                    "weight": -1000.0,
                     "fn": rewards.base_height,
                     "params": {
-                        "target_height": 0.14,
-                        # "height_command": self.height_command,
+                        # "target_height": 0.135,
+                        "height_command": self.height_command,
                     },
                 },
                 "Similar to default": {
-                    "weight": -0.1,
+                    "weight": -1.5,
                     "fn": rewards.dof_similar_to_default,
                     "params": {
                         "dof_action_manager": self.action_manager,
                     },
                 },
                 "Action rate": {
-                    "weight": -0.005,
+                    "weight": -0.05,
                     "fn": rewards.action_rate,
                 },
                 "Cmd linear velocity": {
-                    "weight": 2.0,
+                    "weight": 20.0,
                     "fn": rewards.command_tracking_lin_vel,
                     "params": {
                         "vel_cmd_manager": self.velocity_command,
                     },
                 },
                 "Cmd angular velocity": {
-                    "weight": 1.0,
+                    "weight": 10.0,
                     "fn": rewards.command_tracking_ang_vel,
                     "params": {
                         "vel_cmd_manager": self.velocity_command,
                     },
                 },
                 "Flat orientation": {
-                    "weight": -5.0,
+                    "weight": -50.0,
                     "fn": rewards.flat_orientation_l2,
                 },
                 "Bad touch": {
-                    "weight": 0.0, #-1.0,
+                    "weight": 0.0, #-10.0,
                     "fn": rewards.has_contact,
                     "params": {
                         "contact_manager": self.bad_touch_contact,
                     },
                 },
                 "Foot contact (some)": {
-                    "weight": 0.0, #0.5,
+                    "weight": 0.0, #5.0,
                     "fn": rewards.has_contact,
                     "params": {
                         "contact_manager": self.foot_contact_manager,
@@ -199,7 +193,7 @@ class SpiderRobotEnv(GenesisEnv):
                     },
                 },
                 "Foot contact (all)": {
-                    "weight": 0.0, #0.01,
+                    "weight": 0.0, #0.1,
                     "fn": rewards.has_contact,
                     "params": {
                         "contact_manager": self.foot_contact_manager,
@@ -232,15 +226,6 @@ class SpiderRobotEnv(GenesisEnv):
     """
 
     @property
-    def observation_space(self):
-        return spaces.Box(
-            low=-np.inf,
-            high=np.inf,
-            shape=(84,),
-            dtype=np.float32,
-        )
-
-    @property
     def action_space(self):
         return self.action_manager.action_space
 
@@ -253,7 +238,7 @@ class SpiderRobotEnv(GenesisEnv):
         scene = super().construct_scene(
             rigid_options=gs.options.RigidOptions(
                 enable_collision=True,
-                enable_self_collision=False,
+                enable_self_collision=True,
             )
         )
 
@@ -283,6 +268,30 @@ class SpiderRobotEnv(GenesisEnv):
         # Track robot with camera
         self.camera.follow_entity(self.robot, fixed_axis=(None, None, 1.0))
         self.camera.set_pose(lookat=self.robot.get_pos())
+
+    def observations(self) -> torch.Tensor:
+        """Generate a list of observations for each environment."""
+
+        # If this is being called before the first step, actions should all be zero
+        actions = self.actions
+        if actions is None:
+            actions = torch.zeros((self.num_envs, self.action_manager.num_actions), device=gs.device)
+
+        self.obs_buf = torch.cat(
+            [
+                self.height_command.command, # 1
+                self.velocity_command.command,  # 3
+                robot_ang_vel(self),  # 3
+                robot_lin_vel(self),  # 3
+                robot_projected_gravity(self),  # 3
+                self.action_manager.get_dofs_position(noise=0.01),  # 24
+                self.action_manager.get_dofs_velocity(noise=0.1),  # 24
+                actions,  # 24
+                # self.action_manager.get_dofs_force(noise=0.01, clip_to_max_force=True),  # 24
+            ],
+            dim=-1,
+        )
+        return self.obs_buf
 
     def step(self, actions: torch.Tensor):
         """
@@ -319,7 +328,7 @@ class SpiderRobotEnv(GenesisEnv):
 
         # Finish up
         self.reset(reset_env_idx)
-        self._get_observations()
+        self.observations()
         return self.obs_buf, reward, terminated, truncated, info
 
     def reset(
@@ -350,7 +359,7 @@ class SpiderRobotEnv(GenesisEnv):
             self.robot.set_pos(self.base_pos[envs_idx], envs_idx=envs_idx)
             self.robot.set_quat(self.base_quat[envs_idx], envs_idx=envs_idx)
 
-        obs = self._get_observations()
+        obs = self.observations()
         return obs, {}
 
     def render(self):
@@ -368,29 +377,15 @@ class SpiderRobotEnv(GenesisEnv):
         """
         Update the training curriculum based on the current step or environment performance.
         """
-        # We've learned to stand, let's try to walk
-        if self.step_count == 20_000:
+        # We've (hopefully) learned to stand, let's try to walk
+        if self.step_count == 15_000:
             self._curriculum_phase += 1
-            self.set_max_episode_length(round(self.max_episode_length * 1.5))
+            self.velocity_command.range["lin_vel_x"] = [-1.0, 1.0]
+            self.velocity_command.range["lin_vel_y"] = [-1.0, 1.0]
+            self.velocity_command.range["ang_vel_z"] = [-1.0, 1.0]
+            self.set_max_episode_length(round(self.max_episode_length_sec * 1.5))
+
             self.reward_manager.cfg["Similar to default"]["weight"] = 0.0
-            self.reward_manager.cfg["Bad touch"]["weight"] = -1.0
-            self.reward_manager.cfg["Foot contact (some)"]["weight"] = 0.5
-            self.reward_manager.cfg["Foot contact (all)"]["weight"] = 0.01
-
-    def _get_observations(self):
-        """Environment observations"""
-
-        self.obs_buf = torch.cat(
-            [
-                self.velocity_command.command,  # 3
-                robot_ang_vel(self),  # 3
-                robot_lin_vel(self),  # 3
-                robot_projected_gravity(self),  # 3
-                self.action_manager.get_dofs_position(noise=0.01),  # 24
-                self.action_manager.get_dofs_velocity(noise=0.1),  # 24
-                self.actions,  # 24
-                # self.action_manager.get_dofs_force(noise=0.01, clip_to_max_force=True),  # 24
-            ],
-            dim=-1,
-        )
-        return self.obs_buf
+            self.reward_manager.cfg["Bad touch"]["weight"] = -10.0
+            self.reward_manager.cfg["Foot contact (some)"]["weight"] = 5
+            self.reward_manager.cfg["Foot contact (all)"]["weight"] = 0.1

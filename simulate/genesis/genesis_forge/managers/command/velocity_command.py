@@ -73,7 +73,6 @@ class VelocityCommandManager(CommandManager):
             def __init__(self, *args, **kwargs):
                 super().__init__(*args, **kwargs)
 
-            def configuration_managers(self):
                 self.command_manager = VelocityCommandManager(
                     self,
                     visualize=True,
