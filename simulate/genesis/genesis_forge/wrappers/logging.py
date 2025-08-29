@@ -10,124 +10,75 @@ LogFn = Union[Callable[[str, float], None], None]
 
 class DataLoggerWrapper(Wrapper):
     """
-    Wrapper that automatically log data from the info dict.
-    IMPORTANT: This needs to be the outermost Genesis wrapper, otherwise some data will not be logged.
-
-    Data can either be logged at each step, or at the end of each episode (at reset).
+    Wrapper that automatically logs data from the info dict to tensorboard or other logging systems.
 
     Args:
-        env
+        env: The environment to wrap.
+        logger_fn: A function that will be called with the name and value of each logged value.
+        log_key: The key in the info dict that contains the items to log. (default: "logs")
 
     Example::
-        def step(self, actions):
-            # ... Do some step stuff
+        class MyEnv(GenesisEnv):
+            def step(self, actions):
+                # ... Do some step stuff
 
-            # Initialize the logs dict
-            info["logs"] = {}
+                # Initialize the logs dict
+                info["logs"] = {}
 
-            # Step logs
-            info["logs"]["step"] = {}
-            info["logs"]["step"]["Step / My Chart"] = Tensor.zeros((num_envs,))
-            info["logs"]["step"]["Step / My Chart"][0] = 1.0
+                # Step logs
+                info["logs"] = {}
+                info["logs"]["Section / My Chart"] = Tensor.zeros((num_envs,))
+                info["logs"]["Section / My Chart"][0] = 1.0
 
-            # Episode logs
-            info["logs"]["episode"] = {}
-            info["logs"]["episode"]["Episode / My Chart"] = Tensor.zeros((num_envs,))
-            info["logs"]["episode"]["Episode / My Chart"][0] = 1.0
+                # Return
+                return obs, rewards, terminations, timeouts, info
+        
+        def train():
+            # Create wrapped environment
+            env = MyEnv()
+            env = DataLoggerWrapper(env)
+            env.build()
 
-            # Return
-            return obs, rewards, terminations, timeouts, info
+            # Setup SKRL training runner
+            skrl_env = create_skrl_env(env)
+            runner = Runner(skrl_env, cfg)
+
+            # Assign the SKRL data tracker to the environment
+            env.set_data_tracker(runner.agent.track_data)
+
+            # Train
+            runner.run("train")
     """
 
     key: str
     log_fn: LogFn = None
-    episode_data: dict[str, torch.Tensor] = None
 
     def __init__(self, env: GenesisEnv, logger_fn: LogFn = None, log_key: str = "logs"):
         """Initialize the logging wrapper with the function to use for data logging."""
         super().__init__(env)
         self.key = log_key
         self.log_fn = logger_fn
-        self.episode_length = torch.zeros(
-            (self.num_envs,), device=gs.device, dtype=torch.int32
-        )
-        self.episode_data = dict()
-
-    def log_episode_data(self, env_ids: Sequence[int]):
-        """Log episode values."""
-        if self.episode_data is None:
-            return
-
-        episode_lengths = self.episode_length[env_ids]
-        valid_episodes = episode_lengths > 0
-        for name, value in self.episode_data.items():
-            # Log episodes with at least one step
-            if torch.any(valid_episodes):
-                if not isinstance(value, torch.Tensor):
-                    print(
-                        f"Warning: Episode log value for '{name}' is not a torch.Tensor"
-                    )
-                    continue
-                if value.numel() < self.num_envs:
-                    print(
-                        f"Warning: Episode log value for '{name}' does not have the shape ({self.num_envs},)"
-                    )
-                    continue
-
-                # Calculate average for each episode based on its actual length
-                episode_avg = torch.zeros_like(value[env_ids])
-                episode_avg[valid_episodes] = (
-                    value[env_ids][valid_episodes] / episode_lengths[valid_episodes]
-                )
-
-                # Take the mean across valid episodes only
-                episode_mean = torch.mean(episode_avg[valid_episodes]).cpu().item()
-                self.env.track_data(name, episode_mean)
-
-            # Reset episodic sum
-            self.episode_data[name][env_ids] = 0.0
 
     def step(
         self, actions: torch.Tensor
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, Any]:
-        """Perform a step in the environment and log data at the end of it."""
-        self.episode_length += 1
+        """Perform a step in the environment and log data."""
         obs, rewards, terminations, timeouts, info = super().step(actions)
-
         if self.key in info:
-            # Step logs
-            if "step" in info[self.key]:
-                for name, value in info[self.key]["step"].items():
-                    if isinstance(value, torch.Tensor):
-                        value = value.mean().cpu().item()
-                    self.track_data(name, value)
-
-            # Update episode logs
-            if "episode" in info[self.key]:
-                for name, value in info[self.key]["episode"].items():
-                    self.episode_data[name] = value
-
-        # Log episode data for environments that reset at this step
-        resets = timeouts | terminations
-        reset_idx = resets.nonzero(as_tuple=False).reshape((-1,))
-        if reset_idx.numel() > 0:
-            self.log_episode_data(reset_idx)
-
+            self._log_items(info[self.key])
         return obs, rewards, terminations, timeouts, info
 
     def reset(
         self, env_ids: Sequence[int] = None
     ) -> tuple[torch.Tensor, dict[str, Any]]:
         (obs, info) = super().reset(env_ids)
-
-        # If env_ids is None, we're resetting all environments
-        if env_ids is None:
-            env_ids = torch.arange(self.num_envs, device=gs.device)
-
-        # Episode logs
-        if self.key in info and "episode" in info[self.key]:
-            for name, value in info[self.key]["episode"].items():
-                self.episode_data[name] = value
-        self.log_episode_data(env_ids)
-
+        if self.key in info:
+            self._log_items(info[self.key])
         return obs, info
+    
+    def _log_items(self, logs: dict[str, Any]):
+        """Log items from the info dict."""
+        for name, value in logs.items():
+            if isinstance(value, torch.Tensor):
+                value = value.float().mean().cpu().item()
+            self.track_data(name, value)
