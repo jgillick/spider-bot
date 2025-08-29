@@ -1,33 +1,56 @@
+"""
+Reward functions for the Genesis environment.
+Each of these should return a float tensor with the reward value for each environment, in the shape (num_envs,).
+"""
 import torch
 from typing import Union
 from genesis_forge.genesis_env import GenesisEnv
 from genesis_forge.managers import (
+    CommandManager,
     VelocityCommandManager,
     DofPositionActionManager,
     ContactManager,
+    TerminationManager,
 )
 from genesis_forge.utils import robot_lin_vel, robot_ang_vel, robot_projected_gravity
 
 
-def base_height(env: GenesisEnv, target_height: Union[float, torch.Tensor]):
+def is_alive(env: GenesisEnv, term_manager: TerminationManager) -> torch.Tensor:
+    """
+    Reward for being alive and not terminating this step.
+    """
+    return (~term_manager.terminated).float()
+
+
+def is_terminated(env: GenesisEnv, term_manager: TerminationManager) -> torch.Tensor:
+    """
+    Penalize terminated episodes that terminated.
+    """
+    return term_manager.terminated.float()
+
+def base_height(env: GenesisEnv, target_height: Union[float, torch.Tensor] = None, 
+    height_command: CommandManager = None) -> torch.Tensor:
     """
     Penalize base height away from target
 
     Args:
         env: The Genesis environment containing the robot
         target_height: The target height to penalize the base height away from
+        height_command: Get the target height from a height command manager. This expects the command to have a single range value.
 
     Returns:
         torch.Tensor: Penalty for base height away from target
     """
     base_pos = env.robot.get_pos()
+    if height_command is not None:
+        target_height = height_command.command.squeeze(-1) 
     return torch.square(base_pos[:, 2] - target_height)
 
 
 def dof_similar_to_default(
     env: GenesisEnv,
     dof_action_manager: DofPositionActionManager,
-):
+) -> torch.Tensor:
     """
     Penalize joint poses far away from default pose
 
@@ -43,7 +66,7 @@ def dof_similar_to_default(
     return torch.sum(torch.abs(dof_pos - default_pos), dim=1)
 
 
-def lin_vel_z(env: GenesisEnv):
+def lin_vel_z(env: GenesisEnv) -> torch.Tensor:
     """
     Penalize z axis base linear velocity
 
@@ -57,7 +80,7 @@ def lin_vel_z(env: GenesisEnv):
     return torch.square(linear_vel[:, 2])
 
 
-def action_rate(env: GenesisEnv):
+def action_rate(env: GenesisEnv) -> torch.Tensor:
     """
     Penalize changes in actions
 
@@ -76,7 +99,7 @@ def command_tracking_lin_vel(
     env: GenesisEnv,
     vel_cmd_manager: VelocityCommandManager,
     sensitivity: float = 0.25,
-):
+) -> torch.Tensor:
     """
     Penalize not tracking commanded linear velocity (xy axes)
 
@@ -100,7 +123,7 @@ def command_tracking_ang_vel(
     env: GenesisEnv,
     vel_cmd_manager: VelocityCommandManager,
     sensitivity: float = 0.25,
-):
+) -> torch.Tensor:
     """
     Penalize not tracking commanded angular velocity (yaw)
 
@@ -118,16 +141,25 @@ def command_tracking_ang_vel(
     return torch.exp(-ang_vel_error / sensitivity)
 
 
-def has_contact(_env: GenesisEnv, contact_manager: ContactManager, threshold=1.0):
+def has_contact(_env: GenesisEnv, contact_manager: ContactManager, threshold=1.0, min_contacts=1) -> torch.Tensor:
     """
+    One or more links in the contact manager are in contact with something.
+    
+    Args:
+        env: The Genesis environment containing the robot
+        contact_manager: The contact manager to check for contact
+        threshold: The force threshold for contact detection (default: 1.0)
+        min_contacts: The minimum number of contacts required. (default: 1)
+
     Returns:
         1 for each contact meeting the threshold
     """
     has_contact = contact_manager.contacts[:, :].norm(dim=-1) > threshold
-    return has_contact.sum(dim=1).float()
+    result = has_contact.sum(dim=1) >= min_contacts
+    return result.float()
 
 
-def flat_orientation_l2(env: GenesisEnv):
+def flat_orientation_l2(env: GenesisEnv) -> torch.Tensor:
     """
     Penalize non-flat base orientation using L2 squared kernel.
     This is computed by penalizing the xy-components of the projected gravity vector.
