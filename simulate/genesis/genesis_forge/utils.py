@@ -1,6 +1,8 @@
+import re
 import torch
 from typing import Tuple
 import genesis as gs
+from genesis.engine.entities import RigidEntity
 
 from genesis.utils.geom import (
     transform_by_quat,
@@ -88,3 +90,20 @@ def robot_relative_quat(
     # Transform current quaternion to local frame (relative to upright reference)
     local_quat = transform_quat_by_quat(inv_upright_quat, base_quat)
     return local_quat
+
+def links_idx_by_name_pattern(entity: RigidEntity, name_re: str) -> list[int]:
+    """
+    Find a list of entity links by name regex pattern, and return their indices.
+
+    Args:
+        entity: The entity to find the links in.
+        name_re: The name regex patterns of the links to find.
+
+    Returns:
+        List of global link indices.
+    """
+    links_idx = []
+    for link in entity.links:
+        if re.match(name_re, link.name):
+            links_idx.append(link.idx)
+    return links_idx

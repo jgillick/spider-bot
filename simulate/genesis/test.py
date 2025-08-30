@@ -1,6 +1,4 @@
 import os
-import time
-from pprint import pprint
 import torch
 import genesis as gs
 from genesis.engine.entities import RigidEntity
@@ -69,6 +67,33 @@ GROUND_POSE = {
     "Leg8_Tibia": GROUND_TIBIA,
 }
 
+ZERO_POSE = {
+    "Leg1_Hip": 0.0,
+    "Leg1_Femur": 0.0,
+    "Leg1_Tibia": 0.0,
+    "Leg2_Hip": 0.0,
+    "Leg2_Femur": 0.0,
+    "Leg2_Tibia": 0.0,
+    "Leg3_Hip": 0.0,
+    "Leg3_Femur": 0.0,
+    "Leg3_Tibia": 0.0,
+    "Leg4_Hip": 0.0,
+    "Leg4_Femur": 0.0,
+    "Leg4_Tibia": 0.0,
+    "Leg5_Hip": 0.0,
+    "Leg5_Femur": 0.0,
+    "Leg5_Tibia": 0.0,
+    "Leg6_Hip": 0.0,
+    "Leg6_Femur": 0.0,
+    "Leg6_Tibia": 0.0,
+    "Leg7_Hip": 0.0,
+    "Leg7_Femur": 0.0,
+    "Leg7_Tibia": 0.0,
+    "Leg8_Hip": 0.0,
+    "Leg8_Femur": 0.0,
+    "Leg8_Tibia": 0.0,
+}
+
 PD_KP = 50.0
 PD_KV = 0.5
 MAX_TORQUE = 8.0
@@ -85,12 +110,12 @@ def main():
         rigid_options=gs.options.RigidOptions(
             constraint_solver=gs.constraint_solver.Newton,
             enable_collision=True,
-            # enable_multi_contact=False,
+            enable_joint_limit=True,
         ),
     )
 
     # Ground plane
-    plane: RigidEntity = scene.add_entity(gs.morphs.Plane())
+    scene.add_entity(gs.morphs.Plane())
 
     # Robot
     robot: RigidEntity = scene.add_entity(
@@ -119,6 +144,10 @@ def main():
     )
 
     # Initial dof positions
+    zero_pos = torch.tensor(
+        [list(ZERO_POSE.values()) for _ in range(N_ENVS)],
+        device=gs.device,
+    )
     stable_pos = torch.tensor(
         [list(STABLE_POS.values()) for _ in range(N_ENVS)],
         device=gs.device,
@@ -127,21 +156,17 @@ def main():
         [list(GROUND_POSE.values()) for _ in range(N_ENVS)],
         device=gs.device,
     )
+    target_pos = stable_pos
     robot.set_dofs_position(
-        position=ground_pos,
+        position=target_pos,
         dofs_idx_local=dof_idx,
     )
 
-    for i in range(100):
-        if i > 50:
-            print("Resetting to stable position")
-            robot.control_dofs_position(
-                stable_pos,
-                dof_idx,
-            )
-        if i % 10 == 0:
-            force = robot.get_dofs_force(dofs_idx_local=dof_idx)
-            pprint(torch.round(force))
+    for i in range(400):
+        robot.set_dofs_position(
+            position=target_pos,
+            dofs_idx_local=dof_idx,
+        )
 
         scene.step()
 
