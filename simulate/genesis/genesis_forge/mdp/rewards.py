@@ -2,13 +2,14 @@
 Reward functions for the Genesis environment.
 Each of these should return a float tensor with the reward value for each environment, in the shape (num_envs,).
 """
+
 import torch
 from typing import Union
 from genesis_forge.genesis_env import GenesisEnv
 from genesis_forge.managers import (
     CommandManager,
     VelocityCommandManager,
-    DofPositionActionManager,
+    PositionalActionManager,
     ContactManager,
     TerminationManager,
 )
@@ -28,8 +29,12 @@ def is_terminated(env: GenesisEnv, term_manager: TerminationManager) -> torch.Te
     """
     return term_manager.terminated.float()
 
-def base_height(env: GenesisEnv, target_height: Union[float, torch.Tensor] = None, 
-    height_command: CommandManager = None) -> torch.Tensor:
+
+def base_height(
+    env: GenesisEnv,
+    target_height: Union[float, torch.Tensor] = None,
+    height_command: CommandManager = None,
+) -> torch.Tensor:
     """
     Penalize base height away from target
 
@@ -43,14 +48,14 @@ def base_height(env: GenesisEnv, target_height: Union[float, torch.Tensor] = Non
     """
     base_pos = env.robot.get_pos()
     if height_command is not None:
-        target_height = height_command.command.squeeze(-1) 
+        target_height = height_command.command.squeeze(-1)
     return torch.square(base_pos[:, 2] - target_height)
 
 
 def dof_similar_to_default(
     env: GenesisEnv,
-    dof_action_manager: DofPositionActionManager,
-) -> torch.Tensor:
+    dof_action_manager: PositionalActionManager,
+):
     """
     Penalize joint poses far away from default pose
 
@@ -141,10 +146,12 @@ def command_tracking_ang_vel(
     return torch.exp(-ang_vel_error / sensitivity)
 
 
-def has_contact(_env: GenesisEnv, contact_manager: ContactManager, threshold=1.0, min_contacts=1) -> torch.Tensor:
+def has_contact(
+    _env: GenesisEnv, contact_manager: ContactManager, threshold=1.0, min_contacts=1
+) -> torch.Tensor:
     """
     One or more links in the contact manager are in contact with something.
-    
+
     Args:
         env: The Genesis environment containing the robot
         contact_manager: The contact manager to check for contact

@@ -11,16 +11,7 @@ class ContactManager(BaseManager):
     """
     Tracks the contact forces between entity links in the environment.
 
-    Args:
-        env: The environment to track the contact forces for.
-        link_names: The names, or name regex patterns, of the entity links to track the contact forces for.
-        entity_attr: The environment attribute which contains the entity with the links we're tracking. Defaults to `robot`.
-        with_entity_attr: Filter the contact forces to only include contacts with the entity assigned to this environment attribute.
-        with_links_names: Filter the contact forces to only include contacts with these links.
-        track_air_time: Whether to track the air time of the entity link contacts.
-        air_time_contact_threshold: When track_air_time is True, this is the threshold for the contact forces to be considered.
-
-    Example:
+    Example::
 
         class MyEnv(GenesisEnv):
             def __init__(self, *args, **kwargs):
@@ -49,8 +40,8 @@ class ContactManager(BaseManager):
                 contact_reward = has_contact.sum(dim=1).float() * CONTACT_WEIGHT
 
                 # ...additional reward calculations here...
-    
-    Entity Filtering:
+
+    Entity Filtering::
 
         class MyEnv(GenesisEnv):
             def __init__(self, *args, **kwargs):
@@ -64,10 +55,10 @@ class ContactManager(BaseManager):
                     link_names=[".*_Foot"],
                     with_entity_attr="terrain",
                 )
-            
+
             def construct_scene(self) -> gs.Scene:
                 scene = super().construct_scene()
-                
+
                 # Add terrain
                 self.terrain = scene.add_entity(
                     gs.morphs.Plane(),
@@ -106,12 +97,22 @@ class ContactManager(BaseManager):
         self,
         env: GenesisEnv,
         link_names: list[str],
-        entity_attr: RigidEntity = 'robot',
+        entity_attr: RigidEntity = "robot",
         with_entity_attr: RigidEntity = None,
         with_links_names: list[int] = None,
         track_air_time: bool = False,
         air_time_contact_threshold: float = 1.0,
     ):
+        """
+        Args:
+            env: The environment to track the contact forces for.
+            link_names: The names, or name regex patterns, of the entity links to track the contact forces for.
+            entity_attr: The environment attribute which contains the entity with the links we're tracking. Defaults to `robot`.
+            with_entity_attr: Filter the contact forces to only include contacts with the entity assigned to this environment attribute.
+            with_links_names: Filter the contact forces to only include contacts with these links.
+            track_air_time: Whether to track the air time of the entity link contacts.
+            air_time_contact_threshold: When track_air_time is True, this is the threshold for the contact forces to be considered.
+        """
         super().__init__(env)
         self._initialized = False
         self._link_names = link_names
@@ -212,14 +213,16 @@ class ContactManager(BaseManager):
         super().step()
         if not self.enabled:
             return
-        assert self._initialized, f"{self} is not initialized. Did you forget to add it to your reset function?"
+        assert (
+            self._initialized
+        ), f"{self} is not initialized. Did you forget to add it to your reset function?"
         self._calculate_contact_forces()
         self._calculate_air_time()
 
     """
     Implementation
     """
-    
+
     def __repr__(self):
         attrs = [f"link_names={self._link_names}"]
         if self._entity_attr:
@@ -231,7 +234,9 @@ class ContactManager(BaseManager):
         if self._track_air_time:
             attrs.append(f"track_air_time={self._track_air_time}")
             if self._air_time_contact_threshold:
-                attrs.append(f"air_time_contact_threshold={self._air_time_contact_threshold}")
+                attrs.append(
+                    f"air_time_contact_threshold={self._air_time_contact_threshold}"
+                )
         attrs_str = ", ".join(attrs)
         return f"{self.__class__.__name__}({attrs_str})"
 
@@ -240,13 +245,21 @@ class ContactManager(BaseManager):
         entity = self.env.__getattribute__(self._entity_attr)
         self._target_link_ids = self._get_links_idx(entity, self._link_names)
         if self._with_entity_attr or self._with_links_names:
-            with_entity_attr = self._with_entity_attr if self._with_entity_attr is not None else 'robot'
+            with_entity_attr = (
+                self._with_entity_attr
+                if self._with_entity_attr is not None
+                else "robot"
+            )
             with_entity = self.env.__getattribute__(with_entity_attr)
-            self._with_link_ids = self._get_links_idx(with_entity, self._with_links_names)
+            self._with_link_ids = self._get_links_idx(
+                with_entity, self._with_links_names
+            )
 
         # Initialize buffers
         link_count = self._target_link_ids.shape[0]
-        self.contacts = torch.zeros((self.env.num_envs, link_count, 3), device=gs.device)
+        self.contacts = torch.zeros(
+            (self.env.num_envs, link_count, 3), device=gs.device
+        )
         if self._track_air_time:
             self.last_air_time = torch.zeros(
                 (self.env.num_envs, link_count), device=gs.device
