@@ -205,7 +205,7 @@ class SpiderRobotEnv(GenesisEnv):
                     },
                 },
                 "Leg angle": {
-                    "weight": -1.0,
+                    "weight": -1.5,
                     "fn": self._penalize_leg_angle,
                 },
             },
@@ -331,9 +331,10 @@ class SpiderRobotEnv(GenesisEnv):
 
         # Command manager
         self.velocity_command.step()
+        self.height_command.step()
 
         # Update curriculum
-        self._update_curriculum(info)
+        # self._update_curriculum(info)
 
         # Log metrics
         info["logs"]["Metrics / Leg Contact"] = rewards.has_contact(self, self.bad_touch_contact)
