@@ -226,7 +226,7 @@ class PositionalActionManager(BaseActionManager):
         if not self.enabled:
             return
         if envs_idx is None:
-            envs_idx = torch.arange(self.num_envs, device=gs.device)
+            envs_idx = torch.arange(self.env.num_envs, device=gs.device)
 
         # Set DOF values with random scaling
         if self._kp_values is not None:

@@ -31,7 +31,7 @@ class RewardManager(BaseManager):
         reward_cfg: A dictionary of reward conditions.
         logging_enabled: Whether to log the rewards to tensorboard.
 
-    Example:
+    Example with ManagedEnvironment::
         class MyEnv(ManagedEnvironment):
             def __init__(self, *args, **kwargs):
                 super().__init__(*args, **kwargs)
@@ -51,6 +51,38 @@ class RewardManager(BaseManager):
                     },
                 )
 
+    Example using the reward manager directly::
+
+        class MyEnv(GenesisEnv):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+
+                self.reward_manager = RewardManager(
+                    self,
+                    cfg={
+
+                        "Base height": {
+                            "fn": mdp.rewards.base_height,
+                            "params": { "target_height": 0.135 },
+                            "weight": -100.0,
+                        },
+                    },
+                )
+
+            def build(self):
+                super().build()
+                self.reward_manager.build()
+
+            def step(self, actions: torch.Tensor):
+                super().step(actions)
+                rewards = self.reward_manager.step()
+                return obs, rewards, terminations, timeouts, info
+
+            def reset(self, envs_idx: list[int] | None = None):
+                super().reset(envs_idx)
+                self.reward_manager.reset(envs_idx)
+                return obs, info
+
     """
 
     def __init__(
@@ -60,6 +92,9 @@ class RewardManager(BaseManager):
         logging_enabled: bool = True,
     ):
         super().__init__(env)
+        if hasattr(env, "add_reward_manager"):
+            env.add_reward_manager(self)
+
         self.cfg = cfg
         self.logging_enabled = logging_enabled
 

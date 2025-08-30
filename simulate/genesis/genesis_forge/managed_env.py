@@ -1,11 +1,11 @@
 import torch
 from typing import Any
 import genesis as gs
-from genesis_forge import GenesisEnv
 
-from . import RewardManager, TerminationManager, ContactManager
-from .action import BaseActionManager
-from .command import CommandManager
+from genesis_forge.genesis_env import GenesisEnv
+from genesis_forge.managers import RewardManager, TerminationManager, ContactManager
+from genesis_forge.managers.action import BaseActionManager
+from genesis_forge.managers.command import CommandManager
 
 
 class ManagedEnvironment(GenesisEnv):
@@ -186,13 +186,16 @@ class ManagedEnvironment(GenesisEnv):
             command_manager.step()
 
         # Reset environments
-        self.reset(reset_env_idx)
+        if reset_env_idx.numel() > 0:
+            self.reset(reset_env_idx)
 
         return None, self._reward_buf, self._terminated_buf, self._truncated_buf, {}
 
-    def reset(self, env_ids: list[int] | None = None):
+    def reset(
+        self, env_ids: list[int] | None = None
+    ) -> tuple[torch.Tensor, dict[str, Any]]:
         """Reset managers."""
-        super().reset(env_ids)
+        (obs, info) = super().reset(env_ids)
 
         if self.action_manager is not None:
             self.action_manager.reset(env_ids)
@@ -204,3 +207,5 @@ class ManagedEnvironment(GenesisEnv):
             reward_manager.reset(env_ids)
         for command_manager in self.command_managers:
             command_manager.reset(env_ids)
+
+        return (obs, info)

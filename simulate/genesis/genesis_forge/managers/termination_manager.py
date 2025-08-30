@@ -31,7 +31,33 @@ class TerminationManager(BaseManager):
         term_cfg: A dictionary of termination conditions.
         logging_enabled: Whether to log the termination signals to tensorboard.
 
-    Example:
+    Example with ManagedEnvironment::
+        class MyEnv(ManagedEnvironment):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+
+                self.termination_manager = TerminationManager(
+                    self,
+                    term_cfg={
+                        "Min Height": {
+                            "fn": mdp.terminations.min_height,
+                            "params": {"min_height": 0.05},
+                        },
+                    },
+                )
+
+            def step(self, actions: torch.Tensor):
+                _, reward, terminated, truncated, info = super().step(actions)
+
+                obs = self.observations()
+                return obs, reward, terminated, truncated, info
+
+            def observations(self) -> torch.Tensor:
+                return torch.cat([
+                    ...
+                ])
+
+    Example using the termination manager directly::
         class MyEnv(GenesisEnv):
             def __init__(self, *args, **kwargs):
                 super().__init__(*args, **kwargs)
@@ -50,15 +76,23 @@ class TerminationManager(BaseManager):
                     },
                 )
 
+            def build(self):
+                super().build()
+                self.termination_manager.build()
+
             def step(self, actions: torch.Tensor):
                 super().step(actions)
                 # ...handle actions...
 
-                terminated, truncated, reset_env_idx = self.termination_manager.step()
+                # Calculate dones (terminated or truncated)
+                terminated, truncated = self.termination_manager.step()
+                dones = terminated | truncated
+                reset_env_idx = dones.nonzero(as_tuple=False).reshape((-1,))
 
-                # reward manager should be called after termination manager, especially if you have alive/termination rewards
+                # Reset environments
+                if reset_env_idx.numel() > 0:
+                    self.reset(reset_env_idx)
 
-                self.reset(reset_env_idx)
                 return obs, rewards, terminated, truncated, info
 
             def reset(self, envs_idx: Sequence[int] = None):
@@ -77,6 +111,9 @@ class TerminationManager(BaseManager):
         logging_enabled: bool = True,
     ):
         super().__init__(env)
+        if hasattr(env, "add_termination_manager"):
+            env.add_termination_manager(self)
+
         self.term_cfg = term_cfg
         self.logging_enabled = logging_enabled
         self._terminated_buf = torch.zeros(
@@ -100,7 +137,7 @@ class TerminationManager(BaseManager):
         """The truncation signals for the environments. Shape is (num_envs,)."""
         return self._truncated_buf
 
-    def step(self) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def step(self) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Calculate the termination/truncation signals for this step
 
@@ -135,10 +172,7 @@ class TerminationManager(BaseManager):
             else:
                 self._terminated_buf |= value
 
-        # Return the environments that need to be reset
-        dones = self._terminated_buf | self._truncated_buf
-        reset_env_idx = dones.nonzero(as_tuple=False).reshape((-1,))
-        return self._terminated_buf, self._truncated_buf, reset_env_idx
+        return self._terminated_buf, self._truncated_buf
 
     def reset(self, env_ids: Sequence[int] = None):
         """Track terminated/truncated environments."""

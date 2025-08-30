@@ -47,7 +47,7 @@ class CommandManager(BaseManager):
                 height_reward = torch.square(base_pos[:, 2] - target_height)
 
                 # ...additional reward calculations here...
-            
+
             def get_observations(self):
                 return torch.cat(
                     [
@@ -70,6 +70,9 @@ class CommandManager(BaseManager):
         resample_time_sec: float = 5.0,
     ):
         super().__init__(env)
+        if hasattr(env, "add_command_manager"):
+            env.add_command_manager(self)
+
         self._range = range
         self.resample_time_sec = resample_time_sec
 
@@ -84,39 +87,44 @@ class CommandManager(BaseManager):
     def command(self) -> torch.Tensor:
         """The desired base velocity command in the base frame. Shape is (num_envs, num_ranges)."""
         return self._command
-    
+
     @property
     def range(self) -> CommandRange:
         """The range of values to generate target command(s) for."""
         return self._range
-    
+
     @range.setter
     def range(self, range: CommandRange):
         """Set the range of values to generate target command(s) for."""
         # Validate the shape of the range
         num = len(range) if isinstance(range, dict) else 1
         if num != self._command.shape[1]:
-            raise ValueError(f"Cannot change the shape of the CommandManager range. Expected size: {self._command.shape[1]}, got {num}")
+            raise ValueError(
+                f"Cannot change the shape of the CommandManager range. Expected size: {self._command.shape[1]}, got {num}"
+            )
         # Validate the range types match
         if type(range) != type(self._range):
-            raise ValueError(f"Cannot change the base type of the CommandManager range. Expected type: {type(self._range)}, got {type(range)}")
+            raise ValueError(
+                f"Cannot change the base type of the CommandManager range. Expected type: {type(self._range)}, got {type(range)}"
+            )
         # Validate that the dict keys match the current range dict keys
         if isinstance(range, dict):
             if set(range.keys()) != set(self._range.keys()):
-                raise ValueError(f"Cannot change the dict keys of the CommandManager range. Expected keys: {set(self._range.keys())}, got {set(range.keys())}")
+                raise ValueError(
+                    f"Cannot change the dict keys of the CommandManager range. Expected keys: {set(self._range.keys())}, got {set(range.keys())}"
+                )
         self._range = range
-    
+
     @property
     def resample_time_sec(self) -> float:
         """The time interval (in seconds) between changing the command for each environment."""
         return self._resample_time_sec
-    
+
     @resample_time_sec.setter
     def resample_time_sec(self, resample_time_s: float):
         """Set the time interval (in seconds) between changing the command for each environment."""
         self._resample_time_sec = resample_time_s
         self._resample_steps = int(resample_time_s / self.env.dt)
-    
 
     """
     Operations
