@@ -3,10 +3,11 @@ import torch
 import genesis as gs
 import numpy as np
 from gymnasium import spaces
-from typing import Sequence, Any, Callable
+from typing import Any, Callable
 
 from genesis_forge.genesis_env import GenesisEnv
 from genesis_forge.managers.base import BaseManager
+from genesis_forge.managers.action.base import BaseActionManager
 
 DofValue = dict[str, float] | float
 """Mapping of DOF name (literal or regex) to value."""
@@ -37,11 +38,11 @@ def ensure_dof_pattern(value: DofValue) -> dict[str, Any] | None:
     return {".*": value}
 
 
-class DofPositionActionManager(BaseManager):
+class PositionalActionManager(BaseActionManager):
     """
-    Manages the DOF actuators and setting and resetting their position values.
+    Manages converting the actions to actuator positions.
 
-    This manager assumes the action space is [-1, 1], and converts it to DOF positions within the limits of the actuators.
+    This manager converts actions from the range -1.0 - 1.0 to DOF positions within the limits of the actuators.
 
     Args:
         env: The environment to manage the DOF actuators for.
@@ -60,11 +61,11 @@ class DofPositionActionManager(BaseManager):
         resample_randomization_s: The time interval to resample the randomization values.
 
     Example::
-        class MyEnv(GenesisEnv):
+        class MyEnv(ManagedEnvironment):
             def __init__(self, *args, **kwargs):
                 super().__init__(*args, **kwargs)
 
-                self.action_manager = DofPositionActionManager(
+                self.action_manager = PositionalActionManager(
                     self,
                     joint_names=".*",
                     default_pos={
@@ -85,27 +86,6 @@ class DofPositionActionManager(BaseManager):
             def action_space(self):
                 return self.action_manager.action_space
 
-            def build(self):
-                super().build()
-
-            def step(self, actions: torch.Tensor):
-                super().step(actions)
-
-                self.action_manager.step(actions)
-                self.scene.step()
-
-                # ...handle other step actions here...
-
-                return obs, rewards, terminations, timeouts, info
-
-            def reset(self, envs_idx: Sequence[int] = None):
-                super().reset(envs_idx)
-
-                self.action_manager.reset(envs_idx)
-
-                # ...do other reset logic here...
-                return obs, info
-
     """
 
     _default_dofs_pos: torch.Tensor = None
@@ -116,7 +96,7 @@ class DofPositionActionManager(BaseManager):
     def __init__(
         self,
         env: GenesisEnv,
-        joint_names: Sequence[str] | str = ".*",
+        joint_names: list[str] | str = ".*",
         default_pos: DofValue = {".*": 0.0},
         pd_kp: DofValue = None,
         pd_kv: DofValue = None,
@@ -149,36 +129,26 @@ class DofPositionActionManager(BaseManager):
         else:
             raise TypeError(f"Invalid joint_names type: {type(joint_names)}")
 
-
     """
     Properties
     """
 
     @property
-    def dof_num(self) -> int:
-        """
-        Get the number of DOF that are enabled.
-        """
-        self._init_buffers()
-        assert (
-            self._enabled_dof is not None
-        ), "DofPositionActionManager not initialized. You need to call <DofPositionActionManager>.build() in the build phase of the environment."
-
-        return len(self._enabled_dof)
-
-    @property
     def num_actions(self) -> int:
         """
-        Alias for dof_num
+        Get the number of actions.
         """
-        return self.dof_num
+        assert (
+            self._enabled_dof is not None
+        ), "PositionalActionManager not initialized. You may need to add <PositionalActionManager>.reset() in your environment's reset method."
+
+        return len(self._enabled_dof)
 
     @property
     def action_space(self) -> tuple[float, float]:
         """
         If using the default action handler, the action space is [-1, 1].
         """
-        self._init_buffers()
         return spaces.Box(
             low=-1.0,
             high=1.0,
@@ -187,17 +157,15 @@ class DofPositionActionManager(BaseManager):
         )
 
     @property
-    def dofs_idx(self) -> Sequence[int]:
+    def dofs_idx(self) -> list[int]:
         """
         Get the indices of the DOF that are enabled (via joint_names).
         """
-        self._init_buffers()
         return list(self._enabled_dof.values())
 
     @property
     def default_dofs_pos(self) -> torch.Tensor:
         """Return the default DOF positions."""
-        self._init_buffers()
         return self._default_dofs_pos
 
     """
@@ -233,6 +201,10 @@ class DofPositionActionManager(BaseManager):
     Operations
     """
 
+    def build(self):
+        """Initialize the buffers."""
+        self._init_buffers()
+
     def step(self, actions: torch.Tensor) -> None:
         """
         Convert the actions into DOF positions and set the DOF actuators.
@@ -246,7 +218,7 @@ class DofPositionActionManager(BaseManager):
 
     def reset(
         self,
-        envs_idx: Sequence[int] = None,
+        envs_idx: list[int] = None,
         reset_to_default: bool = True,
         zero_dofs_velocity: bool = True,
     ):
@@ -255,7 +227,6 @@ class DofPositionActionManager(BaseManager):
             return
         if envs_idx is None:
             envs_idx = torch.arange(self.num_envs, device=gs.device)
-        self._init_buffers()
 
         # Set DOF values with random scaling
         if self._kp_values is not None:
@@ -276,10 +247,7 @@ class DofPositionActionManager(BaseManager):
             frictionloss = self._add_random_noise(
                 self._frictionloss_values, self._noise_scale
             )
-            # TODO: Waiting for this to land in the Genesis release
-            # self.env.robot.set_dofs_frictionloss(
-            #     self._frictionloss_values[envs_idx], self.dofs_idx, envs_idx
-            # )
+            self.env.robot.set_dofs_frictionloss(frictionloss, self.dofs_idx, envs_idx)
         if self._force_range is not None:
             lower = self._add_random_noise(self._force_range[0], self._noise_scale)
             upper = self._add_random_noise(self._force_range[1], self._noise_scale)
@@ -302,11 +270,6 @@ class DofPositionActionManager(BaseManager):
 
     def _init_buffers(self):
         """Define the buffers for the DOF values."""
-        if self._has_initialized:
-            return
-        self._has_initialized = True
-
-        # Get enabled DOFs
         self._enabled_dof = dict()
         for joint in self.env.robot.joints:
             if joint.type != gs.JOINT_TYPE.REVOLUTE:
@@ -350,8 +313,8 @@ class DofPositionActionManager(BaseManager):
             max_force = self._get_dof_value_array(self._max_force_cfg)
 
             # Convert values to upper and lower arrays
-            force_upper = [0.0] * self.dof_num
-            force_lower = [0.0] * self.dof_num
+            force_upper = [0.0] * self.num_actions
+            force_lower = [0.0] * self.num_actions
             for i, value in enumerate(max_force):
                 if isinstance(max_force[0], (list, tuple)):
                     force_lower[i] = value[0]
@@ -394,7 +357,7 @@ class DofPositionActionManager(BaseManager):
         # Set target positions
         self.env.robot.control_dofs_position(target_positions, self.dofs_idx)
 
-    def _get_dof_value_array(self, values: DofValue) -> Sequence[Any]:
+    def _get_dof_value_array(self, values: DofValue) -> list[Any]:
         """
         Given a DofValue dict, loop over the entries, and set the value to the DOF indices (from dofs_idx) that match the pattern.
 
@@ -405,8 +368,8 @@ class DofPositionActionManager(BaseManager):
             A list of values for the DOF indices.
             For example, for 4 DOFs: [50, 50, 50, 50]
         """
-        is_set = [False] * self.dof_num
-        value_arr = [0.0] * self.dof_num
+        is_set = [False] * self.num_actions
+        value_arr = [0.0] * self.num_actions
         for pattern, value in values.items():
             for i, name in enumerate(self._enabled_dof.keys()):
                 if not is_set[i] and re.match(pattern, name):

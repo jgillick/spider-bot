@@ -32,7 +32,7 @@ class RewardManager(BaseManager):
         logging_enabled: Whether to log the rewards to tensorboard.
 
     Example:
-        class MyEnv(GenesisEnv):
+        class MyEnv(ManagedEnvironment):
             def __init__(self, *args, **kwargs):
                 super().__init__(*args, **kwargs)
 
@@ -50,23 +50,6 @@ class RewardManager(BaseManager):
                         },
                     },
                 )
-
-            def step(self, actions: torch.Tensor):
-                super().step(actions)
-                # ...handle actions...
-
-                # Termination manager should be called before reward manager
-
-                self.reward_manager.step()
-
-                return obs, rewards, terminations, timeouts, info
-
-            def reset(self, envs_idx: Sequence[int] = None):
-                super().reset(envs_idx)
-                # ...do reset logic here...x
-
-                self.reward_manager.reset(envs_idx)
-                return obs, info
 
     """
 
@@ -103,7 +86,7 @@ class RewardManager(BaseManager):
             # Don't calculate reward if the weight is zero
             if weight == 0:
                 continue
-            
+
             weight = weight * self.env.dt
             value = fn(self.env, **params) * weight
             self._reward_buf += value

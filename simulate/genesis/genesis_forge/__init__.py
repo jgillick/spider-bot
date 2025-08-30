@@ -7,7 +7,7 @@ from .managers import (
     VelocityCommandManager,
     RewardManager,
     TerminationManager,
-    DofPositionActionManager,
+    PositionalActionManager,
 )
 from .genesis_env import GenesisEnv, EnvMode
 
@@ -19,6 +19,6 @@ __all__ = [
     "VelocityCommandManager",
     "RewardManager",
     "TerminationManager",
-    "DofPositionActionManager",
+    "PositionalActionManager",
     "create_skrl_env",
 ]

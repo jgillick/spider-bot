@@ -5,7 +5,6 @@ Focuses on core objectives with progressive difficulty
 
 import math
 import torch
-import numpy as np
 import genesis as gs
 from gymnasium import spaces
 from genesis.engine.entities import RigidEntity
@@ -37,6 +36,7 @@ class GenesisEnv:
     last_actions: torch.Tensor = None
     episode_length: torch.Tensor = None
     data_tracker_fn: Callable[[str, float], None] = None
+    action_space: spaces.Space | None = None
     observation_space: spaces.Space | None = None
 
     max_episode_length: torch.Tensor = None
@@ -62,16 +62,16 @@ class GenesisEnv:
         self._base_max_episode_length = None
         if max_episode_length_sec and max_episode_length_sec > 0:
             self._max_episode_random_scaling = max_episode_random_scaling / self.dt
-            self.max_episode_length = torch.zeros((self.num_envs,), device=gs.device, dtype=gs.tc_int)
-            self.max_episode_length[:] = self.set_max_episode_length(max_episode_length_sec)
+            self.max_episode_length = torch.zeros(
+                (self.num_envs,), device=gs.device, dtype=gs.tc_int
+            )
+            self.max_episode_length[:] = self.set_max_episode_length(
+                max_episode_length_sec
+            )
 
     """
     Properties
     """
-
-    @property
-    def action_space(self):
-        return None
 
     @property
     def unwrapped(self):
@@ -81,7 +81,7 @@ class GenesisEnv:
             Env: The base non-wrapped :class:`GenesisEnv` instance
         """
         return self
-    
+
     @property
     def max_episode_length_sec(self) -> int | None:
         """The max episode length, in seconds, for each environment."""
@@ -155,17 +155,8 @@ class GenesisEnv:
         """Builds the scene once all entities have been added (via construct_scene). This operation is required before running the simulation."""
         if self.scene is None:
             self.construct_scene()
-            
-        self.scene.build(n_envs=self.num_envs)
 
-        # Set observation space from first observation
-        obs = self.observations()
-        self.observation_space = spaces.Box(
-            low=-np.inf,
-            high=np.inf,
-            shape=(obs.shape[1],),
-            dtype=np.float32,
-        )
+        self.scene.build(n_envs=self.num_envs)
 
     def observations(self) -> torch.Tensor:
         """Generate a list of observations for each environment."""
