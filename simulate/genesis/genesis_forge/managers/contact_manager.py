@@ -11,7 +11,30 @@ class ContactManager(BaseManager):
     """
     Tracks the contact forces between entity links in the environment.
 
-    Example::
+    Example with ManagedEnvironment::
+        class MyEnv(ManagedEnvironment):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+
+                self.foot_contact_manager = ContactManager(
+                    self,
+                    link_names=[".*_Foot"],
+                )
+                self.reward_manager = RewardManager(
+                    self,
+                    term_cfg={
+                        "Foot contact": {
+                            "weight": 5.0,
+                            "fn": rewards.has_contact,
+                            "params": {
+                                "contact_manager": self.foot_contact_manager,
+                                "min_contacts": 4,
+                            },
+                        },
+                    },
+                )
+
+    Example using the contact manager directly::
 
         class MyEnv(GenesisEnv):
             def __init__(self, *args, **kwargs):
@@ -21,6 +44,10 @@ class ContactManager(BaseManager):
                     self,
                     link_names=[".*_Foot"],
                 )
+
+            def build(self):
+                super().build()
+                self.contact_manager.build()
 
             def step(self, actions: torch.Tensor):
                 super().step(actions)
@@ -43,7 +70,7 @@ class ContactManager(BaseManager):
 
     Entity Filtering::
 
-        class MyEnv(GenesisEnv):
+        class MyEnv(ManagedEnvironment):
             def __init__(self, *args, **kwargs):
                 super().__init__(*args, **kwargs)
 
@@ -55,6 +82,8 @@ class ContactManager(BaseManager):
                     link_names=[".*_Foot"],
                     with_entity_attr="terrain",
                 )
+
+                # ...other managers here...
 
             def construct_scene(self) -> gs.Scene:
                 scene = super().construct_scene()
@@ -114,7 +143,9 @@ class ContactManager(BaseManager):
             air_time_contact_threshold: When track_air_time is True, this is the threshold for the contact forces to be considered.
         """
         super().__init__(env)
-        self._initialized = False
+        if hasattr(env, "add_contact_manager"):
+            env.add_contact_manager(self)
+
         self._link_names = link_names
         self._air_time_contact_threshold = air_time_contact_threshold
         self._track_air_time = track_air_time
@@ -189,58 +220,10 @@ class ContactManager(BaseManager):
     Operations
     """
 
-    def reset(self, envs_idx: list[int] | None = None):
-        super().reset(envs_idx)
-        if envs_idx is None:
-            envs_idx = torch.arange(self.num_envs, device=gs.device)
+    def build(self):
+        """Initialize link indices and buffers."""
+        super().build()
 
-        # Initialize link indices and buffers
-        if not self._initialized:
-            self._initialize()
-            self._initialized = True
-
-        if not self.enabled:
-            return
-
-        # reset the current air time
-        if self._track_air_time:
-            self.current_air_time[envs_idx] = 0.0
-            self.current_contact_time[envs_idx] = 0.0
-            self.last_air_time[envs_idx] = 0.0
-            self.last_contact_time[envs_idx] = 0.0
-
-    def step(self):
-        super().step()
-        if not self.enabled:
-            return
-        assert (
-            self._initialized
-        ), f"{self} is not initialized. Did you forget to add it to your reset function?"
-        self._calculate_contact_forces()
-        self._calculate_air_time()
-
-    """
-    Implementation
-    """
-
-    def __repr__(self):
-        attrs = [f"link_names={self._link_names}"]
-        if self._entity_attr:
-            attrs.append(f"entity_attr={self._entity_attr}")
-        if self._with_entity_attr:
-            attrs.append(f"with_entity_attr={self._with_entity_attr}")
-        if self._with_links_names:
-            attrs.append(f"with_links_names={self._with_links_names}")
-        if self._track_air_time:
-            attrs.append(f"track_air_time={self._track_air_time}")
-            if self._air_time_contact_threshold:
-                attrs.append(
-                    f"air_time_contact_threshold={self._air_time_contact_threshold}"
-                )
-        attrs_str = ", ".join(attrs)
-        return f"{self.__class__.__name__}({attrs_str})"
-
-    def _initialize(self):
         # Get the link indices
         entity = self.env.__getattribute__(self._entity_attr)
         self._target_link_ids = self._get_links_idx(entity, self._link_names)
@@ -267,6 +250,49 @@ class ContactManager(BaseManager):
             self.current_air_time = torch.zeros_like(self.last_air_time)
             self.last_contact_time = torch.zeros_like(self.last_air_time)
             self.current_contact_time = torch.zeros_like(self.last_air_time)
+
+    def reset(self, envs_idx: list[int] | None = None):
+        super().reset(envs_idx)
+        if envs_idx is None:
+            envs_idx = torch.arange(self.env.num_envs, device=gs.device)
+
+        if not self.enabled:
+            return
+
+        # reset the current air time
+        if self._track_air_time:
+            self.current_air_time[envs_idx] = 0.0
+            self.current_contact_time[envs_idx] = 0.0
+            self.last_air_time[envs_idx] = 0.0
+            self.last_contact_time[envs_idx] = 0.0
+
+    def step(self):
+        super().step()
+        if not self.enabled:
+            return
+        self._calculate_contact_forces()
+        self._calculate_air_time()
+
+    """
+    Implementation
+    """
+
+    def __repr__(self):
+        attrs = [f"link_names={self._link_names}"]
+        if self._entity_attr:
+            attrs.append(f"entity_attr={self._entity_attr}")
+        if self._with_entity_attr:
+            attrs.append(f"with_entity_attr={self._with_entity_attr}")
+        if self._with_links_names:
+            attrs.append(f"with_links_names={self._with_links_names}")
+        if self._track_air_time:
+            attrs.append(f"track_air_time={self._track_air_time}")
+            if self._air_time_contact_threshold:
+                attrs.append(
+                    f"air_time_contact_threshold={self._air_time_contact_threshold}"
+                )
+        attrs_str = ", ".join(attrs)
+        return f"{self.__class__.__name__}({attrs_str})"
 
     def _get_links_idx(
         self, entity: RigidEntity, names: list[str] = None

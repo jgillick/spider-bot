@@ -16,6 +16,8 @@ class BaseActionManager(BaseManager):
 
     def __init__(self, env: GenesisEnv):
         super().__init__(env)
+        if hasattr(env, "add_action_manager"):
+            env.add_action_manager(self)
 
     """
     Properties

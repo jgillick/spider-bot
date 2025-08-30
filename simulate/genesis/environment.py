@@ -12,7 +12,7 @@ import genesis as gs
 from genesis.vis.camera import Camera
 from genesis.utils.geom import transform_by_quat, inv_quat
 
-from genesis_forge import GenesisEnv, EnvMode
+from genesis_forge import GenesisEnv, ManagedEnvironment, EnvMode
 from genesis_forge.managers import (
     CommandManager,
     VelocityCommandManager,
@@ -37,7 +37,7 @@ THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 SPIDER_XML = os.path.abspath(os.path.join(THIS_DIR, "../robot/SpiderBot.xml"))
 
 
-class SpiderRobotEnv(GenesisEnv):
+class SpiderRobotEnv(ManagedEnvironment):
     """
     SpiderBot environment for Genesis
     """
@@ -94,9 +94,9 @@ class SpiderRobotEnv(GenesisEnv):
             pd_kp=50,
             pd_kv=0.5,
             max_force=8.0,
+            frictionloss=0.1,
+            noise_scale=0.02,
             # stiffness=0.1,
-            # frictionloss=0.1,
-            # noise_scale=0.02,
         )
 
         # Command manager: instruct the robot to move in a certain direction
@@ -271,7 +271,16 @@ class SpiderRobotEnv(GenesisEnv):
         This operation is required before running the simulation.
         """
         super().build()
-        self.action_manager.build()
+
+        # Set observation space from first observation
+        if self.observation_space is None:
+            obs = self.observations()
+            self.observation_space = spaces.Box(
+                low=-np.inf,
+                high=np.inf,
+                shape=(obs.shape[1],),
+                dtype=np.float32,
+            )
 
         # Track robot with camera
         self.camera.follow_entity(self.robot, fixed_axis=(None, None, 1.0))
@@ -286,16 +295,6 @@ class SpiderRobotEnv(GenesisEnv):
             self.num_envs, len(self._foot_links_idx), 3
         )
 
-        # Set observation space from first observation
-        if self.observation_space is None:
-            obs = self.observations()
-            self.observation_space = spaces.Box(
-                low=-np.inf,
-                high=np.inf,
-                shape=(obs.shape[1],),
-                dtype=np.float32,
-            )
-
     def observations(self) -> torch.Tensor:
         """Generate a list of observations for each environment."""
 
@@ -306,7 +305,8 @@ class SpiderRobotEnv(GenesisEnv):
                 (self.num_envs, self.action_manager.num_actions), device=gs.device
             )
 
-        self.obs_buf = torch.cat(
+        # Create observations
+        return torch.cat(
             [
                 self.height_command.command,  # 1
                 self.velocity_command.command,  # 3
@@ -320,41 +320,22 @@ class SpiderRobotEnv(GenesisEnv):
             ],
             dim=-1,
         )
-        return self.obs_buf
 
     def step(self, actions: torch.Tensor):
         """
         Perform a step in the environment.
         """
-        super().step(actions)
-        info = {"logs": {}}
-
-        # Execute the actions and a simulation step
-        self.action_manager.step(actions)
-        self.scene.step()
-
-        # Calculate contact forces
-        self.bad_touch_contact.step()
-        self.foot_contact_manager.step()
+        _, reward, terminated, truncated, info = super().step(actions)
+        obs = self.observations()
 
         #  Keep the camera looking at the robot
         self.camera.set_pose(lookat=self.robot.get_pos())
 
-        # Termination, rewards
-        terminated, truncated = self.termination_manager.step()
-        dones = terminated | truncated
-        reset_env_idx = dones.nonzero(as_tuple=False).reshape((-1,))
-
-        reward = self.reward_manager.step()
-
-        # Command managers
-        self.velocity_command.step()
-        self.height_command.step()
-
         # Update curriculum
-        # self._update_curriculum(info)
+        # self._update_curriculum()
 
         # Log metrics
+        info["logs"] = {} if "logs" not in info else info["logs"]
         info["logs"]["Metrics / Leg Contact"] = rewards.has_contact(
             self, self.bad_touch_contact
         )
@@ -364,9 +345,7 @@ class SpiderRobotEnv(GenesisEnv):
         info["logs"]["Metrics / Curriculum level"] = self._curriculum_phase
 
         # Finish up
-        self.reset(reset_env_idx)
-        self.observations()
-        return self.obs_buf, reward, terminated, truncated, info
+        return obs, reward, terminated, truncated, info
 
     def reset(
         self,
@@ -379,17 +358,8 @@ class SpiderRobotEnv(GenesisEnv):
         if envs_idx is None:
             envs_idx = torch.arange(self.num_envs, device=gs.device)
 
+        # Reset robot
         if envs_idx.numel() > 0:
-            # Managers
-            self.height_command.reset(envs_idx)
-            self.velocity_command.reset(envs_idx)
-            self.termination_manager.reset(envs_idx)
-            self.reward_manager.reset(envs_idx)
-            self.action_manager.reset(envs_idx)
-            self.bad_touch_contact.reset(envs_idx)
-            self.foot_contact_manager.reset(envs_idx)
-
-            # Reset robot
             self.base_pos[envs_idx] = self.base_init_pos
             self.base_quat[envs_idx] = self.base_init_quat
             self.robot.zero_all_dofs_velocity(envs_idx)
@@ -410,7 +380,7 @@ class SpiderRobotEnv(GenesisEnv):
     Implementation
     """
 
-    def _update_curriculum(self, info: dict[str, Any]):
+    def _update_curriculum(self):
         """
         Update the training curriculum based on the current step or environment performance.
         """

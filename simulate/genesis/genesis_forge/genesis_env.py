@@ -232,7 +232,7 @@ class GenesisEnv:
                 self._base_max_episode_length + scale
             ).to(gs.tc_int)
 
-        return None, None
+        return None, {}
 
     def close(self):
         """Close the environment."""
