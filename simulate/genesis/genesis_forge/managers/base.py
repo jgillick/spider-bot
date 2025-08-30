@@ -1,5 +1,3 @@
-from typing import Sequence
-
 from genesis_forge.genesis_env import GenesisEnv
 
 
@@ -19,14 +17,14 @@ class BaseManager:
         self.env = env
         self.enabled = True
 
-    def construct_scene(self):
-        """Called when the scene is constructed"""
+    def build(self):
+        """Called when the scene is built"""
         pass
 
     def step(self):
         """Called when the environment is stepped"""
         pass
 
-    def reset(self, env_ids: Sequence[int] = None):
+    def reset(self, env_ids: list[int] | None = None):
         """One or more environments have been reset"""
         pass
