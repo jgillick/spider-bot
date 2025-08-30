@@ -190,8 +190,6 @@ class ContactManager(BaseManager):
 
     def reset(self, envs_idx: list[int] | None = None):
         super().reset(envs_idx)
-        if not self.enabled:
-            return
         if envs_idx is None:
             envs_idx = torch.arange(self.num_envs, device=gs.device)
 
@@ -199,6 +197,9 @@ class ContactManager(BaseManager):
         if not self._initialized:
             self._initialize()
             self._initialized = True
+
+        if not self.enabled:
+            return
 
         # reset the current air time
         if self._track_air_time:

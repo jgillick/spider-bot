@@ -40,7 +40,10 @@ def train(
     Train the agent.
     """
 
-    def video_trigger(episode_id: int) -> bool:
+    def video_trigger_flat(episode_id: int) -> bool:
+        return episode_id % 5 == 0
+
+    def video_trigger_exp(episode_id: int) -> bool:
         # Triggered episode: 0, 1, 4, 9, 16, 25, 36 ... 961, 1000, 2000, 3000, ...
         if episode_id < 1000:
             return int(round(episode_id ** (1.0 / 2))) ** 2 == episode_id
@@ -54,7 +57,7 @@ def train(
         env, 
         video_length_sec=12, 
         out_dir=video_path,
-        episode_trigger=video_trigger
+        episode_trigger=video_trigger_flat
     )
     env.build()
 

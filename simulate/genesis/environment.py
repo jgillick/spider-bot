@@ -5,12 +5,11 @@ Focuses on core objectives with progressive difficulty
 
 import os
 import torch
-import numpy as np
-from gymnasium import spaces
 from typing import Sequence, Any
 
 import genesis as gs
 from genesis.vis.camera import Camera
+from genesis.utils.geom import transform_by_quat, inv_quat
 
 from genesis_forge import GenesisEnv, EnvMode
 from genesis_forge.managers import (
@@ -21,7 +20,12 @@ from genesis_forge.managers import (
     DofPositionActionManager,
     ContactManager,
 )
-from genesis_forge.utils import robot_projected_gravity, robot_ang_vel, robot_lin_vel
+from genesis_forge.utils import (
+    robot_projected_gravity, 
+    robot_ang_vel, 
+    robot_lin_vel, 
+    links_idx_by_name_pattern,
+)
 from genesis_forge.mdp import rewards, terminations
 
 
@@ -149,7 +153,7 @@ class SpiderRobotEnv(GenesisEnv):
                     },
                 },
                 "Similar to default": {
-                    "weight": -1.5,
+                    "weight": -1.0,
                     "fn": rewards.dof_similar_to_default,
                     "params": {
                         "dof_action_manager": self.action_manager,
@@ -199,6 +203,10 @@ class SpiderRobotEnv(GenesisEnv):
                         "contact_manager": self.foot_contact_manager,
                         "min_contacts": 8,
                     },
+                },
+                "Leg angle": {
+                    "weight": -1.0,
+                    "fn": self._penalize_leg_angle,
                 },
             },
         )
@@ -268,6 +276,12 @@ class SpiderRobotEnv(GenesisEnv):
         # Track robot with camera
         self.camera.follow_entity(self.robot, fixed_axis=(None, None, 1.0))
         self.camera.set_pose(lookat=self.robot.get_pos())
+
+        # Fetch foot links
+        self._foot_links_idx = links_idx_by_name_pattern(self.robot, "Leg[1-8]_Tibia_Foot")
+        self._foot_link_gravity = torch.tensor([0.0, 0.0, -1.0], device=gs.device)
+        self._foot_link_gravity = self._foot_link_gravity.unsqueeze(0).expand(self.num_envs, len(self._foot_links_idx), 3)
+
 
     def observations(self) -> torch.Tensor:
         """Generate a list of observations for each environment."""
@@ -380,12 +394,26 @@ class SpiderRobotEnv(GenesisEnv):
         # We've (hopefully) learned to stand, let's try to walk
         if self.step_count == 15_000:
             self._curriculum_phase += 1
-            self.velocity_command.range["lin_vel_x"] = [-1.0, 1.0]
-            self.velocity_command.range["lin_vel_y"] = [-1.0, 1.0]
-            self.velocity_command.range["ang_vel_z"] = [-1.0, 1.0]
+            self.velocity_command.range["lin_vel_x"] = [-1.5, 1.5]
+            self.velocity_command.range["lin_vel_y"] = [-1.5, 1.5]
+            self.velocity_command.range["ang_vel_z"] = [-1.5, 1.5]
             self.set_max_episode_length(round(self.max_episode_length_sec * 1.5))
 
-            self.reward_manager.cfg["Similar to default"]["weight"] = 0.0
-            self.reward_manager.cfg["Bad touch"]["weight"] = -10.0
+            self.reward_manager.cfg["Similar to default"]["weight"] = 0.5
+            # self.reward_manager.cfg["Bad touch"]["weight"] = -10.0
             self.reward_manager.cfg["Foot contact (some)"]["weight"] = 5
             self.reward_manager.cfg["Foot contact (all)"]["weight"] = 0.1
+    
+    def _penalize_leg_angle(self, _env: GenesisEnv):
+        """Penalize the tibia bending in too far and under the robot."""
+        target_angle = 0.0
+
+        quats = self.robot.get_links_quat(links_idx_local=self._foot_links_idx)
+
+        # Transform link frames to world gravity frames
+        inv_quats = inv_quat(quats)
+        gravity_in_links = transform_by_quat(self._foot_link_gravity, inv_quats)
+        uprightness = -gravity_in_links[..., 2]
+
+        # Add up all the uprightness values less than zero
+        return torch.sum(uprightness * (uprightness < target_angle), dim=1)
