@@ -5,8 +5,9 @@ Focuses on core objectives with progressive difficulty
 
 import os
 import torch
+import numpy as np
 from typing import Sequence, Any
-
+from gymnasium import spaces
 import genesis as gs
 from genesis.vis.camera import Camera
 from genesis.utils.geom import transform_by_quat, inv_quat
@@ -17,13 +18,13 @@ from genesis_forge.managers import (
     VelocityCommandManager,
     RewardManager,
     TerminationManager,
-    DofPositionActionManager,
+    PositionalActionManager,
     ContactManager,
 )
 from genesis_forge.utils import (
-    robot_projected_gravity, 
-    robot_ang_vel, 
-    robot_lin_vel, 
+    robot_projected_gravity,
+    robot_ang_vel,
+    robot_lin_vel,
     links_idx_by_name_pattern,
 )
 from genesis_forge.mdp import rewards, terminations
@@ -77,7 +78,7 @@ class SpiderRobotEnv(GenesisEnv):
         Configuration
         """
         # Define the DOF actuators
-        self.action_manager = DofPositionActionManager(
+        self.action_manager = PositionalActionManager(
             self,
             joint_names=".*",
             default_pos={
@@ -130,9 +131,7 @@ class SpiderRobotEnv(GenesisEnv):
         )
         self.foot_contact_manager = ContactManager(
             self,
-            link_names=[
-                "Leg[1-8]_Tibia_Foot"
-           ],
+            link_names=["Leg[1-8]_Tibia_Foot"],
         )
 
         # Rewards
@@ -182,14 +181,14 @@ class SpiderRobotEnv(GenesisEnv):
                     "fn": rewards.flat_orientation_l2,
                 },
                 "Bad touch": {
-                    "weight": 0.0, #-10.0,
+                    "weight": 0.0,  # -10.0,
                     "fn": rewards.has_contact,
                     "params": {
                         "contact_manager": self.bad_touch_contact,
                     },
                 },
                 "Foot contact (some)": {
-                    "weight": 0.0, #5.0,
+                    "weight": 0.0,  # 5.0,
                     "fn": rewards.has_contact,
                     "params": {
                         "contact_manager": self.foot_contact_manager,
@@ -197,7 +196,7 @@ class SpiderRobotEnv(GenesisEnv):
                     },
                 },
                 "Foot contact (all)": {
-                    "weight": 0.0, #0.1,
+                    "weight": 0.0,  # 0.1,
                     "fn": rewards.has_contact,
                     "params": {
                         "contact_manager": self.foot_contact_manager,
@@ -272,16 +271,30 @@ class SpiderRobotEnv(GenesisEnv):
         This operation is required before running the simulation.
         """
         super().build()
+        self.action_manager.build()
 
         # Track robot with camera
         self.camera.follow_entity(self.robot, fixed_axis=(None, None, 1.0))
         self.camera.set_pose(lookat=self.robot.get_pos())
 
         # Fetch foot links
-        self._foot_links_idx = links_idx_by_name_pattern(self.robot, "Leg[1-8]_Tibia_Foot")
+        self._foot_links_idx = links_idx_by_name_pattern(
+            self.robot, "Leg[1-8]_Tibia_Foot"
+        )
         self._foot_link_gravity = torch.tensor([0.0, 0.0, -1.0], device=gs.device)
-        self._foot_link_gravity = self._foot_link_gravity.unsqueeze(0).expand(self.num_envs, len(self._foot_links_idx), 3)
+        self._foot_link_gravity = self._foot_link_gravity.unsqueeze(0).expand(
+            self.num_envs, len(self._foot_links_idx), 3
+        )
 
+        # Set observation space from first observation
+        if self.observation_space is None:
+            obs = self.observations()
+            self.observation_space = spaces.Box(
+                low=-np.inf,
+                high=np.inf,
+                shape=(obs.shape[1],),
+                dtype=np.float32,
+            )
 
     def observations(self) -> torch.Tensor:
         """Generate a list of observations for each environment."""
@@ -289,11 +302,13 @@ class SpiderRobotEnv(GenesisEnv):
         # If this is being called before the first step, actions should all be zero
         actions = self.actions
         if actions is None:
-            actions = torch.zeros((self.num_envs, self.action_manager.num_actions), device=gs.device)
+            actions = torch.zeros(
+                (self.num_envs, self.action_manager.num_actions), device=gs.device
+            )
 
         self.obs_buf = torch.cat(
             [
-                self.height_command.command, # 1
+                self.height_command.command,  # 1
                 self.velocity_command.command,  # 3
                 robot_ang_vel(self),  # 3
                 robot_lin_vel(self),  # 3
@@ -326,18 +341,26 @@ class SpiderRobotEnv(GenesisEnv):
         self.camera.set_pose(lookat=self.robot.get_pos())
 
         # Termination, rewards
-        terminated, truncated, reset_env_idx = self.termination_manager.step()
+        terminated, truncated = self.termination_manager.step()
+        dones = terminated | truncated
+        reset_env_idx = dones.nonzero(as_tuple=False).reshape((-1,))
+
         reward = self.reward_manager.step()
 
-        # Command manager
+        # Command managers
         self.velocity_command.step()
+        self.height_command.step()
 
         # Update curriculum
         self._update_curriculum(info)
 
         # Log metrics
-        info["logs"]["Metrics / Leg Contact"] = rewards.has_contact(self, self.bad_touch_contact)
-        info["logs"]["Metrics / Foot Contact"] = rewards.has_contact(self, self.foot_contact_manager)
+        info["logs"]["Metrics / Leg Contact"] = rewards.has_contact(
+            self, self.bad_touch_contact
+        )
+        info["logs"]["Metrics / Foot Contact"] = rewards.has_contact(
+            self, self.foot_contact_manager
+        )
         info["logs"]["Metrics / Curriculum level"] = self._curriculum_phase
 
         # Finish up
@@ -403,7 +426,7 @@ class SpiderRobotEnv(GenesisEnv):
             # self.reward_manager.cfg["Bad touch"]["weight"] = -10.0
             self.reward_manager.cfg["Foot contact (some)"]["weight"] = 5
             self.reward_manager.cfg["Foot contact (all)"]["weight"] = 0.1
-    
+
     def _penalize_leg_angle(self, _env: GenesisEnv):
         """Penalize the tibia bending in too far and under the robot."""
         target_angle = 0.0
