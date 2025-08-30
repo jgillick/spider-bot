@@ -416,4 +416,4 @@ class SpiderRobotEnv(GenesisEnv):
         uprightness = -gravity_in_links[..., 2]
 
         # Add up all the uprightness values less than zero
-        return torch.sum(uprightness * (uprightness < target_angle), dim=1)
+        return torch.abs(torch.sum(uprightness * (uprightness < target_angle), dim=1))
