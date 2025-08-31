@@ -15,6 +15,9 @@ from genesis_forge.managers import (
 )
 from genesis_forge.utils import robot_lin_vel, robot_ang_vel, robot_projected_gravity
 
+"""
+Aliveness
+"""
 
 def is_alive(env: GenesisEnv, term_manager: TerminationManager) -> torch.Tensor:
     """
@@ -29,6 +32,9 @@ def is_terminated(env: GenesisEnv, term_manager: TerminationManager) -> torch.Te
     """
     return term_manager.terminated.float()
 
+"""
+Robot base position/state
+"""
 
 def base_height(
     env: GenesisEnv,
@@ -84,6 +90,28 @@ def lin_vel_z(env: GenesisEnv) -> torch.Tensor:
     linear_vel = robot_lin_vel(env)
     return torch.square(linear_vel[:, 2])
 
+def flat_orientation_l2(env: GenesisEnv) -> torch.Tensor:
+    """
+    Penalize non-flat base orientation using L2 squared kernel.
+    This is computed by penalizing the xy-components of the projected gravity vector.
+
+    Args:
+        env: The Genesis environment containing the robot
+
+    Returns:
+        torch.Tensor: Penalty for non-flat base orientation
+    """
+    # Get the projected gravity vector in the robot's base frame
+    # This represents how "tilted" the robot is from upright
+    projected_gravity = robot_projected_gravity(env)
+
+    # Penalize the xy-components (horizontal tilt) using L2 squared kernel
+    # A flat orientation means these components should be close to zero
+    return torch.sum(torch.square(projected_gravity[:, :2]), dim=1)
+
+"""
+Action penalties.
+"""
 
 def action_rate(env: GenesisEnv) -> torch.Tensor:
     """
@@ -99,6 +127,9 @@ def action_rate(env: GenesisEnv) -> torch.Tensor:
     last_actions = env.last_actions
     return torch.sum(torch.square(last_actions - actions), dim=1)
 
+"""
+Velocity Tracking
+"""
 
 def command_tracking_lin_vel(
     env: GenesisEnv,
@@ -124,6 +155,7 @@ def command_tracking_lin_vel(
     return torch.exp(-lin_vel_error / sensitivity)
 
 
+
 def command_tracking_ang_vel(
     env: GenesisEnv,
     vel_cmd_manager: VelocityCommandManager,
@@ -145,6 +177,9 @@ def command_tracking_ang_vel(
     ang_vel_error = torch.square(command[:, 2] - angular_vel[:, 2])
     return torch.exp(-ang_vel_error / sensitivity)
 
+"""
+Contacts
+"""
 
 def has_contact(
     _env: GenesisEnv, contact_manager: ContactManager, threshold=1.0, min_contacts=1
@@ -185,21 +220,3 @@ def feet_air_time(
     return reward
 
 
-def flat_orientation_l2(env: GenesisEnv) -> torch.Tensor:
-    """
-    Penalize non-flat base orientation using L2 squared kernel.
-    This is computed by penalizing the xy-components of the projected gravity vector.
-
-    Args:
-        env: The Genesis environment containing the robot
-
-    Returns:
-        torch.Tensor: Penalty for non-flat base orientation
-    """
-    # Get the projected gravity vector in the robot's base frame
-    # This represents how "tilted" the robot is from upright
-    projected_gravity = robot_projected_gravity(env)
-
-    # Penalize the xy-components (horizontal tilt) using L2 squared kernel
-    # A flat orientation means these components should be close to zero
-    return torch.sum(torch.square(projected_gravity[:, :2]), dim=1)
