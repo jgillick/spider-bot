@@ -22,9 +22,10 @@ from genesis_forge.managers import (
     ContactManager,
 )
 from genesis_forge.utils import (
-    robot_projected_gravity,
-    robot_ang_vel,
-    robot_lin_vel,
+    get_gravity_tensor,
+    entity_projected_gravity,
+    entity_ang_vel,
+    entity_lin_vel,
     links_idx_by_name_pattern,
 )
 from genesis_forge.mdp import rewards, terminations
@@ -320,9 +321,9 @@ class SpiderRobotEnv(ManagedEnvironment):
             [
                 self.height_command.command,  # 1
                 self.velocity_command.command,  # 3
-                robot_ang_vel(self),  # 3
-                robot_lin_vel(self),  # 3
-                robot_projected_gravity(self),  # 3
+                entity_ang_vel(self.robot),  # 3
+                entity_lin_vel(self.robot),  # 3
+                entity_projected_gravity(self.robot),  # 3
                 self.action_manager.get_dofs_position(noise=0.01),  # 24
                 self.action_manager.get_dofs_velocity(noise=0.1),  # 24
                 actions,  # 24
@@ -408,8 +409,11 @@ class SpiderRobotEnv(ManagedEnvironment):
             self.reward_manager.cfg["Foot contact (all)"]["weight"] = 0.1
 
     def _penalize_leg_angle(self, _env: GenesisEnv):
-        """Penalize the tibia bending in too far and under the robot."""
-        target_angle = 0.0
+        """
+        Penalize the tibia bending in too far and under the robot.
+        The penalty is the sum of how far the projected gravity of each leg is below zero.
+        """
+        target_angle = 0.0 # penalize anything less than this
 
         quats = self.robot.get_links_quat(links_idx_local=self._foot_links_idx)
 

@@ -13,7 +13,7 @@ from genesis_forge.managers import (
     ContactManager,
     TerminationManager,
 )
-from genesis_forge.utils import robot_lin_vel, robot_ang_vel, robot_projected_gravity
+from genesis_forge.utils import entity_lin_vel, entity_ang_vel, entity_projected_gravity
 
 """
 Aliveness
@@ -87,7 +87,7 @@ def lin_vel_z(env: GenesisEnv) -> torch.Tensor:
     Returns:
         torch.Tensor: Penalty for z axis base linear velocity
     """
-    linear_vel = robot_lin_vel(env)
+    linear_vel = entity_lin_vel(env.robot)
     return torch.square(linear_vel[:, 2])
 
 def flat_orientation_l2(env: GenesisEnv) -> torch.Tensor:
@@ -103,7 +103,7 @@ def flat_orientation_l2(env: GenesisEnv) -> torch.Tensor:
     """
     # Get the projected gravity vector in the robot's base frame
     # This represents how "tilted" the robot is from upright
-    projected_gravity = robot_projected_gravity(env)
+    projected_gravity = entity_projected_gravity(env.robot)
 
     # Penalize the xy-components (horizontal tilt) using L2 squared kernel
     # A flat orientation means these components should be close to zero
@@ -148,7 +148,7 @@ def command_tracking_lin_vel(
         torch.Tensor: Penalty for tracking of linear velocity commands (xy axes)
     """
     command = vel_cmd_manager.command
-    linear_vel_local = robot_lin_vel(env)
+    linear_vel_local = entity_lin_vel(env.robot)
     lin_vel_error = torch.sum(
         torch.square(command[:, :2] - linear_vel_local[:, :2]), dim=1
     )
@@ -173,7 +173,7 @@ def command_tracking_ang_vel(
         torch.Tensor: Penalty for tracking of angular velocity commands (yaw)
     """
     command = vel_cmd_manager.command
-    angular_vel = robot_ang_vel(env)
+    angular_vel = entity_ang_vel(env.robot)
     ang_vel_error = torch.square(command[:, 2] - angular_vel[:, 2])
     return torch.exp(-ang_vel_error / sensitivity)
 

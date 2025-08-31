@@ -4,7 +4,7 @@ Each of these should return a boolean tensor indicating which environments shoul
 """
 import torch
 from genesis_forge.genesis_env import GenesisEnv
-from genesis_forge.utils import robot_projected_gravity
+from genesis_forge.utils import entity_projected_gravity
 from genesis_forge.managers import (
     ContactManager,
 )
@@ -37,7 +37,7 @@ def bad_orientation(
         torch.Tensor: Boolean tensor indicating which environments should terminate
     """
     # Get the projected gravity vector in body frame
-    projected_gravity = robot_projected_gravity(env)
+    projected_gravity = entity_projected_gravity(env.robot)
     projected_gravity_xy = projected_gravity[:, :2]
 
     # Calculate the magnitude of tilt (distance from perfectly upright)
