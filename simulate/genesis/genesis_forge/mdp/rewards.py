@@ -165,6 +165,25 @@ def has_contact(
     result = has_contact.sum(dim=1) >= min_contacts
     return result.float()
 
+def feet_air_time(
+    env: GenesisEnv, contact_manager: ContactManager, threshold: float, vel_cmd_manager: VelocityCommandManager,
+) -> torch.Tensor:
+    """Reward long steps taken by the feet using L2-kernel.
+
+    This function rewards the agent for taking steps that are longer than a threshold. This helps ensure
+    that the robot lifts its feet off the ground and takes steps. The reward is computed as the sum of
+    the time for which the feet are in the air.
+
+    If the commands are small (i.e. the agent is not supposed to take a step), then the reward is zero.
+    """
+    made_contact = contact_manager.has_made_contact(env.dt)
+    last_air_time = contact_manager.last_air_time
+    reward = torch.sum((last_air_time - threshold) * made_contact, dim=1)
+    # no reward for zero velocity command
+    if vel_cmd_manager is not None:
+        reward *= torch.norm(vel_cmd_manager.command[:, :2], dim=1) > 0.1
+    return reward
+
 
 def flat_orientation_l2(env: GenesisEnv) -> torch.Tensor:
     """

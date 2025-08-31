@@ -159,8 +159,9 @@ class ContactManager(BaseManager):
     Helper Methods
     """
 
-    def get_first_contact(self, dt: float, time_margin: float = 1.0e-8) -> torch.Tensor:
-        """Checks if links that have established contact within the last :attr:`dt` seconds.
+    def has_made_contact(self, dt: float, time_margin: float = 1.0e-8) -> torch.Tensor:
+        """
+        Checks if links that have established contact within the last :attr:`dt` seconds.
 
         This function checks if the links have established contact within the last :attr:`dt` seconds
         by comparing the current contact time with the given time period. If the contact time is less
@@ -168,19 +169,19 @@ class ContactManager(BaseManager):
 
         Args:
             dt: The time period since the contact was established.
-            time_margin: The absolute time margin for the time period
+            time_margin: Adds a little error margin to the dt time period.
 
         Returns:
             A boolean tensor indicating the links that have established contact within the last
             :attr:`dt` seconds. Shape is (n_envs, n_target_links)
 
         Raises:
-            RuntimeError: If the manager is not configured to track contact time.
+            RuntimeError: If the manager is not configured to track air time.
         """
         # check if the sensor is configured to track contact time
-        if not self.cfg.track_air_time:
+        if not self._track_air_time:
             raise RuntimeError(
-                "The contact sensor is not configured to track contact time."
+                "The contact sensor is not configured to track air time."
                 "Please enable the 'track_air_time' in the manager configuration."
             )
         # check if the bodies are in contact
@@ -188,7 +189,7 @@ class ContactManager(BaseManager):
         less_than_dt_in_contact = self.current_contact_time < (dt + time_margin)
         return currently_in_contact * less_than_dt_in_contact
 
-    def get_first_air(self, dt: float, time_margin: float = 1.0e-8) -> torch.Tensor:
+    def has_broken_contact(self, dt: float, time_margin: float = 1.0e-8) -> torch.Tensor:
         """Checks links that have broken contact within the last :attr:`dt` seconds.
 
         This function checks if the links have broken contact within the last :attr:`dt` seconds
@@ -197,19 +198,19 @@ class ContactManager(BaseManager):
 
         Args:
             dt: The time period since the contact was broken.
-            time_margin: The absolute time margin for the time period
+            time_margin: Adds a little error margin to the dt time period.
 
         Returns:
             A boolean tensor indicating the links that have broken contact within the last
             :attr:`dt` seconds. Shape is (n_envs, n_target_links)
 
         Raises:
-            RuntimeError: If the manager is not configured to track contact time.
+            RuntimeError: If the manager is not configured to track air time.
         """
         # check if the sensor is configured to track contact time
         if not self._track_air_time:
             raise RuntimeError(
-                "The contact manager is not configured to track contact time."
+                "The contact manager is not configured to track air time."
                 "Please enable the 'track_air_time' in the manager configuration."
             )
         currently_detached = self.current_air_time > 0.0
@@ -276,23 +277,6 @@ class ContactManager(BaseManager):
     """
     Implementation
     """
-
-    def __repr__(self):
-        attrs = [f"link_names={self._link_names}"]
-        if self._entity_attr:
-            attrs.append(f"entity_attr={self._entity_attr}")
-        if self._with_entity_attr:
-            attrs.append(f"with_entity_attr={self._with_entity_attr}")
-        if self._with_links_names:
-            attrs.append(f"with_links_names={self._with_links_names}")
-        if self._track_air_time:
-            attrs.append(f"track_air_time={self._track_air_time}")
-            if self._air_time_contact_threshold:
-                attrs.append(
-                    f"air_time_contact_threshold={self._air_time_contact_threshold}"
-                )
-        attrs_str = ", ".join(attrs)
-        return f"{self.__class__.__name__}({attrs_str})"
 
     def _get_links_idx(
         self, entity: RigidEntity, names: list[str] = None
@@ -395,12 +379,12 @@ class ContactManager(BaseManager):
             torch.norm(self.contacts[:, :, :], dim=-1)
             > self._air_time_contact_threshold
         )
-        is_first_contact = (self.current_air_time > 0) * is_contact
-        is_first_detached = (self.current_contact_time > 0) * ~is_contact
+        is_new_contact = (self.current_air_time > 0) * is_contact
+        is_new_detached = (self.current_contact_time > 0) * ~is_contact
 
         # Update the last contact time if body has just become in contact
         self.last_air_time = torch.where(
-            is_first_contact,
+            is_new_contact,
             self.current_air_time + dt,
             self.last_air_time,
         )
@@ -414,7 +398,7 @@ class ContactManager(BaseManager):
 
         # Update the last contact time if body has just detached
         self.last_contact_time = torch.where(
-            is_first_detached,
+            is_new_detached,
             self.current_contact_time + dt,
             self.last_contact_time,
         )
@@ -425,3 +409,20 @@ class ContactManager(BaseManager):
             self.current_contact_time + dt,
             0.0,
         )
+
+    def __repr__(self):
+        attrs = [f"link_names={self._link_names}"]
+        if self._entity_attr:
+            attrs.append(f"entity_attr={self._entity_attr}")
+        if self._with_entity_attr:
+            attrs.append(f"with_entity_attr={self._with_entity_attr}")
+        if self._with_links_names:
+            attrs.append(f"with_links_names={self._with_links_names}")
+        if self._track_air_time:
+            attrs.append(f"track_air_time={self._track_air_time}")
+            if self._air_time_contact_threshold:
+                attrs.append(
+                    f"air_time_contact_threshold={self._air_time_contact_threshold}"
+                )
+        attrs_str = ", ".join(attrs)
+        return f"{self.__class__.__name__}({attrs_str})"
