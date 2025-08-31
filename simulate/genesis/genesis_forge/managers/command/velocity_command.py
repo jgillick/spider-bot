@@ -5,7 +5,7 @@ import torch
 import genesis as gs
 
 from genesis_forge.genesis_env import GenesisEnv
-from genesis_forge.utils import robot_lin_vel, transform_by_quat
+from genesis_forge.utils import entity_lin_vel, transform_by_quat
 from genesis_forge.gamepads import BaseGamepad
 
 from .command_manager import CommandManager, CommandRangeValue
@@ -276,7 +276,7 @@ class VelocityCommandManager(CommandManager):
         )
 
         # Actual robot velocity (already in world coordinates)
-        actual_vec = robot_lin_vel(self.env).clone()
+        actual_vec = entity_lin_vel(self.env.robot).clone()
         actual_vec[:, 2] = 0.0
         actual_vec[:, :] *= scale_factor
 

@@ -1,95 +1,76 @@
 import re
 import torch
-from typing import Tuple
 import genesis as gs
 from genesis.engine.entities import RigidEntity
 
 from genesis.utils.geom import (
     transform_by_quat,
     inv_quat,
-    transform_quat_by_quat,
 )
 
-from .genesis_env import GenesisEnv
+# Pre-allocated gravity tensor for performance
+# This avoids creating a new tensor on every function call
+_GRAVITY_TENSOR = None
 
-
-def robot_lin_vel(env: GenesisEnv) -> torch.Tensor:
+def get_gravity_tensor(num_envs: int) -> torch.Tensor:
     """
-    Calculate the robot's linear velocity in the local frame.
+    Get and cache the gravity tensor, since this shouldn't change.
+    
+    Returns:
+        torch.Tensor: Gravity tensor of shape (3,)
+    """
+    global _GRAVITY_TENSOR
+    if _GRAVITY_TENSOR is None:
+        _GRAVITY_TENSOR = torch.tensor(
+            [0.0, 0.0, -1.0], device=gs.device, dtype=gs.tc_float
+        )
+    if _GRAVITY_TENSOR.shape[0] != num_envs:
+        _GRAVITY_TENSOR = _GRAVITY_TENSOR.expand(num_envs, 3)
+    return _GRAVITY_TENSOR
+
+
+def entity_lin_vel(entity: RigidEntity) -> torch.Tensor:
+    """
+    Calculate an entity's linear velocity in its local frame.
 
     Args:
-        env: The Genesis environment containing the robot
+        entity: The entity to calculate the linear velocity of
 
     Returns:
         torch.Tensor: Linear velocity in the local frame
     """
-    robot = env.robot
-    inv_base_quat = inv_quat(robot.get_quat())
-    return transform_by_quat(robot.get_vel(), inv_base_quat)
+    inv_base_quat = inv_quat(entity.get_quat())
+    return transform_by_quat(entity.get_vel(), inv_base_quat)
 
 
-def robot_ang_vel(env: GenesisEnv) -> torch.Tensor:
+def entity_ang_vel(entity: RigidEntity) -> torch.Tensor:
     """
-    Calculate the robot's angular velocity in the local frame.
+    Calculate an entity's angular velocity in its local frame.
 
     Args:
-        env: The Genesis environment containing the robot
+        entity: The entity to calculate the angular velocity of
 
     Returns:
         torch.Tensor: Angular velocity in the local frame
     """
-    robot = env.robot
-    inv_base_quat = inv_quat(robot.get_quat())
-    return transform_by_quat(robot.get_ang(), inv_base_quat)
+    inv_base_quat = inv_quat(entity.get_quat())
+    return transform_by_quat(entity.get_ang(), inv_base_quat)
 
 
-def robot_projected_gravity(env: GenesisEnv) -> torch.Tensor:
+def entity_projected_gravity(entity: RigidEntity) -> torch.Tensor:
     """
-    Calculate the robot's projected gravity in the local frame.
+    Calculate an entity's projected gravity in its local frame.
 
     Args:
-        env: The Genesis environment containing the robot
+        entity: The entity to calculate the projected gravity of
 
     Returns:
         torch.Tensor: Projected gravity in the local frame
     """
-    robot = env.robot
-    inv_base_quat = inv_quat(robot.get_quat())
-    global_gravity = torch.tensor(
-        [0.0, 0.0, -1.0], device=gs.device, dtype=gs.tc_float
-    ).repeat(robot.get_quat().shape[0], 1)
+    inv_base_quat = inv_quat(entity.get_quat())
+    global_gravity = get_gravity_tensor(inv_base_quat.shape[0])
     return transform_by_quat(global_gravity, inv_base_quat)
 
-
-def robot_relative_quat(
-    env: GenesisEnv,
-    robot_upright_quat: Tuple[float, float, float, float] = [1.0, 0.0, 0.0, 0.0],
-) -> torch.Tensor:
-    """
-    Calculate the robot's quaternion relative to a reference upright orientation.
-
-    Args:
-        env: The Genesis environment containing the robot
-        robot_upright_quat: Reference quaternion representing upright orientation [w, x, y, z]
-                           Defaults to [1.0, 0.0, 0.0, 0.0] (world upright)
-
-    Returns:
-        torch.Tensor: Quaternion representing robot's orientation relative to upright reference
-                     This can be used to check how much the robot has tipped from upright
-    """
-    robot = env.robot
-    base_quat = robot.get_quat()
-
-    # Convert reference quaternion to tensor and expand to match batch size
-    upright_quat = torch.tensor(
-        robot_upright_quat, device=base_quat.device, dtype=base_quat.dtype
-    )
-    upright_quat = upright_quat.expand(base_quat.shape[0], -1)
-    inv_upright_quat = inv_quat(upright_quat)
-
-    # Transform current quaternion to local frame (relative to upright reference)
-    local_quat = transform_quat_by_quat(inv_upright_quat, base_quat)
-    return local_quat
 
 def links_idx_by_name_pattern(entity: RigidEntity, name_re: str) -> list[int]:
     """
