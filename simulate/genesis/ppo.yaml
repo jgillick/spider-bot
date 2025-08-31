@@ -75,5 +75,5 @@ agent:
   # logging and checkpoint
   experiment:
     directory: "logs"
-    write_interval: 1000
+    write_interval: auto # 1000
     checkpoint_interval: auto

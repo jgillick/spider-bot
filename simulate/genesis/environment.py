@@ -110,9 +110,9 @@ class SpiderRobotEnv(ManagedEnvironment):
             self,
             # Starting ranges should be small, while robot is learning to stand
             range={
-                "lin_vel_x": [-0.5, 0.5],
-                "lin_vel_y": [-0.5, 0.5],
-                "ang_vel_z": [-0.5, 0.5],
+                "lin_vel_x": [-1.0, 1.0],
+                "lin_vel_y": [-1.0, 1.0],
+                "ang_vel_z": [-1.0, 1.0],
             },
             standing_probability=0.02,
             resample_time_s=5.0,
@@ -132,6 +132,7 @@ class SpiderRobotEnv(ManagedEnvironment):
         self.foot_contact_manager = ContactManager(
             self,
             link_names=["Leg[1-8]_Tibia_Foot"],
+            track_air_time=True,
         )
 
         # Rewards
@@ -201,6 +202,15 @@ class SpiderRobotEnv(ManagedEnvironment):
                     "params": {
                         "contact_manager": self.foot_contact_manager,
                         "min_contacts": 8,
+                    },
+                },
+                "Foot air time": {
+                    "weight": 1.25,
+                    "fn": rewards.feet_air_time,
+                    "params": {
+                        "contact_manager": self.foot_contact_manager,
+                        "vel_cmd_manager": self.velocity_command,
+                        "threshold": 1.0,
                     },
                 },
                 "Leg angle": {
@@ -316,7 +326,7 @@ class SpiderRobotEnv(ManagedEnvironment):
                 self.action_manager.get_dofs_position(noise=0.01),  # 24
                 self.action_manager.get_dofs_velocity(noise=0.1),  # 24
                 actions,  # 24
-                # self.action_manager.get_dofs_force(noise=0.01, clip_to_max_force=True),  # 24
+                self.action_manager.get_dofs_force(noise=0.01, clip_to_max_force=True),  # 24
             ],
             dim=-1,
         )
