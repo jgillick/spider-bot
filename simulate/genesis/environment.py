@@ -188,12 +188,33 @@ class SpiderRobotEnv(ManagedEnvironment):
                     "weight": -50.0,
                     "fn": rewards.flat_orientation_l2,
                 },
+                # "Self contact": {
+                #     "weight": -10.0,
+                #     "fn": rewards.has_contact,
+                #     "params": {
+                #         "contact_manager": self.self_contact,
+                #     },
+                # },
                 "Self contact": {
-                    "weight": -20.0,
-                    "fn": rewards.has_contact,
+                    "weight": -0.05,
+                    "fn": rewards.contact_force,
                     "params": {
                         "contact_manager": self.self_contact,
+                        "threshold": 0.1,
                     },
+                },
+                "Foot air time": {
+                    "weight": 1.25,
+                    "fn": rewards.feet_air_time,
+                    "params": {
+                        "contact_manager": self.foot_contact_manager,
+                        "vel_cmd_manager": self.velocity_command,
+                        "threshold": 1.0,
+                    },
+                },
+                "Leg angle": {
+                    "weight": -2.0,
+                    "fn": self._penalize_leg_angle,
                 },
                 "Foot contact (some)": {
                     "weight": 0.0,  # 5.0,
@@ -211,19 +232,6 @@ class SpiderRobotEnv(ManagedEnvironment):
                         "min_contacts": 8,
                     },
                 },
-                "Foot air time": {
-                    "weight": 1.25,
-                    "fn": rewards.feet_air_time,
-                    "params": {
-                        "contact_manager": self.foot_contact_manager,
-                        "vel_cmd_manager": self.velocity_command,
-                        "threshold": 1.0,
-                    },
-                },
-                "Leg angle": {
-                    "weight": -2.0,
-                    "fn": self._penalize_leg_angle,
-                },
             },
         )
 
@@ -240,6 +248,13 @@ class SpiderRobotEnv(ManagedEnvironment):
                     "fn": terminations.bad_orientation,
                     "params": {
                         "limit_angle": 0.7,
+                    },
+                },
+                "Self contact force": {
+                    "fn": terminations.contact_force,
+                    "params": {
+                        "contact_manager": self.self_contact,
+                        "threshold": 20.0,
                     },
                 },
             },
