@@ -67,19 +67,20 @@ class ManagedEnvironment(GenesisEnv):
 
     """
 
-    action_manager: BaseActionManager | None = None
-    reward_managers: list[RewardManager] = []
-    termination_managers: list[TerminationManager] = []
-    contact_managers: list[ContactManager] = []
-    command_managers: list[CommandManager] = []
-
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+
+        self.action_manager: BaseActionManager | None = None
+        self.reward_managers: list[RewardManager] = []
+        self.termination_managers: list[TerminationManager] = []
+        self.contact_managers: list[ContactManager] = []
+        self.command_managers: list[CommandManager] = []
+
         self._reward_buf = torch.zeros(
             (self.num_envs,), device=gs.device, dtype=gs.tc_float
         )
         self._terminated_buf = torch.zeros(
-            self.num_envs, device=gs.device, dtype=torch.bool
+            (self.num_envs,), device=gs.device, dtype=torch.bool
         )
         self._truncated_buf = torch.zeros_like(self._terminated_buf)
 

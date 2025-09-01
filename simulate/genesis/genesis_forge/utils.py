@@ -17,16 +17,14 @@ def get_gravity_tensor(num_envs: int) -> torch.Tensor:
     Get and cache the gravity tensor, since this shouldn't change.
     
     Returns:
-        torch.Tensor: Gravity tensor of shape (3,)
+        torch.Tensor: Gravity tensor of shape (num_envs, 3)
     """
     global _GRAVITY_TENSOR
     if _GRAVITY_TENSOR is None:
         _GRAVITY_TENSOR = torch.tensor(
             [0.0, 0.0, -1.0], device=gs.device, dtype=gs.tc_float
         )
-    if _GRAVITY_TENSOR.shape[0] != num_envs:
-        _GRAVITY_TENSOR = _GRAVITY_TENSOR.expand(num_envs, 3)
-    return _GRAVITY_TENSOR
+    return _GRAVITY_TENSOR.expand(num_envs, 3)
 
 
 def entity_lin_vel(entity: RigidEntity) -> torch.Tensor:

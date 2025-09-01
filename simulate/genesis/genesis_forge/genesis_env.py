@@ -25,22 +25,8 @@ class GenesisEnv:
         headless: Whether to run the environment in headless mode.
     """
 
-    scene: gs.Scene = None
-    robot: RigidEntity = None
-    terrain: RigidEntity = None
-    headless: bool = True
-    num_envs: int = 1
-    step_count: int = 0
-
-    actions: torch.Tensor = None
-    last_actions: torch.Tensor = None
-    episode_length: torch.Tensor = None
-    data_tracker_fn: Callable[[str, float], None] = None
     action_space: spaces.Space | None = None
     observation_space: spaces.Space | None = None
-
-    max_episode_length: torch.Tensor = None
-    """The max episode length, in steps, for each environment."""
 
     def __init__(
         self,
@@ -56,6 +42,19 @@ class GenesisEnv:
         self.num_envs = num_envs
         self.headless = headless
         self.mode = mode
+        self.scene: gs.Scene = None
+        self.robot: RigidEntity = None
+        self.terrain: RigidEntity = None
+
+        self.actions: torch.Tensor = None
+        self.last_actions: torch.Tensor = None
+        self.data_tracker_fn: Callable[[str, float], None] = None
+
+        self.step_count: int = 0
+        self.episode_length = torch.zeros(
+                (self.num_envs,), device=gs.device, dtype=torch.int32
+            )
+        self.max_episode_length: torch.Tensor = None
 
         self._max_episode_length_sec = 0.0
         self._max_episode_random_scaling = 0.0
@@ -209,9 +208,6 @@ class GenesisEnv:
                 dtype=gs.tc_float,
             )
             self.last_actions = torch.zeros_like(self.actions, device=gs.device)
-            self.episode_length = torch.zeros(
-                (self.num_envs,), device=gs.device, dtype=torch.int32
-            )
 
         # Actions
         if envs_idx.numel() > 0:

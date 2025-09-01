@@ -144,13 +144,12 @@ class TerminationManager(BaseManager):
         Returns:
             terminated - The termination signals for the environments. Shape is (num_envs,).
             truncated - The truncation signals for the environments. Shape is (num_envs,).
-            reset_env_idx - The indices of the environments that need to be reset.
         """
         self._term_data = dict()
         self._terminated_buf[:] = False
         self._truncated_buf[:] = False
         if not self.enabled:
-            return self._terminated_buf, self._truncated_buf, torch.tensor([])
+            return self._terminated_buf, self._truncated_buf
 
         for name, cfg in self.term_cfg.items():
             fn = cfg["fn"]
