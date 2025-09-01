@@ -22,7 +22,6 @@ from genesis_forge.managers import (
     ContactManager,
 )
 from genesis_forge.utils import (
-    get_gravity_tensor,
     entity_projected_gravity,
     entity_ang_vel,
     entity_lin_vel,
@@ -123,17 +122,24 @@ class SpiderRobotEnv(ManagedEnvironment):
             },
         )
 
-        # Contact managers: Legs should not come in contact with anything
-        self.bad_touch_contact = ContactManager(
-            self,
-            link_names=[
-                "Leg[1-8]_Tibia_BadTouch",
-            ],
-        )
+        # Contact managers
         self.foot_contact_manager = ContactManager(
             self,
             link_names=["Leg[1-8]_Tibia_Foot"],
+            with_entity_attr="terrain",
             track_air_time=True,
+        )
+        self.self_contact = ContactManager(
+            self,
+            link_names=[
+                "Leg[1-8]_Femur",
+                "Leg[1-8]_Tibia_Leg",
+            ],
+            with_entity_attr="robot",
+            with_links_names=[
+                "Leg[1-8]_Femur",
+                "Leg[1-8]_Tibia_Leg",
+            ]
         )
 
         # Rewards
@@ -154,7 +160,7 @@ class SpiderRobotEnv(ManagedEnvironment):
                     },
                 },
                 "Similar to default": {
-                    "weight": -1.0,
+                    "weight": -0.5,
                     "fn": rewards.dof_similar_to_default,
                     "params": {
                         "dof_action_manager": self.action_manager,
@@ -182,11 +188,11 @@ class SpiderRobotEnv(ManagedEnvironment):
                     "weight": -50.0,
                     "fn": rewards.flat_orientation_l2,
                 },
-                "Bad touch": {
-                    "weight": 0.0,  # -10.0,
+                "Self contact": {
+                    "weight": -20.0,
                     "fn": rewards.has_contact,
                     "params": {
-                        "contact_manager": self.bad_touch_contact,
+                        "contact_manager": self.self_contact,
                     },
                 },
                 "Foot contact (some)": {
@@ -215,7 +221,7 @@ class SpiderRobotEnv(ManagedEnvironment):
                     },
                 },
                 "Leg angle": {
-                    "weight": -1.5,
+                    "weight": -2.0,
                     "fn": self._penalize_leg_angle,
                 },
             },
@@ -271,7 +277,11 @@ class SpiderRobotEnv(ManagedEnvironment):
 
         # Add camera
         self.camera = scene.add_camera(
-            pos=(-2.5, -1.5, 1.0), res=(1280, 960), fov=40, debug=True
+            pos=(-2.5, -1.5, 1.0), 
+            res=(1280, 960), 
+            fov=40, 
+            env_idx=0, 
+            debug=True,
         )
 
         return scene
@@ -347,8 +357,8 @@ class SpiderRobotEnv(ManagedEnvironment):
 
         # Log metrics
         info["logs"] = {} if "logs" not in info else info["logs"]
-        info["logs"]["Metrics / Leg Contact"] = rewards.has_contact(
-            self, self.bad_touch_contact
+        info["logs"]["Metrics / Self Contact"] = rewards.has_contact(
+            self, self.self_contact
         )
         info["logs"]["Metrics / Foot Contact"] = rewards.has_contact(
             self, self.foot_contact_manager

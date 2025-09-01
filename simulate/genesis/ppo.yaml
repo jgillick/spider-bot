@@ -47,7 +47,7 @@ agent:
   class: PPO
   # Target training batch size of ~98,304 (98,304 / num parallel envs = num_steps_per_env)
   # Based on: https://ar5iv.labs.arxiv.org/html/2109.11978
-  rollouts: 66
+  rollouts: 40
   learning_epochs: 5
   mini_batches: 4
   discount_factor: 0.99
