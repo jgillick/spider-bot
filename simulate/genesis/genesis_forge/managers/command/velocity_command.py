@@ -1,4 +1,4 @@
-from typing import Tuple, Sequence, TypedDict
+from typing import Tuple, TypedDict
 
 import os
 import torch
@@ -23,7 +23,7 @@ class VelocityCommandRange(TypedDict):
 class DebugVisualizerConfig(TypedDict):
     """Defines the configuration for the debug visualizer."""
 
-    envs_idx: Sequence[int]
+    envs_idx: list[int]
     """The indices of the environments to visualize. If None, all environments will be visualized."""
 
     arrow_offset: float
@@ -92,7 +92,7 @@ class VelocityCommandManager(CommandManager):
                 return obs, rewards, terminations, timeouts, info
 
 
-            def reset(self, env_ids: Sequence[int] = None):
+            def reset(self, env_ids: list[int] = None):
                 super().reset(env_ids)
                 # ...do reset logic here...
 
@@ -115,7 +115,7 @@ class VelocityCommandManager(CommandManager):
                 ang_vel_reward = torch.exp(-ang_vel_error / 0.25)
 
                 # ...additional reward calculations here...
-            
+
             def get_observations(self):
                 return torch.cat(
                     [
@@ -133,7 +133,7 @@ class VelocityCommandManager(CommandManager):
         - GREEN: Commanded velocity (robot-relative, transformed to world coordinates for visualization)
           When joystick is "forward", this arrow points in the robot's forward direction
         - BLUE: Actual robot velocity in world coordinates
-    
+
     Args:
         env: The environment to control
         range: The ranges of linear & angular velocities
@@ -197,17 +197,20 @@ class VelocityCommandManager(CommandManager):
             lin_vel_y_axis: Map this gamepad axis index to the linear velocity in the y-direction.
             ang_vel_z_axis: Map this gamepad axis index to the angular velocity in the z-direction.
         """
-        super().use_gamepad(gamepad, range_axis={
-            "lin_vel_x": lin_vel_x_axis,
-            "lin_vel_y": lin_vel_y_axis,
-            "ang_vel_z": ang_vel_z_axis,
-        })
+        super().use_gamepad(
+            gamepad,
+            range_axis={
+                "lin_vel_x": lin_vel_x_axis,
+                "lin_vel_y": lin_vel_y_axis,
+                "ang_vel_z": ang_vel_z_axis,
+            },
+        )
 
     """
     Implementation
     """
 
-    def _resample_command(self, env_ids: Sequence[int]):
+    def _resample_command(self, env_ids: list[int]):
         """
         Overwrites commands for environments that should be standing still.
         """
@@ -239,7 +242,9 @@ class VelocityCommandManager(CommandManager):
 
         # Scale the arrow size based on the maximum target velocity range
         scale_factor = self.visualizer_cfg["arrow_max_length"] / max(
-            *self._range["lin_vel_x"], *self._range["lin_vel_y"], *self._range["ang_vel_z"]
+            *self._range["lin_vel_x"],
+            *self._range["lin_vel_y"],
+            *self._range["ang_vel_z"],
         )
 
         # Calculate the center of the robot
@@ -325,7 +330,7 @@ class VelocityCommandManager(CommandManager):
         self,
         pos: torch.Tensor,
         vec: torch.Tensor,
-        color: Sequence[float],
+        color: list[float],
     ):
         # If velocity is zero, don't draw the arrow
         if torch.all(vec == 0.0):
@@ -339,7 +344,5 @@ class VelocityCommandManager(CommandManager):
             )
             if node:
                 self._arrow_nodes.append(node)
-            else:
-                print("No node returned")
         except Exception as e:
             print(f"Error adding debug visualizing in VelocityCommandManager: {e}")

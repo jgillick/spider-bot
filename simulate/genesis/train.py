@@ -40,24 +40,21 @@ def train(
     Train the agent.
     """
 
-    def video_trigger_flat(episode_id: int) -> bool:
-        return episode_id % 5 == 0
-
     def video_trigger_exp(episode_id: int) -> bool:
         # Triggered episode: 0, 1, 4, 9, 16, 25, 36 ... 961, 1000, 2000, 3000, ...
         if episode_id < 1000:
             return int(round(episode_id ** (1.0 / 2))) ** 2 == episode_id
         else:
             return episode_id % 1000 == 0
-    
+
     #  Create environment
     env = SpiderRobotEnv(num_envs=num_envs, headless=True)
     env = DataLoggerWrapper(env)
     env = VideoWrapper(
-        env, 
-        video_length_sec=12, 
+        env,
+        video_length_sec=12,
         out_dir=video_path,
-        episode_trigger=video_trigger_flat
+        episode_trigger=lambda episode_id: episode_id % 5 == 0,
     )
     env.build()
 
