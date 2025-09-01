@@ -12,12 +12,14 @@ from genesis_forge.managers import (
     PositionalActionManager,
     ContactManager,
     TerminationManager,
+    TerrainManager,
 )
 from genesis_forge.utils import entity_lin_vel, entity_ang_vel, entity_projected_gravity
 
 """
 Aliveness
 """
+
 
 def is_alive(env: GenesisEnv, term_manager: TerminationManager) -> torch.Tensor:
     """
@@ -32,14 +34,17 @@ def is_terminated(env: GenesisEnv, term_manager: TerminationManager) -> torch.Te
     """
     return term_manager.terminated.float()
 
+
 """
 Robot base position/state
 """
+
 
 def base_height(
     env: GenesisEnv,
     target_height: Union[float, torch.Tensor] = None,
     height_command: CommandManager = None,
+    terrain_manager: TerrainManager = None,
 ) -> torch.Tensor:
     """
     Penalize base height away from target
@@ -48,14 +53,20 @@ def base_height(
         env: The Genesis environment containing the robot
         target_height: The target height to penalize the base height away from
         height_command: Get the target height from a height command manager. This expects the command to have a single range value.
+        terrain_manager: The terrain manager will adjust the height based on the terrain height.
 
     Returns:
         torch.Tensor: Penalty for base height away from target
     """
     base_pos = env.robot.get_pos()
+    height_offset = 0.0
+    if terrain_manager is not None:
+        height_offset = terrain_manager.get_terrain_height(
+            base_pos[:, 0], base_pos[:, 1]
+        )
     if height_command is not None:
         target_height = height_command.command.squeeze(-1)
-    return torch.square(base_pos[:, 2] - target_height)
+    return torch.square(height_offset - base_pos[:, 2] - target_height)
 
 
 def dof_similar_to_default(
@@ -90,6 +101,7 @@ def lin_vel_z(env: GenesisEnv) -> torch.Tensor:
     linear_vel = entity_lin_vel(env.robot)
     return torch.square(linear_vel[:, 2])
 
+
 def flat_orientation_l2(env: GenesisEnv) -> torch.Tensor:
     """
     Penalize non-flat base orientation using L2 squared kernel.
@@ -109,9 +121,11 @@ def flat_orientation_l2(env: GenesisEnv) -> torch.Tensor:
     # A flat orientation means these components should be close to zero
     return torch.sum(torch.square(projected_gravity[:, :2]), dim=1)
 
+
 """
 Action penalties.
 """
+
 
 def action_rate(env: GenesisEnv) -> torch.Tensor:
     """
@@ -127,9 +141,11 @@ def action_rate(env: GenesisEnv) -> torch.Tensor:
     last_actions = env.last_actions
     return torch.sum(torch.square(last_actions - actions), dim=1)
 
+
 """
 Velocity Tracking
 """
+
 
 def command_tracking_lin_vel(
     env: GenesisEnv,
@@ -155,7 +171,6 @@ def command_tracking_lin_vel(
     return torch.exp(-lin_vel_error / sensitivity)
 
 
-
 def command_tracking_ang_vel(
     env: GenesisEnv,
     vel_cmd_manager: VelocityCommandManager,
@@ -177,9 +192,11 @@ def command_tracking_ang_vel(
     ang_vel_error = torch.square(command[:, 2] - angular_vel[:, 2])
     return torch.exp(-ang_vel_error / sensitivity)
 
+
 """
 Contacts
 """
+
 
 def has_contact(
     _env: GenesisEnv, contact_manager: ContactManager, threshold=1.0, min_contacts=1
@@ -218,7 +235,10 @@ def contact_force(
     return torch.sum(violation.clip(min=0.0), dim=1)
     
 def feet_air_time(
-    env: GenesisEnv, contact_manager: ContactManager, threshold: float, vel_cmd_manager: VelocityCommandManager,
+    env: GenesisEnv,
+    contact_manager: ContactManager,
+    threshold: float,
+    vel_cmd_manager: VelocityCommandManager,
 ) -> torch.Tensor:
     """Reward long steps taken by the feet using L2-kernel.
 
@@ -235,5 +255,3 @@ def feet_air_time(
     if vel_cmd_manager is not None:
         reward *= torch.norm(vel_cmd_manager.command[:, :2], dim=1) > 0.1
     return reward
-
-

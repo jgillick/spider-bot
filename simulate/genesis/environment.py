@@ -4,12 +4,13 @@ Focuses on core objectives with progressive difficulty
 """
 
 import os
+import math
 import torch
 import numpy as np
-from typing import Sequence, Any
+from PIL import Image
+from typing import Any
 from gymnasium import spaces
 import genesis as gs
-from genesis.vis.camera import Camera
 from genesis.utils.geom import transform_by_quat, inv_quat
 
 from genesis_forge import GenesisEnv, ManagedEnvironment, EnvMode
@@ -20,6 +21,7 @@ from genesis_forge.managers import (
     TerminationManager,
     PositionalActionManager,
     ContactManager,
+    TerrainManager,
 )
 from genesis_forge.utils import (
     entity_projected_gravity,
@@ -42,8 +44,6 @@ class SpiderRobotEnv(ManagedEnvironment):
     SpiderBot environment for Genesis
     """
 
-    camera: Camera = None
-
     def __init__(
         self,
         num_envs: int = 1,
@@ -51,6 +51,7 @@ class SpiderRobotEnv(ManagedEnvironment):
         max_episode_length_s: int | None = 6,
         headless: bool = True,
         mode: EnvMode = "train",
+        terrain: str = "flat_terrain",
     ):
         super().__init__(
             num_envs=num_envs,
@@ -59,24 +60,28 @@ class SpiderRobotEnv(ManagedEnvironment):
             max_episode_random_scaling=0.1,
             headless=headless,
         )
-
+        self.camera = None
         self._curriculum_phase = 1
+        self._training_terrain = terrain
 
         # Cache position buffers
         self.base_init_pos = torch.tensor(INITIAL_BODY_POSITION, device=gs.device)
         self.base_init_quat = torch.tensor(INITIAL_QUAT, device=gs.device).reshape(
             1, -1
         )
-        self.base_pos = torch.zeros(
-            (self.num_envs, 3), device=gs.device, dtype=gs.tc_float
-        )
         self.base_quat = torch.zeros(
             (self.num_envs, 4), device=gs.device, dtype=gs.tc_float
+        )
+        self.rand_quat_rotation = torch.zeros(
+            (self.num_envs,), device=gs.device, dtype=gs.tc_float
         )
 
         """
         Configuration
         """
+        # Terrain
+        self.terrain_manager = TerrainManager(self, terrain_attr="terrain")
+
         # Define the DOF actuators
         self.action_manager = PositionalActionManager(
             self,
@@ -139,7 +144,7 @@ class SpiderRobotEnv(ManagedEnvironment):
             with_links_names=[
                 "Leg[1-8]_Femur",
                 "Leg[1-8]_Tibia_Leg",
-            ]
+            ],
         )
 
         # Rewards
@@ -157,6 +162,7 @@ class SpiderRobotEnv(ManagedEnvironment):
                     "params": {
                         # "target_height": 0.135,
                         "height_command": self.height_command,
+                        "terrain_manager": self.terrain_manager,
                     },
                 },
                 "Similar to default": {
@@ -273,16 +279,59 @@ class SpiderRobotEnv(ManagedEnvironment):
     """
 
     def construct_scene(self) -> gs.Scene:
-        """Add the robot to the scene."""
-        scene = super().construct_scene(
+        """
+        Construct the environment scene.
+        """
+        self.scene = gs.Scene(
+            show_viewer=not self.headless,
+            sim_options=gs.options.SimOptions(dt=self.dt),
+            viewer_options=gs.options.ViewerOptions(
+                camera_pos=(-2.5, -1.5, 1.0),
+                camera_lookat=(0.0, 0.0, 0.0),
+                camera_fov=40,
+                max_FPS=60,
+            ),
+            vis_options=gs.options.VisOptions(rendered_envs_idx=list(range(1))),
             rigid_options=gs.options.RigidOptions(
+                constraint_solver=gs.constraint_solver.Newton,
                 enable_collision=True,
+                enable_joint_limit=True,
                 enable_self_collision=True,
-            )
+            ),
         )
 
-        # add robot
-        self.robot = scene.add_entity(
+        # Create terrain
+        checker_image = np.array(Image.open("./assets/checker.png"))
+        tiled_image = np.tile(checker_image, (24, 24, 1))
+        self.terrain = self.scene.add_entity(
+            surface=gs.surfaces.Default(
+                diffuse_texture=gs.textures.ImageTexture(
+                    image_array=tiled_image,
+                )
+            ),
+            morph=gs.morphs.Terrain(
+                n_subterrains=(2, 2),
+                subterrain_size=(12, 12),
+                # subterrain_parameters={
+                #     "pyramid_stairs_terrain": {
+                #         "step_height": -0.08,
+                #     },
+                #     "discrete_obstacles_terrain": {
+                #         "min_size": 0.5,
+                #         "max_size": 2.0,
+                #         "max_height": 0.05,
+                #         "num_rects": 20,
+                #     },
+                # },
+                subterrain_types=[
+                    ["flat_terrain", "random_uniform_terrain"],  # "fractal_terrain"
+                    ["discrete_obstacles_terrain", "pyramid_stairs_terrain"],
+                ],
+            ),
+        )
+
+        # Robot
+        self.robot = self.scene.add_entity(
             gs.morphs.MJCF(
                 file=SPIDER_XML,
                 pos=INITIAL_BODY_POSITION,
@@ -291,15 +340,15 @@ class SpiderRobotEnv(ManagedEnvironment):
         )
 
         # Add camera
-        self.camera = scene.add_camera(
-            pos=(-2.5, -1.5, 1.0), 
-            res=(1280, 960), 
-            fov=40, 
-            env_idx=0, 
+        self.camera = self.scene.add_camera(
+            pos=(-2.5, -1.5, 1.0),
+            res=(1280, 960),
+            fov=40,
+            env_idx=0,
             debug=True,
         )
 
-        return scene
+        return self.scene
 
     def build(self) -> None:
         """
@@ -352,7 +401,9 @@ class SpiderRobotEnv(ManagedEnvironment):
                 self.action_manager.get_dofs_position(noise=0.01),  # 24
                 self.action_manager.get_dofs_velocity(noise=0.1),  # 24
                 actions,  # 24
-                self.action_manager.get_dofs_force(noise=0.01, clip_to_max_force=True),  # 24
+                self.action_manager.get_dofs_force(
+                    noise=0.01, clip_to_max_force=True
+                ),  # 24
             ],
             dim=-1,
         )
@@ -368,7 +419,7 @@ class SpiderRobotEnv(ManagedEnvironment):
         self.camera.set_pose(lookat=self.robot.get_pos())
 
         # Update curriculum
-        # self._update_curriculum()
+        self._update_curriculum()
 
         # Log metrics
         info["logs"] = {} if "logs" not in info else info["logs"]
@@ -385,7 +436,7 @@ class SpiderRobotEnv(ManagedEnvironment):
 
     def reset(
         self,
-        envs_idx: Sequence[int] = None,
+        envs_idx: list[int] = None,
     ) -> tuple[torch.Tensor, dict[str, Any]]:
         """
         Reset one or more environments.
@@ -396,10 +447,24 @@ class SpiderRobotEnv(ManagedEnvironment):
 
         # Reset robot
         if envs_idx.numel() > 0:
-            self.base_pos[envs_idx] = self.base_init_pos
+            # Randomize positions on the terrain
+            pos = self.terrain_manager.generate_random_env_pos(
+                envs_idx=envs_idx,
+                subterrain=self._training_terrain,
+                height_offset=0.15,
+            )
+
+            # Randomize quat rotation
+            self.rand_quat_rotation[envs_idx] = (
+                torch.rand(len(envs_idx), device=gs.device) * 2 * math.pi
+            )
             self.base_quat[envs_idx] = self.base_init_quat
+            self.base_quat[envs_idx, 0] = torch.cos(self.rand_quat_rotation[envs_idx])
+            self.base_quat[envs_idx, 3] = torch.sin(self.rand_quat_rotation[envs_idx])
+
+            # Send to robot
             self.robot.zero_all_dofs_velocity(envs_idx)
-            self.robot.set_pos(self.base_pos[envs_idx], envs_idx=envs_idx)
+            self.robot.set_pos(pos, envs_idx=envs_idx)
             self.robot.set_quat(self.base_quat[envs_idx], envs_idx=envs_idx)
 
         obs = self.observations()
@@ -420,25 +485,28 @@ class SpiderRobotEnv(ManagedEnvironment):
         """
         Update the training curriculum based on the current step or environment performance.
         """
-        # We've (hopefully) learned to stand, let's try to walk
+        # Move to rough terrain
         if self.step_count == 15_000:
-            self._curriculum_phase += 1
+            # Unsetting the terrain will randomize the robot anywhere in the environment
+            self._training_terrain = None
+            self.reward_manager.cfg["Base height"]["weight"] = 0
+            self.set_max_episode_length(round(self.max_episode_length_sec * 1.5))
+        # Pick up the pace
+        elif self.step_count == 25_000:
             self.velocity_command.range["lin_vel_x"] = [-1.5, 1.5]
             self.velocity_command.range["lin_vel_y"] = [-1.5, 1.5]
             self.velocity_command.range["ang_vel_z"] = [-1.5, 1.5]
-            self.set_max_episode_length(round(self.max_episode_length_sec * 1.5))
-
-            self.reward_manager.cfg["Similar to default"]["weight"] = 0.5
+            # self.reward_manager.cfg["Similar to default"]["weight"] = 0.5
             # self.reward_manager.cfg["Bad touch"]["weight"] = -10.0
-            self.reward_manager.cfg["Foot contact (some)"]["weight"] = 5
-            self.reward_manager.cfg["Foot contact (all)"]["weight"] = 0.1
+            # self.reward_manager.cfg["Foot contact (some)"]["weight"] = 5
+            # self.reward_manager.cfg["Foot contact (all)"]["weight"] = 0.1
 
     def _penalize_leg_angle(self, _env: GenesisEnv):
         """
         Penalize the tibia bending in too far and under the robot.
         The penalty is the sum of how far the projected gravity of each leg is below zero.
         """
-        target_angle = 0.0 # penalize anything less than this
+        target_angle = 0.0  # penalize anything less than this
 
         quats = self.robot.get_links_quat(links_idx_local=self._foot_links_idx)
 
