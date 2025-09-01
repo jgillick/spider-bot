@@ -158,7 +158,6 @@ class VelocityCommandManager(CommandManager):
     ):
         super().__init__(env, range=range, resample_time_sec=resample_time_s)
         self._arrow_nodes: list = []
-        self._gamepad_cfg = None
         self.standing_probability = standing_probability
         self.debug_visualizer = debug_visualizer
         self.visualizer_cfg = {**DEFAULT_VISUALIZER_CONFIG, **debug_visualizer_cfg}
@@ -171,20 +170,13 @@ class VelocityCommandManager(CommandManager):
     Properties
     """
 
-    @property
-    def command(self) -> torch.Tensor:
-        """The desired base velocity command in the base frame. Shape is (num_envs, 3)."""
-        if self._gamepad_cfg is not None:
-            return self._get_gamepad_command()
-        return super().command
-
     """
     Operations
     """
 
     def step(self):
         """Render the command arrows"""
-        if not self.enabled or self._gamepad_cfg is not None:
+        if not self.enabled:
             return
         super().step()
         self._render_arrows()
@@ -205,13 +197,11 @@ class VelocityCommandManager(CommandManager):
             lin_vel_y_axis: Map this gamepad axis index to the linear velocity in the y-direction.
             ang_vel_z_axis: Map this gamepad axis index to the angular velocity in the z-direction.
         """
-
-        self._gamepad_cfg = {
-            "gamepad": gamepad,
-            "lin_vel_x_axis": lin_vel_x_axis,
-            "lin_vel_y_axis": lin_vel_y_axis,
-            "ang_vel_z_axis": ang_vel_z_axis,
-        }
+        super().use_gamepad(gamepad, range_axis={
+            "lin_vel_x": lin_vel_x_axis,
+            "lin_vel_y": lin_vel_y_axis,
+            "ang_vel_z": ang_vel_z_axis,
+        })
 
     """
     Implementation
@@ -222,7 +212,7 @@ class VelocityCommandManager(CommandManager):
         Overwrites commands for environments that should be standing still.
         """
         super()._resample_command(env_ids)
-        if not self.enabled or self._gamepad_cfg is not None:
+        if not self.enabled:
             return
 
         num = torch.empty(len(env_ids), device=gs.device)
@@ -353,25 +343,3 @@ class VelocityCommandManager(CommandManager):
                 print("No node returned")
         except Exception as e:
             print(f"Error adding debug visualizing in VelocityCommandManager: {e}")
-
-    def _get_gamepad_command(self) -> torch.Tensor:
-        """Get the command from the gamepad."""
-        cmd = torch.zeros(self.env.num_envs, 3, device=gs.device)
-        if self._gamepad_cfg is None:
-            return cmd
-
-        # Get values from gamepad
-        gamepad = self._gamepad_cfg["gamepad"]
-        lin_vel_x = gamepad.state.axis(self._gamepad_cfg["lin_vel_x_axis"])
-        lin_vel_y = gamepad.state.axis(self._gamepad_cfg["lin_vel_y_axis"])
-        ang_vel_z = gamepad.state.axis(self._gamepad_cfg["ang_vel_z_axis"])
-
-        # Convert the values to the commanded full range
-        def convert_to_range(value: float, min: float, max: float) -> float:
-            return (value - -1) * (max - min) / 2 + min
-
-        cmd[:, 0] = convert_to_range(lin_vel_x, *self._range["lin_vel_x"])
-        cmd[:, 1] = convert_to_range(lin_vel_y, *self._range["lin_vel_y"])
-        cmd[:, 2] = convert_to_range(ang_vel_z, *self._range["ang_vel_z"])
-
-        return cmd
