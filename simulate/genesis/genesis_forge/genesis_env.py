@@ -52,8 +52,8 @@ class GenesisEnv:
 
         self.step_count: int = 0
         self.episode_length = torch.zeros(
-                (self.num_envs,), device=gs.device, dtype=torch.int32
-            )
+            (self.num_envs,), device=gs.device, dtype=torch.int32
+        )
         self.max_episode_length: torch.Tensor = None
 
         self._max_episode_length_sec = 0.0
@@ -119,36 +119,11 @@ class GenesisEnv:
     Operations
     """
 
-    def construct_scene(
-        self, rigid_options: gs.options.RigidOptions = None
-    ) -> gs.Scene:
+    def construct_scene(self) -> gs.Scene:
         """
         Construct the genesis scene.
         """
-        self.scene = gs.Scene(
-            show_viewer=not self.headless,
-            sim_options=gs.options.SimOptions(dt=self.dt),
-            viewer_options=gs.options.ViewerOptions(
-                camera_pos=(-2.5, -1.5, 1.0),
-                camera_lookat=(0.0, 0.0, 0.0),
-                camera_fov=40,
-                max_FPS=60,
-            ),
-            vis_options=gs.options.VisOptions(rendered_envs_idx=list(range(1))),
-            rigid_options=rigid_options
-            or gs.options.RigidOptions(
-                constraint_solver=gs.constraint_solver.Newton,
-                enable_collision=True,
-                enable_joint_limit=True,
-            ),
-        )
-
-        # Add plane
-        self.terrain = self.scene.add_entity(
-            gs.morphs.Plane(),
-        )
-
-        return self.scene
+        raise NotImplementedError("construct_scene must be implemented in the subclass")
 
     def build(self) -> None:
         """Builds the scene once all entities have been added (via construct_scene). This operation is required before running the simulation."""

@@ -3,7 +3,12 @@ from typing import Any
 import genesis as gs
 
 from genesis_forge.genesis_env import GenesisEnv
-from genesis_forge.managers import RewardManager, TerminationManager, ContactManager
+from genesis_forge.managers import (
+    RewardManager,
+    TerminationManager,
+    ContactManager,
+    TerrainManager,
+)
 from genesis_forge.managers.action import BaseActionManager
 from genesis_forge.managers.command import CommandManager
 
@@ -75,6 +80,7 @@ class ManagedEnvironment(GenesisEnv):
         self.termination_managers: list[TerminationManager] = []
         self.contact_managers: list[ContactManager] = []
         self.command_managers: list[CommandManager] = []
+        self.terrain_managers: list[TerrainManager] = []
 
         self._reward_buf = torch.zeros(
             (self.num_envs,), device=gs.device, dtype=gs.tc_float
@@ -132,6 +138,12 @@ class ManagedEnvironment(GenesisEnv):
         """
         self.command_managers.append(manager)
 
+    def add_terrain_manager(self, manager: TerrainManager):
+        """
+        Adds a terrain manager to the environment.
+        """
+        self.terrain_managers.append(manager)
+
     """
     Operations
     """
@@ -139,6 +151,8 @@ class ManagedEnvironment(GenesisEnv):
     def build(self):
         """Called when the scene is built"""
         super().build()
+        for terrain_manager in self.terrain_managers:
+            terrain_manager.build()
         if self.action_manager is not None:
             self.action_manager.build()
         for contact_manager in self.contact_managers:

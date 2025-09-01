@@ -86,7 +86,7 @@ class ContactManager(BaseManager):
                 # ...other managers here...
 
             def construct_scene(self) -> gs.Scene:
-                scene = super().construct_scene()
+                scene = # ... create scene here ...
 
                 # Add terrain
                 self.terrain = scene.add_entity(
@@ -189,7 +189,9 @@ class ContactManager(BaseManager):
         less_than_dt_in_contact = self.current_contact_time < (dt + time_margin)
         return currently_in_contact * less_than_dt_in_contact
 
-    def has_broken_contact(self, dt: float, time_margin: float = 1.0e-8) -> torch.Tensor:
+    def has_broken_contact(
+        self, dt: float, time_margin: float = 1.0e-8
+    ) -> torch.Tensor:
         """Checks links that have broken contact within the last :attr:`dt` seconds.
 
         This function checks if the links have broken contact within the last :attr:`dt` seconds
