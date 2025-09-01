@@ -1,5 +1,4 @@
 import os
-import signal
 import argparse
 import torch
 from skrl.utils.runner.torch import Runner
@@ -107,12 +106,6 @@ def record_video(cfg: dict, log_path: str, video_path: str):
 
 
 def main():
-    # Setup interrupt handler
-    def shutdown(_sig, _frame):
-        os._exit(0)
-
-    signal.signal(signal.SIGINT, shutdown)
-
     # Processor backend (GPU or CPU)
     backend = gs.gpu
     if args.device == "cpu":
