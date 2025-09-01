@@ -70,6 +70,7 @@ def train(
     print("💪 Training model...")
     runner.run("train")
     skrl_env.close()
+    env = None
 
 
 def record_video(cfg: dict, log_path: str, video_path: str):
@@ -105,6 +106,7 @@ def record_video(cfg: dict, log_path: str, video_path: str):
     print("🎬 Recording video of best model...")
     runner.run("eval")
     skrl_env.close()
+    env = None
 
 
 def main():

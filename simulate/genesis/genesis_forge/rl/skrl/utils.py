@@ -26,7 +26,7 @@ def load_training_config(
 
     # Logging directory
     if log_base_dir is None:
-        log_base_dir = os.path.join(THIS_DIR, "logs")
+        log_base_dir = "./logs"
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     experiment_name = f"{timestamp}_{cfg['agent']['class']}"
     log_path = os.path.join(log_base_dir, experiment_name)
