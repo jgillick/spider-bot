@@ -217,7 +217,23 @@ def has_contact(
     result = has_contact.sum(dim=1) >= min_contacts
     return result.float()
 
+def contact_force(
+    _env: GenesisEnv, contact_manager: ContactManager, threshold: float=1.0
+) -> torch.Tensor:
+    """
+    Reward for the total contact force acting on all the target links in the contact manager over the threshold.
 
+    Args:
+        env: The Genesis environment containing the robot
+        contact_manager: The contact manager to check for contact
+        threshold: The force threshold for contact detection (default: 1.0 N)
+
+    Returns:
+        The total force for the contact manager for each environment
+    """
+    violation = torch.norm(contact_manager.contacts[:, :, :], dim=-1) - threshold
+    return torch.sum(violation.clip(min=0.0), dim=1)
+    
 def feet_air_time(
     env: GenesisEnv,
     contact_manager: ContactManager,

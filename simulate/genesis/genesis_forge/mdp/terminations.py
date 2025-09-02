@@ -87,3 +87,22 @@ def has_contact(_env: GenesisEnv, contact_manager: ContactManager, threshold=1.0
     """
     has_contact = contact_manager.contacts[:, :].norm(dim=-1) > threshold
     return has_contact.sum(dim=1) >= min_contacts
+
+
+def contact_force(
+    _env: GenesisEnv, contact_manager: ContactManager, threshold: float=1.0
+) -> torch.Tensor:
+    """
+    Terminate if any link in the contact manager is in contact with something with a force greater than the threshold.
+
+    Args:
+        env: The Genesis environment containing the robot
+        contact_manager: The contact manager to check for contact
+        threshold: The force threshold for contact detection (default: 1.0 N)
+
+    Returns:
+        The total force for the contact manager for each environment
+    """
+    force_magnitudes = torch.norm(contact_manager.contacts[:, :, :], dim=-1)
+    violated = force_magnitudes > threshold
+    return torch.any(violated, dim=1)
