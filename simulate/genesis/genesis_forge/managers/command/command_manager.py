@@ -6,7 +6,7 @@ import genesis as gs
 
 from genesis_forge.genesis_env import GenesisEnv
 from genesis_forge.managers.base import BaseManager
-from genesis_forge.gamepads import BaseGamepad
+from genesis_forge.gamepads import Gamepad
 
 CommandRangeValue = Tuple[float, float]
 CommandRange = CommandRangeValue | dict[str, CommandRangeValue]
@@ -156,10 +156,7 @@ class CommandManager(BaseManager):
             env_ids = torch.arange(self.env.num_envs, device=gs.device)
         self._resample_command(env_ids)
 
-    def use_external_controller(
-        self,
-        controller: Callable[[int], CommandRange]
-    ):
+    def use_external_controller(self, controller: Callable[[int], CommandRange]):
         """
         Bypass the internal command controller, and generate the command values with an external control function.
         This can be used to connect a gamepad, joystick, or other external controller to the command manager.
@@ -175,7 +172,7 @@ class CommandManager(BaseManager):
                     super().__init__(*args, **kwargs)
                     self.height_command = CommandManager(self, range=(MIN_HEIGHT, MAX_HEIGHT))
                 # ...
-            
+
             # Setup gamepad
             gamepad = Gamepad(GAMEPAD_PRODUCT)
             cmd_buffer = torch.zeros((N_ENVS, 1), device=gs.device)
@@ -193,10 +190,10 @@ class CommandManager(BaseManager):
             controller: A function that takes the step index and returns a tensor of command values with the shape (num_envs, num_ranges).
         """
         self._external_controller = controller
-    
+
     def use_gamepad(
         self,
-        gamepad: BaseGamepad,
+        gamepad: Gamepad,
         range_axis: int | dict[str, int],
     ):
         f"""
@@ -209,7 +206,7 @@ class CommandManager(BaseManager):
                     super().__init__(*args, **kwargs)
                     self.height_command = CommandManager(self, range=(0.1, 0.2))
                 # ...
-            
+
             # Connect gamepad
             gamepad = Gamepad(GAMEPAD_PRODUCT)
 
@@ -219,21 +216,21 @@ class CommandManager(BaseManager):
 
             # Connect joystick axis 3 to the height command
             env.command_manager.use_gamepad(gamepad_controller, range_axis=3)
-        
+
         Example with multiple ranges::
             # Create environment
             class MyEnv(GenesisEnv):
                 def __init__(self, *args, **kwargs):
                     super().__init__(*args, **kwargs)
                     self.height_command = CommandManager(
-                        self, 
+                        self,
                         range={
                             "cmd1": (-2.0, 2.0),
                             "cmd2": (1.0, 5.0),
                         }
                     )
                 # ...
-            
+
             # Connect gamepad
             gamepad = Gamepad(GAMEPAD_PRODUCT)
 
@@ -243,7 +240,7 @@ class CommandManager(BaseManager):
 
             # Connect joystick axis 2 and 3 to to the indvidual ranges
             env.command_manager.use_gamepad(
-                gamepad_controller, 
+                gamepad_controller,
                 range_axis={
                     "cmd1": 2,
                     "cmd2": 3,
@@ -267,8 +264,9 @@ class CommandManager(BaseManager):
             "axis_map": axis_map,
         }
 
-        self._gamepad_axis_command_buffer = torch.zeros(self.env.num_envs, len(self._gamepad_cfg), device=gs.device)
-
+        self._gamepad_axis_command_buffer = torch.zeros(
+            self.env.num_envs, len(self._gamepad_cfg), device=gs.device
+        )
 
     """
     Implementation
@@ -288,8 +286,6 @@ class CommandManager(BaseManager):
         # Resample the command
         for i in range(self._command.shape[1]):
             self._command[env_ids, i] = num.uniform_(*ranges[i])
-    
-
 
     def _gamepad_axis_command(self) -> torch.Tensor:
         """
