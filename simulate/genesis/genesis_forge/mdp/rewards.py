@@ -66,7 +66,7 @@ def base_height(
         )
     if height_command is not None:
         target_height = height_command.command.squeeze(-1)
-    return torch.square(height_offset - base_pos[:, 2] - target_height)
+    return torch.square(base_pos[:, 2] - height_offset - target_height)
 
 
 def dof_similar_to_default(
