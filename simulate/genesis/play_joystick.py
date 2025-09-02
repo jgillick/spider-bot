@@ -15,12 +15,7 @@ from genesis_forge.rl.skrl import SkrlEnvWapper
 from genesis_forge.rl.skrl.utils import get_latest_checkpoint
 from environment import SpiderRobotEnv
 
-from genesis_forge.gamepads.logitech import (
-    LogitechGamepad as Gamepad,
-    LogitechGamepadProduct,
-)
-
-GAMEPAD_PRODUCT = LogitechGamepadProduct.F310
+from genesis_forge.gamepads import Gamepad
 
 parser = argparse.ArgumentParser(add_help=True)
 parser.add_argument(
@@ -59,7 +54,7 @@ def play():
     cfg = cfg[0]
 
     # Connect to gamepad
-    gamepad = Gamepad(GAMEPAD_PRODUCT)
+    gamepad = Gamepad()
 
     # Processor backend (GPU or CPU)
     backend = gs.gpu

@@ -1,10 +1,10 @@
 import time
 import argparse
 
-from .base import BaseGamepad, GamepadState
+from .gamepad import Gamepad, GamepadState
 
 
-class DebugGamepad(BaseGamepad):
+class DebugGamepad(Gamepad):
     """
     This is just used to output the HID data to the console so you can implement a new gamepad class.
     """
