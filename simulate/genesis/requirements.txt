@@ -1,4 +1,4 @@
-genesis-world>=0.3.2
+genesis-world>=0.3.3
 torch
 skrl[torch]
 pyyaml
