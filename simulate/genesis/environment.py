@@ -194,21 +194,21 @@ class SpiderRobotEnv(ManagedEnvironment):
                     "weight": -50.0,
                     "fn": rewards.flat_orientation_l2,
                 },
-                # "Self contact": {
-                #     "weight": -10.0,
-                #     "fn": rewards.has_contact,
-                #     "params": {
-                #         "contact_manager": self.self_contact,
-                #     },
-                # },
                 "Self contact": {
-                    "weight": -0.05,
-                    "fn": rewards.contact_force,
+                    "weight": -10.0,
+                    "fn": rewards.has_contact,
                     "params": {
                         "contact_manager": self.self_contact,
-                        "threshold": 0.1,
                     },
                 },
+                # "Self contact": {
+                #     "weight": -0.012,
+                #     "fn": rewards.contact_force,
+                #     "params": {
+                #         "contact_manager": self.self_contact,
+                #         "threshold": 0.1,
+                #     },
+                # },
                 "Foot air time": {
                     "weight": 1.25,
                     "fn": rewards.feet_air_time,
@@ -256,13 +256,13 @@ class SpiderRobotEnv(ManagedEnvironment):
                         "limit_angle": 0.7,
                     },
                 },
-                "Self contact force": {
-                    "fn": terminations.contact_force,
-                    "params": {
-                        "contact_manager": self.self_contact,
-                        "threshold": 20.0,
-                    },
-                },
+                # "Self contact force": {
+                #     "fn": terminations.contact_force,
+                #     "params": {
+                #         "contact_manager": self.self_contact,
+                #         "threshold": 30.0,
+                #     },
+                # },
             },
         )
 
@@ -291,7 +291,7 @@ class SpiderRobotEnv(ManagedEnvironment):
                 camera_fov=40,
                 max_FPS=60,
             ),
-            vis_options=gs.options.VisOptions(rendered_envs_idx=list(range(1))),
+            vis_options=gs.options.VisOptions(rendered_envs_idx=[0]),
             rigid_options=gs.options.RigidOptions(
                 constraint_solver=gs.constraint_solver.Newton,
                 enable_collision=True,
@@ -310,25 +310,22 @@ class SpiderRobotEnv(ManagedEnvironment):
                 )
             ),
             morph=gs.morphs.Terrain(
-                n_subterrains=(2, 2),
+                n_subterrains=(1, 3),
                 subterrain_size=(12, 12),
-                # subterrain_parameters={
-                #     "pyramid_stairs_terrain": {
-                #         "step_height": -0.08,
-                #     },
-                #     "discrete_obstacles_terrain": {
-                #         "min_size": 0.5,
-                #         "max_size": 2.0,
-                #         "max_height": 0.05,
-                #         "num_rects": 20,
-                #     },
-                # },
+                vertical_scale=0.002,
                 subterrain_types=[
-                    ["flat_terrain", "random_uniform_terrain"],  # "fractal_terrain"
-                    ["discrete_obstacles_terrain", "pyramid_stairs_terrain"],
+                    [
+                        "flat_terrain",
+                        # "fractal_terrain", 
+                        "discrete_obstacles_terrain",
+                        "pyramid_stairs_terrain",
+                    ],
+                    # ["flat_terrain", "pyramid_stairs_terrain"],
+                    # ["discrete_obstacles_terrain", "fractal_terrain"],   # "random_uniform_terrain"
                 ],
             ),
         )
+        # self.terrain = self.scene.add_entity(gs.morphs.Plane())
 
         # Robot
         self.robot = self.scene.add_entity(
@@ -356,7 +353,7 @@ class SpiderRobotEnv(ManagedEnvironment):
         This operation is required before running the simulation.
         """
         super().build()
-
+        
         # Set observation space from first observation
         if self.observation_space is None:
             obs = self.observations()
@@ -485,14 +482,20 @@ class SpiderRobotEnv(ManagedEnvironment):
         """
         Update the training curriculum based on the current step or environment performance.
         """
-        # Move to rough terrain
-        if self.step_count == 15_000:
-            # Unsetting the terrain will randomize the robot anywhere in the environment
-            self._training_terrain = None
-            self.reward_manager.cfg["Base height"]["weight"] = 0
+        # Move to more uneven terrain
+        if self.step_count == 50_000:
+            self._training_terrain = "discrete_obstacles_terrain"
+            self.reward_manager.cfg["Base height"]["weight"] = -1.0
+            self.reward_manager.cfg["Self contact"]["weight"] = -1.0
             self.set_max_episode_length(round(self.max_episode_length_sec * 1.5))
+        
+        # Open all terrains
+        elif self.step_count == 60_000:
+            # Unsetting the terrain will open all subterrains
+            self._training_terrain = None
+            
         # Pick up the pace
-        elif self.step_count == 25_000:
+        elif self.step_count == 80_000:
             self.velocity_command.range["lin_vel_x"] = [-1.5, 1.5]
             self.velocity_command.range["lin_vel_y"] = [-1.5, 1.5]
             self.velocity_command.range["ang_vel_z"] = [-1.5, 1.5]
