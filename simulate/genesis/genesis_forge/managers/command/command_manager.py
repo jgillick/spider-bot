@@ -146,7 +146,7 @@ class CommandManager(BaseManager):
             .nonzero(as_tuple=False)
             .reshape((-1,))
         )
-        self._resample_command(resample_command_envs)
+        self.resample_command(resample_command_envs)
 
     def reset(self, env_ids: Sequence[int] = None):
         """One or more environments have been reset"""
@@ -154,7 +154,7 @@ class CommandManager(BaseManager):
             return
         if env_ids is None:
             env_ids = torch.arange(self.env.num_envs, device=gs.device)
-        self._resample_command(env_ids)
+        self.resample_command(env_ids)
 
     def use_external_controller(self, controller: Callable[[int], CommandRange]):
         """
@@ -196,7 +196,7 @@ class CommandManager(BaseManager):
         gamepad: Gamepad,
         range_axis: int | dict[str, int],
     ):
-        f"""
+        """
         A wrapper around use_external_controller that converts a gamepad joystick axis to a command value.
 
         Example::
@@ -253,26 +253,21 @@ class CommandManager(BaseManager):
         """
         self._external_controller = self._gamepad_axis_command
 
+        # Map axis to range keys
         axis_map = []
         if isinstance(range_axis, int):
             axis_map.append(range_axis)
         elif isinstance(range_axis, dict):
             for key in self._range.keys():
                 axis_map.append(range_axis[key])
+
         self._gamepad_cfg = {
             "gamepad": gamepad,
             "axis_map": axis_map,
         }
+        self._gamepad_axis_command_buffer = torch.zeros_like(self._command, device=gs.device)
 
-        self._gamepad_axis_command_buffer = torch.zeros(
-            self.env.num_envs, len(self._gamepad_cfg), device=gs.device
-        )
-
-    """
-    Implementation
-    """
-
-    def _resample_command(self, env_ids: Sequence[int]):
+    def resample_command(self, env_ids: Sequence[int]):
         """Create a new command for the given environment ids."""
         num = torch.empty(len(env_ids), device=gs.device)
 
@@ -287,7 +282,11 @@ class CommandManager(BaseManager):
         for i in range(self._command.shape[1]):
             self._command[env_ids, i] = num.uniform_(*ranges[i])
 
-    def _gamepad_axis_command(self) -> torch.Tensor:
+    """
+    Implementation
+    """
+
+    def _gamepad_axis_command(self, step_count: int) -> torch.Tensor:
         """
         Get the command from the gamepad.
         """
@@ -301,8 +300,13 @@ class CommandManager(BaseManager):
         def convert_to_range(value: float, min: float, max: float) -> float:
             return (value - -1) * (max - min) / 2 + min
 
+        # Set the gamepad commands to the buffer
         cmd = self._gamepad_axis_command_buffer
+        ranges = [self._range]
+        if isinstance(self._range, dict):
+            ranges = list(self._range.values())
         for i, axis in enumerate(axis_map):
-            cmd[:, i] = convert_to_range(gamepad.state.axis(axis), *self._range[i])
+            if i < len(ranges):
+                cmd[:, i] = convert_to_range(gamepad.state.axis(axis), *ranges[i])
 
         return cmd
