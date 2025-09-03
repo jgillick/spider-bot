@@ -249,8 +249,8 @@ class VelocityCommandManager(CommandManager):
 
         # Calculate the center of the robot
         aabb = self.env.robot.get_AABB()
-        max_aabb = aabb[:, 1]  # [max_x, max_y, max_z]
         min_aabb = aabb[:, 0]  # [min_x, min_y, min_z]
+        max_aabb = aabb[:, 1]  # [max_x, max_y, max_z]
         robot_x = (min_aabb[:, 0] + max_aabb[:, 0]) / 2
         robot_y = (min_aabb[:, 1] + max_aabb[:, 1]) / 2
         robot_z = max_aabb[:, 2]

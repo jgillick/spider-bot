@@ -1,5 +1,6 @@
 import torch
 from typing import Any
+from gymnasium import spaces
 import genesis as gs
 
 from genesis_forge.genesis_env import GenesisEnv
@@ -81,6 +82,7 @@ class ManagedEnvironment(GenesisEnv):
         self.contact_managers: list[ContactManager] = []
         self.command_managers: list[CommandManager] = []
         self.terrain_managers: list[TerrainManager] = []
+        self._action_space = None
 
         self._reward_buf = torch.zeros(
             (self.num_envs,), device=gs.device, dtype=gs.tc_float
@@ -96,10 +98,17 @@ class ManagedEnvironment(GenesisEnv):
 
     @property
     def action_space(self) -> torch.Tensor:
-        """The action space, provided by the action manager if it exists."""
+        """The action space, provided by the action manager, if it exists."""
+        if self._action_space is not None:
+            return self._action_space
         if self.action_manager is not None:
             return self.action_manager.action_space
         return None
+    
+    @action_space.setter
+    def action_space(self, action_space: spaces.Space):
+        """Set the action space."""
+        self._action_space = action_space
 
     """
     Managers
