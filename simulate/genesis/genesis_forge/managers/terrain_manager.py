@@ -74,7 +74,6 @@ class TerrainManager(BaseManager):
         self._size = (0, 0)
         self._terrain: RigidEntity = None
         self._terrain_attr = terrain_attr
-        self._num_subterrains = 0
         self._subterrain_bounds = {}
         self._height_field: torch.Tensor | None = None
         self._env_pos_buffer = torch.zeros(
@@ -116,6 +115,7 @@ class TerrainManager(BaseManager):
         height_field = self._height_field.expand(
             coords.shape[0], 1, -1, -1
         )  # (n_coords, 1, height, width)
+
 
         interpolated = F.grid_sample(
             height_field,  # (n_coords, 1, height, width)
@@ -194,10 +194,8 @@ class TerrainManager(BaseManager):
         # Output
         output[out_idx, 0] = torch.rand(num, device=gs.device) * (x_max - x_min) + x_min
         output[out_idx, 1] = torch.rand(num, device=gs.device) * (y_max - y_min) + y_min
-        output[out_idx, 2] = (
-            self.get_terrain_height(output[out_idx, 0], output[out_idx, 1])
-            + height_offset
-        )
+        terrain_heights = self.get_terrain_height(output[out_idx, 0], output[out_idx, 1])
+        output[out_idx, 2] = terrain_heights + height_offset
         return output
 
     def generate_random_env_pos(
@@ -245,39 +243,37 @@ class TerrainManager(BaseManager):
         """Map out terrain and subterrain sizes and bounds."""
         (terrain_geom,) = self._terrain.geoms
         morph = self._terrain.morph
+        aabb = terrain_geom.get_AABB()
+        pos = terrain_geom.get_pos()
+
+        # If there are parallel environments, take values for the first environment
+        if aabb.ndim == 3:
+            aabb = aabb[0] 
+        if pos.ndim == 2:
+            pos = pos[0]
 
         # Get the total bounds of the terrain
-        aabb = terrain_geom.get_AABB()
-        if aabb.ndim == 3:
-            aabb = aabb[0]  # parallel env, take the first oen
-        self._origin = aabb[0]
-        self._size = (aabb[1, 0] - aabb[0, 0], aabb[1, 1] - aabb[0, 1])
-        self._bounds = (
-            aabb[0, 0],
-            aabb[1, 0],
-            aabb[0, 1],
-            aabb[1, 1],
-        )
+        (x_min, y_min, _) = aabb[0]
+        (x_max, y_max, _) = aabb[1] 
+        self._origin = pos
+        self._size = (x_max - x_min, y_max - y_min)
+        self._bounds = (x_min, x_max, y_min, y_max)
 
-        # Get subterrain count
-        if not hasattr(morph, "n_subterrains") or morph.n_subterrains is None:
-            return
-        self._num_subterrains = morph.n_subterrains[0] * morph.n_subterrains[1]
-        self._subterrain_size = morph.subterrain_size
+        # Get subterrain bounds
+        if hasattr(morph, "n_subterrains") and morph.n_subterrains is not None:
+            self._subterrain_size = morph.subterrain_size
+            self._subterrain_bounds = {}
+            i = 0
+            for x in range(morph.n_subterrains[0]):
+                for y in range(morph.n_subterrains[1]):
+                    name = morph.subterrain_types[x][y]
+                    x_min = self._origin[0] + x * self._subterrain_size[0]
+                    y_min = self._origin[1] + y * self._subterrain_size[1]
+                    x_max = x_min + self._subterrain_size[0]
+                    y_max = y_min + self._subterrain_size[1]
 
-        # Define subterrain grid bounds
-        self._subterrain_bounds = {}
-        i = 0
-        for x in range(morph.n_subterrains[0]):
-            for y in range(morph.n_subterrains[1]):
-                name = morph.subterrain_types[x][y]
-                x_min = self._origin[0] + x * self._subterrain_size[0]
-                y_min = self._origin[1] + y * self._subterrain_size[1]
-                x_max = x_min + self._subterrain_size[0]
-                y_max = y_min + self._subterrain_size[1]
-
-                self._subterrain_bounds[name] = (x_min, x_max, y_min, y_max)
-                i += 1
+                    self._subterrain_bounds[name] = (x_min, x_max, y_min, y_max)
+                    i += 1
 
         # Height field
         if "height_field" in terrain_geom.metadata:
@@ -290,6 +286,6 @@ class TerrainManager(BaseManager):
             # Adjust for the vertical scale
             self._height_field *= vertical_scale
 
-            # Reshape to (1, 1, height, width) for grid_sample calculation
+            # Reshape from (width, height) to (height, width) for grid_sample calculation
             # We only need one copy since all environments share the same terrain
-            self._height_field = self._height_field.unsqueeze(0).unsqueeze(1)
+            self._height_field = self._height_field.T
