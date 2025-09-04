@@ -1,8 +1,5 @@
 from .rl.skrl import create_skrl_env
-from .wrappers import (
-    DataLoggerWrapper,
-    VideoWrapper,
-)
+from .wrappers import VideoWrapper
 from .managers import (
     VelocityCommandManager,
     RewardManager,
@@ -16,7 +13,6 @@ __all__ = [
     "GenesisEnv",
     "ManagedEnvironment",
     "EnvMode",
-    "DataLoggerWrapper",
     "VideoWrapper",
     "VelocityCommandManager",
     "RewardManager",
