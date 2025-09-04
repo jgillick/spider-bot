@@ -7,6 +7,7 @@ from typing import Tuple, Any, Callable
 from genesis_forge.wrappers.wrapper import Wrapper
 from genesis_forge.genesis_env import GenesisEnv
 
+
 def capped_cubic_episode_trigger(episode_id: int) -> bool:
     """The default episode trigger.
 
@@ -23,6 +24,7 @@ def capped_cubic_episode_trigger(episode_id: int) -> bool:
     else:
         return episode_id % 1000 == 0
 
+
 class VideoWrapper(Wrapper):
     """
     Automatically record videos during training at a regular step or episode intervals.
@@ -33,7 +35,7 @@ class VideoWrapper(Wrapper):
 
     To control how frequently recordings are made specify **either** ``episode_trigger`` **or** ``step_trigger`` (not both).
     They should be functions returning a boolean that indicates whether a recording should be started at the
-    current episode or step, respectively. If neither :attr:`episode_trigger` nor ``step_trigger`` is passed, 
+    current episode or step, respectively. If neither :attr:`episode_trigger` nor ``step_trigger`` is passed,
     a default ``episode_trigger`` will be used, which records at the episode indices 0, 1, 8, 27, ..., :math:`k^3`, ..., 729, 1000, 2000, 3000,.
 
     Args:
@@ -72,7 +74,7 @@ class VideoWrapper(Wrapper):
             )
             env.build()
             ...training code...
-    
+
     Record every 1500 steps::
         env = MyEnv()
         env = VideoWrapper(
