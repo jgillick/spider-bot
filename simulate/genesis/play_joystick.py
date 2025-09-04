@@ -73,7 +73,6 @@ def play():
     env.velocity_command.use_gamepad(
         gamepad, lin_vel_y_axis=0, lin_vel_x_axis=1, ang_vel_z_axis=2
     )
-
     # Setup runner configuration
     cfg["trainer"]["close_environment_at_exit"] = False
     cfg["agent"]["experiment"]["write_interval"] = 0  # don't log to TensorBoard

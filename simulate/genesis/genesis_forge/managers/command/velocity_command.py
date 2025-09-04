@@ -214,7 +214,7 @@ class VelocityCommandManager(CommandManager):
         """
         Overwrites commands for environments that should be standing still.
         """
-        super()._resample_command(env_ids)
+        super().resample_command(env_ids)
         if not self.enabled:
             return
 
