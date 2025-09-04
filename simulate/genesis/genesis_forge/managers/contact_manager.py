@@ -1,10 +1,31 @@
 import re
 import torch
 import genesis as gs
+from typing import TypedDict, Tuple
 from genesis.engine.entities import RigidEntity
 
 from genesis_forge.genesis_env import GenesisEnv
 from genesis_forge.managers.base import BaseManager
+
+
+class ContactDebugVisualizerConfig(TypedDict):
+    """Defines the configuration for the contact debug visualizer."""
+
+    envs_idx: list[int]
+    """The indices of the environments to visualize. If None, all environments will be visualized."""
+
+    color: Tuple[float, float, float, float]
+    """The color of the contact ball"""
+
+    radius: float
+    """The radius of the visualization sphere"""
+
+
+DEFAULT_VISUALIZER_CONFIG: ContactDebugVisualizerConfig = {
+    "envs_idx": None,
+    "size": 0.02,
+    "color": (0.5, 0.0, 0.0, 1.0),
+}
 
 
 class ContactManager(BaseManager):
@@ -107,21 +128,6 @@ class ContactManager(BaseManager):
             # ...other operations here...
     """
 
-    contacts: torch.Tensor | None = None
-    """Contact forces experienced by the entity links."""
-
-    last_air_time: torch.Tensor | None = None
-    """Time spent (in s) in the air before the last contact."""
-
-    current_air_time: torch.Tensor | None = None
-    """Time spent (in s) in the air since the last detach."""
-
-    last_contact_time: torch.Tensor | None = None
-    """Time spent (in s) in contact before the last detach."""
-
-    current_contact_time: torch.Tensor | None = None
-    """Time spent (in s) in contact since the last contact."""
-
     def __init__(
         self,
         env: GenesisEnv,
@@ -131,6 +137,8 @@ class ContactManager(BaseManager):
         with_links_names: list[int] = None,
         track_air_time: bool = False,
         air_time_contact_threshold: float = 1.0,
+        debug_visualizer: bool = False,
+        debug_visualizer_cfg: ContactDebugVisualizerConfig = DEFAULT_VISUALIZER_CONFIG,
     ):
         """
         Args:
@@ -141,6 +149,8 @@ class ContactManager(BaseManager):
             with_links_names: Filter the contact forces to only include contacts with these links.
             track_air_time: Whether to track the air time of the entity link contacts.
             air_time_contact_threshold: When track_air_time is True, this is the threshold for the contact forces to be considered.
+            debug_visualizer: Whether to visualize the contact points.
+            debug_visualizer_cfg: The configuration for the contact debug visualizer.
         """
         super().__init__(env)
         if hasattr(env, "add_contact_manager"):
@@ -154,6 +164,25 @@ class ContactManager(BaseManager):
         self._with_links_names = with_links_names
         self._with_link_ids = None
         self._target_link_ids = None
+
+        self.debug_visualizer = debug_visualizer
+        self.visualizer_cfg = {**DEFAULT_VISUALIZER_CONFIG, **debug_visualizer_cfg}
+        self._debug_nodes = []
+
+        self.contacts: torch.Tensor | None = None
+        """Contact forces experienced by the entity links."""
+
+        self.last_air_time: torch.Tensor | None = None
+        """Time spent (in s) in the air before the last contact."""
+
+        self.current_air_time: torch.Tensor | None = None
+        """Time spent (in s) in the air since the last detach."""
+
+        self.last_contact_time: torch.Tensor | None = None
+        """Time spent (in s) in contact before the last detach."""
+
+        self.current_contact_time: torch.Tensor | None = None
+        """Time spent (in s) in contact since the last contact."""
 
     """
     Helper Methods
@@ -331,41 +360,55 @@ class ContactManager(BaseManager):
         force = contacts["force"]
         link_a = contacts["link_a"]
         link_b = contacts["link_b"]
+        position = contacts["position"]
+
+        # Convert target_link_ids to tensor for broadcasting
+        target_links = self._target_link_ids.to(gs.device)
+        n_target_links = target_links.shape[0]
+        target_links = target_links.view(1, 1, n_target_links)
+
+        # For mask filtering
+        link_a_expanded = link_a.unsqueeze(-1)
+        link_b_expanded = link_b.unsqueeze(-1)
+        mask_target_a = (link_a_expanded == target_links).any(dim=-1)
+        mask_target_b = (link_b_expanded == target_links).any(dim=-1)
 
         # Filter contacts by with_link_ids if specified
+        with_link_mask = None
         if self._with_link_ids is not None:
-            with_links = self._with_link_ids.to(force.device)
+            with_links = self._with_link_ids.to(gs.device)
             n_with_links = with_links.shape[0]
             with_links = with_links.view(1, 1, n_with_links)
 
-            # Check if either link_a or link_b is in with_link_ids
-            link_a_expanded = link_a.unsqueeze(-1)
-            link_b_expanded = link_b.unsqueeze(-1)
-
             mask_with_a = (link_a_expanded == with_links).any(dim=-1)
             mask_with_b = (link_b_expanded == with_links).any(dim=-1)
-            contact_filter = mask_with_a | mask_with_b
+            with_link_mask = (mask_with_a & mask_target_b) | (
+                mask_with_b & mask_target_a
+            )
 
-            # Apply filter to all tensors
-            force = force * contact_filter.unsqueeze(-1)
+            # Apply filters to tensors
+            force = force * with_link_mask.unsqueeze(-1)
 
         # Concatenate links and forces - each force applies to both links in the pair
         all_links = torch.cat([link_a, link_b], dim=1)
         all_forces = torch.cat([force, force], dim=1)
 
-        # Convert target_link_ids to tensor for broadcasting
-        target_links = self._target_link_ids.to(force.device)
-        n_target_links = target_links.shape[0]
-        target_links = target_links.view(1, 1, n_target_links)
-
         # Create mask for where each target link appears
         all_links = all_links.unsqueeze(-1)
         mask = all_links == target_links
 
-        # Apply mask and sum
+        # Apply mask and sum contact forces
         force_expanded = all_forces.unsqueeze(-2)
         masked_forces = force_expanded * mask.unsqueeze(-1)
         self.contacts = masked_forces.sum(dim=1)
+
+        # Get the position of the contact for visualization
+        if self.debug_visualizer:
+            # Filter out the positions that aren't with target links
+            target_mask = mask_target_a | mask_target_b
+            if with_link_mask is not None:
+                target_mask = with_link_mask
+            self._render_debug_visualizer(position, target_mask)
 
     def _calculate_air_time(self):
         """
@@ -411,6 +454,36 @@ class ContactManager(BaseManager):
             self.current_contact_time + dt,
             0.0,
         )
+
+    def _render_debug_visualizer(
+        self, contact_pos: torch.Tensor, link_mask: torch.Tensor
+    ):
+        """
+        Visualize the contact points.
+        """
+        # Clear existing debug objects
+        for node in self._debug_nodes:
+            self.env.scene.clear_debug_object(node)
+        self._debug_nodes = []
+
+        # End here if the debug visualizer is not enabled
+        if not self.debug_visualizer:
+            return
+
+        # Filter to only the environments we want to visualize
+        cfg = self.visualizer_cfg
+        if cfg["envs_idx"] is not None:
+            contact_pos = contact_pos[cfg["envs_idx"]]
+        contact_pos = contact_pos[link_mask]
+
+        # Draw debug spheres
+        if contact_pos.shape[0] > 0:
+            node = self.env.scene.draw_debug_spheres(
+                poss=contact_pos,
+                radius=cfg["size"],
+                color=cfg["color"],
+            )
+            self._debug_nodes.append(node)
 
     def __repr__(self):
         attrs = [f"link_names={self._link_names}"]

@@ -140,11 +140,14 @@ class SpiderRobotEnv(ManagedEnvironment):
                 "Leg[1-8]_Femur",
                 "Leg[1-8]_Tibia_Leg",
             ],
-            with_entity_attr="robot",
             with_links_names=[
                 "Leg[1-8]_Femur",
                 "Leg[1-8]_Tibia_Leg",
             ],
+            debug_visualizer=True,
+            debug_visualizer_cfg={
+                "envs_idx": [0],
+            },
         )
 
         # Rewards

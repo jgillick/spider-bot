@@ -20,7 +20,7 @@ class VelocityCommandRange(TypedDict):
     ang_vel_z: CommandRangeValue
 
 
-class DebugVisualizerConfig(TypedDict):
+class VelocityDebugVisualizerConfig(TypedDict):
     """Defines the configuration for the debug visualizer."""
 
     envs_idx: list[int]
@@ -42,7 +42,7 @@ class DebugVisualizerConfig(TypedDict):
     """The color of the actual robot velocity arrow"""
 
 
-DEFAULT_VISUALIZER_CONFIG: DebugVisualizerConfig = {
+DEFAULT_VISUALIZER_CONFIG: VelocityDebugVisualizerConfig = {
     "envs_idx": None,
     "arrow_offset": 0.01,
     "arrow_radius": 0.02,
@@ -143,10 +143,6 @@ class VelocityCommandManager(CommandManager):
         debug_visualizer_cfg: The configuration for the debug visualizer
     """
 
-    standing_probability: float
-    debug_visualizer: bool
-    visualizer_cfg: DebugVisualizerConfig
-
     def __init__(
         self,
         env: GenesisEnv,
@@ -154,7 +150,7 @@ class VelocityCommandManager(CommandManager):
         resample_time_s: float = 5.0,
         standing_probability: float = 0.0,
         debug_visualizer: bool = False,
-        debug_visualizer_cfg: DebugVisualizerConfig = DEFAULT_VISUALIZER_CONFIG,
+        debug_visualizer_cfg: VelocityDebugVisualizerConfig = DEFAULT_VISUALIZER_CONFIG,
     ):
         super().__init__(env, range=range, resample_time_sec=resample_time_s)
         self._arrow_nodes: list = []
