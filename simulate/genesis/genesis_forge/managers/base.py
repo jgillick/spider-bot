@@ -25,6 +25,6 @@ class BaseManager:
         """Called when the environment is stepped"""
         pass
 
-    def reset(self, env_ids: list[int] | None = None):
+    def reset(self, envs_idx: list[int] | None = None):
         """One or more environments have been reset"""
         pass

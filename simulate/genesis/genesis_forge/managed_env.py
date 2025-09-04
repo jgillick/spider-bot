@@ -213,13 +213,19 @@ class ManagedEnvironment(GenesisEnv):
         if reset_env_idx.numel() > 0:
             self.reset(reset_env_idx)
 
-        return None, self._reward_buf, self._terminated_buf, self._truncated_buf, {}
+        return (
+            None,
+            self._reward_buf,
+            self._terminated_buf,
+            self._truncated_buf,
+            self.extras,
+        )
 
     def reset(
         self, env_ids: list[int] | None = None
     ) -> tuple[torch.Tensor, dict[str, Any]]:
         """Reset managers."""
-        (obs, info) = super().reset(env_ids)
+        (obs, _) = super().reset(env_ids)
 
         if self.action_manager is not None:
             self.action_manager.reset(env_ids)
@@ -232,4 +238,4 @@ class ManagedEnvironment(GenesisEnv):
         for command_manager in self.command_managers:
             command_manager.reset(env_ids)
 
-        return (obs, info)
+        return obs, self.extras

@@ -52,9 +52,6 @@ class BaseActionManager(BaseManager):
         """
         pass
 
-    def reset(
-        self,
-        envs_idx: list[int] | None = None,
-    ):
+    def reset(self, envs_idx: list[int] | None):
         """Reset environments."""
         pass

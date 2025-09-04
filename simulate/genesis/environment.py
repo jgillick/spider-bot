@@ -409,7 +409,7 @@ class SpiderRobotEnv(ManagedEnvironment):
         """
         Perform a step in the environment.
         """
-        _, reward, terminated, truncated, info = super().step(actions)
+        _, reward, terminated, truncated, extras = super().step(actions)
         obs = self.observations()
 
         #  Keep the camera looking at the robot
@@ -419,17 +419,18 @@ class SpiderRobotEnv(ManagedEnvironment):
         self._update_curriculum()
 
         # Log metrics
-        info["logs"] = {} if "logs" not in info else info["logs"]
-        info["logs"]["Metrics / Self Contact"] = rewards.has_contact(
-            self, self.self_contact
+        extras["episode"]["Metrics / Self Contact"] = torch.mean(
+            rewards.has_contact(self, self.self_contact)
         )
-        info["logs"]["Metrics / Foot Contact"] = rewards.has_contact(
-            self, self.foot_contact_manager
+        extras["episode"]["Metrics / Foot Contact"] = torch.mean(
+            rewards.has_contact(self, self.foot_contact_manager)
         )
-        info["logs"]["Metrics / Curriculum level"] = self._curriculum_phase
+        extras["episode"]["Metrics / Curriculum level"] = torch.tensor(
+            self._curriculum_phase, device="cpu"
+        )
 
         # Finish up
-        return obs, reward, terminated, truncated, info
+        return obs, reward, terminated, truncated, extras
 
     def reset(
         self,

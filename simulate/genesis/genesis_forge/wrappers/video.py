@@ -143,7 +143,7 @@ class VideoWrapper(Wrapper):
             rewards,
             terminateds,
             truncateds,
-            infos,
+            extras,
         ) = super().step(actions)
 
         # Increment step/episode count
@@ -159,13 +159,12 @@ class VideoWrapper(Wrapper):
             if self._recording_stop_step <= self._current_step:
                 self.finish_recording()
 
-
         return (
             observations,
             rewards,
             terminateds,
             truncateds,
-            infos,
+            extras,
         )
 
     def close(self):
@@ -196,7 +195,6 @@ class VideoWrapper(Wrapper):
         # Reset recording state
         self._is_recording = False
         self._recording_stop_step = 0
-    
 
     def _render_step(self):
         """Render a frame of the video."""

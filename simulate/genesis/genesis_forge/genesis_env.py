@@ -23,6 +23,7 @@ class GenesisEnv:
         max_episode_length_sec: Maximum episode length in seconds.
         max_episode_random_scaling: Scale the maximum episode length by this amount (+/-) so that not all environments reset at the same time.
         headless: Whether to run the environment in headless mode.
+        extras_logging_key: The key used, in info/extras dict, which is returned by step and reset functions, to send data to tensorboard by the RL agent.
     """
 
     action_space: spaces.Space | None = None
@@ -36,6 +37,7 @@ class GenesisEnv:
         max_episode_random_scaling: float = 0.0,
         headless: bool = True,
         mode: EnvMode = "train",
+        extras_logging_key: str = "episode",
     ):
         self.dt = dt
         self.device = gs.device
@@ -46,9 +48,12 @@ class GenesisEnv:
         self.robot: RigidEntity = None
         self.terrain: RigidEntity = None
 
+        self.extras_logging_key = extras_logging_key
+        self._extras = {}
+        self._extras[extras_logging_key] = {}
+
         self.actions: torch.Tensor = None
         self.last_actions: torch.Tensor = None
-        self.data_tracker_fn: Callable[[str, float], None] = None
 
         self.step_count: int = 0
         self.episode_length = torch.zeros(
@@ -86,20 +91,17 @@ class GenesisEnv:
         """The max episode length, in seconds, for each environment."""
         return self._max_episode_length_sec
 
+    @property
+    def extras(self) -> dict:
+        """
+        The extras/infos dictionary that should be returned by the step and reset functions.
+        This dictionary will be cleared at the start of every step.
+        """
+        return self._extras
+
     """
     Utilities
     """
-
-    def set_data_tracker(self, track_data_fn: Callable[[str, float], None]):
-        """Define the data logger function."""
-        self.data_tracker_fn = track_data_fn
-
-    def track_data(self, name: str, value: float):
-        """Log a single value to tensorboard, or similar"""
-        if not self.data_tracker_fn:
-            print(f"Warning: No logger function set for logging data.")
-            return
-        self.data_tracker_fn(name, value)
 
     def set_max_episode_length(self, max_episode_length_sec: int) -> int:
         """
@@ -146,8 +148,10 @@ class GenesisEnv:
             actions: Batch of actions with the :attr:`action_space` shape.
 
         Returns:
-            Batch of (observations, rewards, terminations, truncations, infos)
+            Batch of (observations, rewards, terminations, truncations, infos/extras)
         """
+        self._extras = {}
+        self._extras[self.extras_logging_key] = {}
         self.step_count += 1
         self.episode_length += 1
 
@@ -157,7 +161,7 @@ class GenesisEnv:
             self.last_actions = torch.zeros_like(actions, device=gs.device)
         self.actions = actions
 
-        return None, None, None, None, {}
+        return None, None, None, None, self._extras
 
     def reset(
         self,
@@ -203,7 +207,7 @@ class GenesisEnv:
                 self._base_max_episode_length + scale
             ).to(gs.tc_int)
 
-        return None, {}
+        return None, self.extras
 
     def close(self):
         """Close the environment."""

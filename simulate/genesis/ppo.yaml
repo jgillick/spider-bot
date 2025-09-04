@@ -6,7 +6,7 @@ trainer:
   class: SequentialTrainer
   headless: True
   timesteps: 500
-  environment_info: log
+  environment_info: episode
 
 # Models are instantiated using skrl's model instantiator utility
 # https://skrl.readthedocs.io/en/latest/api/utils/model_instantiators.html
