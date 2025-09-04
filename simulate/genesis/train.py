@@ -7,7 +7,6 @@ import genesis as gs
 
 from genesis_forge import (
     create_skrl_env,
-    DataLoggerWrapper,
     VideoWrapper,
 )
 from genesis_forge.rl.skrl.utils import (
@@ -39,16 +38,8 @@ def train(
     Train the agent.
     """
 
-    def video_trigger_exp(episode_id: int) -> bool:
-        # Triggered episode: 0, 1, 4, 9, 16, 25, 36 ... 961, 1000, 2000, 3000, ...
-        if episode_id < 1000:
-            return int(round(episode_id ** (1.0 / 2))) ** 2 == episode_id
-        else:
-            return episode_id % 1000 == 0
-
     #  Create environment
     env = SpiderRobotEnv(num_envs=num_envs, headless=True)
-    env = DataLoggerWrapper(env)
     env = VideoWrapper(
         env,
         video_length_sec=12,
@@ -60,7 +51,6 @@ def train(
     # Setup training runner
     skrl_env = create_skrl_env(env)
     runner = Runner(skrl_env, cfg)
-    env.set_data_tracker(runner.agent.track_data)
 
     # Train
     print("💪 Training model...")
@@ -96,7 +86,6 @@ def record_video(cfg: dict, log_path: str, video_path: str):
     skrl_env = create_skrl_env(env)
     runner = Runner(skrl_env, cfg)
     runner.agent.load(checkpoint_path)
-    env.set_data_tracker(runner.agent.track_data)
 
     # Eval
     print("🎬 Recording video of best model...")

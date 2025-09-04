@@ -1,5 +1,5 @@
 import torch
-from typing import Sequence, TypedDict, Callable, Any
+from typing import TypedDict, Callable, Any
 
 import genesis as gs
 from genesis_forge.genesis_env import GenesisEnv
@@ -30,6 +30,7 @@ class TerminationManager(BaseManager):
         env: The environment to manage the termination for.
         term_cfg: A dictionary of termination conditions.
         logging_enabled: Whether to log the termination signals to tensorboard.
+        logging_tag: The section tag used to log the termination signals to tensorboard.
 
     Example with ManagedEnvironment::
         class MyEnv(ManagedEnvironment):
@@ -109,6 +110,7 @@ class TerminationManager(BaseManager):
         env: GenesisEnv,
         term_cfg: dict[str, TerminationConfig],
         logging_enabled: bool = True,
+        logging_tag: str = "Dones",
     ):
         super().__init__(env)
         if hasattr(env, "add_termination_manager"):
@@ -116,6 +118,7 @@ class TerminationManager(BaseManager):
 
         self.term_cfg = term_cfg
         self.logging_enabled = logging_enabled
+        self.logging_tag = logging_tag
         self._terminated_buf = torch.zeros(
             env.num_envs, device=gs.device, dtype=torch.bool
         )
@@ -173,11 +176,12 @@ class TerminationManager(BaseManager):
 
         return self._terminated_buf, self._truncated_buf
 
-    def reset(self, env_ids: Sequence[int] = None):
+    def reset(self, env_ids: list[int] = None):
         """Track terminated/truncated environments."""
         super().reset(env_ids)
         if not self.logging_enabled or not self.enabled:
             return
 
+        logging_dict = self.env.extras[self.env.extras_logging_key]
         for name, value in self._term_data.items():
-            self.env.track_data(f"Dones / {name}", value.float().mean().cpu().item())
+            logging_dict[f"{self.logging_tag} / {name}"] = value.float().mean()
