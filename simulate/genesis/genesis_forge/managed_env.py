@@ -4,19 +4,13 @@ from gymnasium import spaces
 import genesis as gs
 
 from genesis_forge.genesis_env import GenesisEnv
-from genesis_forge.managers import (
-    RewardManager,
-    TerminationManager,
-    ContactManager,
-    TerrainManager,
-)
-from genesis_forge.managers.action import BaseActionManager
-from genesis_forge.managers.command import CommandManager
+from genesis_forge.managers.base import BaseManager, ManagerType
 
 
 class ManagedEnvironment(GenesisEnv):
     """
-    An environment where most of the logic is handled by managers.
+    An environment which moves a lot of the logic of the environment to manager classes.
+    This helps to keep the environment code clean and modular.
 
     Example::
 
@@ -24,6 +18,9 @@ class ManagedEnvironment(GenesisEnv):
             def __init__(self, *args, **kwargs):
                 super().__init__(*args, **kwargs)
 
+                # ...Define scene here...
+
+            def config(self):
                 self.action_manager = PositionalActionManager(
                     self,
                     joint_names=".*",
@@ -57,17 +54,31 @@ class ManagedEnvironment(GenesisEnv):
                         },
                     },
                 )
-
-            def step(self, actions: torch.Tensor):
-                _, rewards, terminated, truncated, info = super().step(actions)
-                obs = self.observations()
-                return obs, rewards, terminated, truncated, info
-
-            def observations(self) -> torch.Tensor:
-                return torch.cat(
-                    [
-                        ...
-                    ]
+                ObservationManager(
+                    self,
+                    cfg={
+                        "velocity_cmd": {"fn": self.velocity_command.observation},
+                        "robot_ang_vel": {
+                            "fn": utils.entity_ang_vel,
+                            "params": {"entity": self.robot},
+                            "noise": 0.1,
+                        },
+                        "robot_lin_vel": {
+                            "fn": utils.entity_lin_vel,
+                            "params": {"entity": self.robot},
+                            "noise": 0.1,
+                        },
+                        "robot_projected_gravity": {
+                            "fn": utils.entity_projected_gravity,
+                            "params": {"entity": self.robot},
+                            "noise": 0.1,
+                        },
+                        "robot_dofs_position": {
+                            "fn": self.action_manager.get_dofs_position,
+                            "noise": 0.01,
+                        },
+                        "actions": {"fn": lambda: env.actions},
+                    },
                 )
 
 
@@ -76,14 +87,19 @@ class ManagedEnvironment(GenesisEnv):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-        self.action_manager: BaseActionManager | None = None
-        self.reward_managers: list[RewardManager] = []
-        self.termination_managers: list[TerminationManager] = []
-        self.contact_managers: list[ContactManager] = []
-        self.command_managers: list[CommandManager] = []
-        self.terrain_managers: list[TerrainManager] = []
-        self._action_space = None
+        self.managers: dict[ManagerType, BaseManager | list[BaseManager] | None] = {
+            "action": None,  # there can only be one
+            "observation": None,  # there can only be one
+            "reward": [],
+            "termination": [],
+            "contact": [],
+            "terrain": [],
+            "entity": [],
+            "command": [],
+        }
 
+        self._action_space = None
+        self._observation_space = None
         self._reward_buf = torch.zeros(
             (self.num_envs,), device=gs.device, dtype=gs.tc_float
         )
@@ -99,79 +115,90 @@ class ManagedEnvironment(GenesisEnv):
     @property
     def action_space(self) -> torch.Tensor:
         """The action space, provided by the action manager, if it exists."""
-        if self._action_space is not None:
-            return self._action_space
-        if self.action_manager is not None:
-            return self.action_manager.action_space
+        try:
+            if self.managers["action"] is not None:
+                print("Return action space")
+                return self.managers["action"].action_space
+            if self._action_space is not None:
+                return self._action_space
+        except Exception as e:
+            print(f"Error getting action space: {e}")
+        print("Return None!")
         return None
-    
+
     @action_space.setter
     def action_space(self, action_space: spaces.Space):
-        """Set the action space."""
+        """
+        Set the action space.
+        """
         self._action_space = action_space
+
+    @property
+    def observation_space(self) -> spaces.Space:
+        """The observation space, provided by the observation manager, if it exists."""
+        if self.managers["observation"] is not None:
+            return self.managers["observation"].observation_space
+        if self._observation_space is not None:
+            return self._observation_space
+        return None
+
+    @observation_space.setter
+    def observation_space(self, observation_space: spaces.Space):
+        """
+        Set the observation space.
+        """
+        self._observation_space = observation_space
 
     """
     Managers
     """
 
-    def add_action_manager(self, manager: BaseActionManager):
+    def add_manager(self, manager_type: ManagerType, manager: BaseManager):
         """
-        Adds an action manager to the environment.
+        Adds a manager to the environment.
         """
-        assert (
-            self.action_manager is None
-        ), "An action manager already exists, and an environment cannot have multiple action managers."
-        self.action_manager = manager
+        if manager_type not in self.managers:
+            raise ValueError(f"'{manager_type}' is not a valid manager type.")
 
-    def add_reward_manager(self, manager: RewardManager):
-        """
-        Adds a reward manager to the environment.
-        """
-        self.reward_managers.append(manager)
-
-    def add_termination_manager(self, manager: TerminationManager):
-        """
-        Adds a termination manager to the environment.
-        """
-        self.termination_managers.append(manager)
-
-    def add_contact_manager(self, manager: ContactManager):
-        """
-        Adds a contact manager to the environment.
-        """
-        self.contact_managers.append(manager)
-
-    def add_command_manager(self, manager: CommandManager):
-        """
-        Adds a command manager to the environment.
-        """
-        self.command_managers.append(manager)
-
-    def add_terrain_manager(self, manager: TerrainManager):
-        """
-        Adds a terrain manager to the environment.
-        """
-        self.terrain_managers.append(manager)
+        # Append manager if the dict item is a list
+        if isinstance(self.managers[manager_type], list):
+            self.managers[manager_type].append(manager)
+        elif self.managers[manager_type] is None:
+            self.managers[manager_type] = manager
+        else:
+            raise ValueError(
+                f"Manager type '{manager_type}' already has a manager, and an environment cannot have multiple {manager_type} managers."
+            )
 
     """
     Operations
     """
 
+    def config(self):
+        """Configure the environment managers here."""
+        pass
+
     def build(self):
         """Called when the scene is built"""
         super().build()
-        for terrain_manager in self.terrain_managers:
+        self.config()
+
+        for terrain_manager in self.managers["terrain"]:
             terrain_manager.build()
-        if self.action_manager is not None:
-            self.action_manager.build()
-        for contact_manager in self.contact_managers:
+        if self.managers["action"] is not None:
+            self.managers["action"].build()
+        for contact_manager in self.managers["contact"]:
             contact_manager.build()
-        for termination_manager in self.termination_managers:
+        for termination_manager in self.managers["termination"]:
             termination_manager.build()
-        for reward_manager in self.reward_managers:
+        for reward_manager in self.managers["reward"]:
             reward_manager.build()
-        for command_manager in self.command_managers:
+        for command_manager in self.managers["command"]:
             command_manager.build()
+        for entity_manager in self.managers["entity"]:
+            entity_manager.build()
+        if self.managers["observation"] is not None:
+            self.managers["observation"].build()
 
     def step(
         self, actions: torch.Tensor
@@ -182,18 +209,18 @@ class ManagedEnvironment(GenesisEnv):
         super().step(actions)
 
         # Execute the actions and a simulation step
-        if self.action_manager is not None:
-            self.action_manager.step(actions)
+        if self.managers["action"] is not None:
+            self.managers["action"].step(actions)
         self.scene.step()
 
         # Calculate contact forces
-        for contact_manager in self.contact_managers:
+        for contact_manager in self.managers["contact"]:
             contact_manager.step()
 
         # Calculate termination and truncation
         self._terminated_buf[:] = False
         self._truncated_buf[:] = False
-        for termination_manager in self.termination_managers:
+        for termination_manager in self.managers["termination"]:
             terminated, truncated = termination_manager.step()
             self._terminated_buf[:] |= terminated
             self._truncated_buf[:] |= truncated
@@ -202,19 +229,23 @@ class ManagedEnvironment(GenesisEnv):
 
         # Calculate rewards
         self._reward_buf[:] = 0.0
-        for reward_manager in self.reward_managers:
+        for reward_manager in self.managers["reward"]:
             self._reward_buf += reward_manager.step()
 
         # Command managers
-        for command_manager in self.command_managers:
+        for command_manager in self.managers["command"]:
             command_manager.step()
 
         # Reset environments
         if reset_env_idx.numel() > 0:
-            self.reset(reset_env_idx)
+            self.reset(reset_env_idx, skip_observation=True)
+
+        # Get observation
+        if self.managers["observation"] is not None:
+            obs = self.managers["observation"].step()
 
         return (
-            None,
+            obs,
             self._reward_buf,
             self._terminated_buf,
             self._truncated_buf,
@@ -222,20 +253,24 @@ class ManagedEnvironment(GenesisEnv):
         )
 
     def reset(
-        self, env_ids: list[int] | None = None
+        self, env_ids: list[int] | None = None, skip_observation: bool = False
     ) -> tuple[torch.Tensor, dict[str, Any]]:
         """Reset managers."""
         (obs, _) = super().reset(env_ids)
 
-        if self.action_manager is not None:
+        if self.managers["action"] is not None:
             self.action_manager.reset(env_ids)
-        for contact_manager in self.contact_managers:
+        for entity_manager in self.managers["entity"]:
+            entity_manager.reset(env_ids)
+        for contact_manager in self.managers["contact"]:
             contact_manager.reset(env_ids)
-        for termination_manager in self.termination_managers:
+        for termination_manager in self.managers["termination"]:
             termination_manager.reset(env_ids)
-        for reward_manager in self.reward_managers:
+        for reward_manager in self.managers["reward"]:
             reward_manager.reset(env_ids)
-        for command_manager in self.command_managers:
+        for command_manager in self.managers["command"]:
             command_manager.reset(env_ids)
+        if not skip_observation and self.managers["observation"] is not None:
+            obs = self.managers["observation"].reset(env_ids)
 
         return obs, self.extras

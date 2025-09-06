@@ -53,17 +53,18 @@ class VideoWrapper(Wrapper):
 
     Example::
         class MyEnv(GenesisEnv):
-            camera: Camera
 
-            def construct_scene(self) -> gs.Scene:
-                scene = super().construct_scene()
+            __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
 
-                # Add robot...
+                # Construct the scene
+                self.scene = gs.Scene(
+                    # ... scene options ...
+                )
 
                 # Assign a camera to the `camera` env attribute
                 self.camera = scene.add_camera(pos=(-2.5, -1.5, 1.0))
 
-                return scene
 
         def train():
             env = MyEnv()

@@ -19,13 +19,9 @@ class TerrainManager(BaseManager):
             def __init__(self, *args, **kwargs):
                 super().__init__(*args, **kwargs)
 
-                self.terrain_manager = TerrainManager(
-                    self,
-                    terrain_attr="terrain",
+                self.scene = gs.Scene(
+                    # ... scene options ...
                 )
-
-            def construct_scene(self) -> gs.Scene:
-                scene = # ... create scene here ...
 
                 # Add terrain
                 self.terrain = self.scene.add_entity(
@@ -39,9 +35,11 @@ class TerrainManager(BaseManager):
                     ),
                 )
 
-                # ...add robot here...
-
-                return scene
+            def config(self):
+                self.terrain_manager = TerrainManager(
+                    self,
+                    terrain_attr="terrain",
+                )
 
              def reset(self, envs_idx: list[int] = None) -> tuple[torch.Tensor, dict[str, Any]]:
                 # Randomize positions on the terrain
@@ -65,9 +63,7 @@ class TerrainManager(BaseManager):
         env: GenesisEnv,
         terrain_attr: str = "terrain",
     ):
-        super().__init__(env)
-        if hasattr(env, "add_terrain_manager"):
-            env.add_terrain_manager(self)
+        super().__init__(env, type="terrain")
 
         self._origin = (0, 0, 0)
         self._bounds = (0, 0, 0, 0)  # x_min, x_max, y_min, y_max
@@ -115,7 +111,6 @@ class TerrainManager(BaseManager):
         height_field = self._height_field.expand(
             coords.shape[0], 1, -1, -1
         )  # (n_coords, 1, height, width)
-
 
         interpolated = F.grid_sample(
             height_field,  # (n_coords, 1, height, width)
@@ -194,7 +189,9 @@ class TerrainManager(BaseManager):
         # Output
         output[out_idx, 0] = torch.rand(num, device=gs.device) * (x_max - x_min) + x_min
         output[out_idx, 1] = torch.rand(num, device=gs.device) * (y_max - y_min) + y_min
-        terrain_heights = self.get_terrain_height(output[out_idx, 0], output[out_idx, 1])
+        terrain_heights = self.get_terrain_height(
+            output[out_idx, 0], output[out_idx, 1]
+        )
         output[out_idx, 2] = terrain_heights + height_offset
         return output
 
@@ -248,13 +245,13 @@ class TerrainManager(BaseManager):
 
         # If there are parallel environments, take values for the first environment
         if aabb.ndim == 3:
-            aabb = aabb[0] 
+            aabb = aabb[0]
         if pos.ndim == 2:
             pos = pos[0]
 
         # Get the total bounds of the terrain
         (x_min, y_min, _) = aabb[0]
-        (x_max, y_max, _) = aabb[1] 
+        (x_max, y_max, _) = aabb[1]
         self._origin = pos
         self._size = (x_max - x_min, y_max - y_min)
         self._bounds = (x_min, x_max, y_min, y_max)

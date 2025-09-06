@@ -53,11 +53,6 @@ class TerminationManager(BaseManager):
                 obs = self.observations()
                 return obs, reward, terminated, truncated, info
 
-            def observations(self) -> torch.Tensor:
-                return torch.cat([
-                    ...
-                ])
-
     Example using the termination manager directly::
         class MyEnv(GenesisEnv):
             def __init__(self, *args, **kwargs):
@@ -112,9 +107,7 @@ class TerminationManager(BaseManager):
         logging_enabled: bool = True,
         logging_tag: str = "Dones",
     ):
-        super().__init__(env)
-        if hasattr(env, "add_termination_manager"):
-            env.add_termination_manager(self)
+        super().__init__(env, type="termination")
 
         self.term_cfg = term_cfg
         self.logging_enabled = logging_enabled
