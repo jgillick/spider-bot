@@ -65,6 +65,7 @@ class PositionalActionManager(BaseActionManager):
             def __init__(self, *args, **kwargs):
                 super().__init__(*args, **kwargs)
 
+            def config(self):
                 self.action_manager = PositionalActionManager(
                     self,
                     joint_names=".*",
@@ -219,8 +220,6 @@ class PositionalActionManager(BaseActionManager):
     def reset(
         self,
         envs_idx: list[int] = None,
-        reset_to_default: bool = True,
-        zero_dofs_velocity: bool = True,
     ):
         """Reset the DOF positions."""
         if not self.enabled:
@@ -254,15 +253,14 @@ class PositionalActionManager(BaseActionManager):
             self.env.robot.set_dofs_force_range(lower, upper, self.dofs_idx, envs_idx)
 
         # Reset DOF positions with random scaling
-        if reset_to_default:
-            position = self._add_random_noise(
-                self._default_dofs_pos[envs_idx], self._noise_scale
-            )
-            self.env.robot.set_dofs_position(
-                position=position,
-                dofs_idx_local=self.dofs_idx,
-                envs_idx=envs_idx,
-            )
+        position = self._add_random_noise(
+            self._default_dofs_pos[envs_idx], self._noise_scale
+        )
+        self.env.robot.set_dofs_position(
+            position=position,
+            dofs_idx_local=self.dofs_idx,
+            envs_idx=envs_idx,
+        )
 
     """
     Implementation
@@ -390,4 +388,5 @@ class PositionalActionManager(BaseActionManager):
         """
         Add random noise to the tensor values
         """
-        return values + torch.randn_like(values) * noise_scale
+        noise_value = torch.empty_like(values).uniform_(-1, 1) * noise_scale
+        return values + noise_value

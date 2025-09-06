@@ -69,19 +69,12 @@ class Wrapper:
     Operations
     """
 
-    def construct_scene(self) -> gs.Scene:
-        """Uses the :meth:`construct_scene` of the :attr:`env` that can be overwritten to change the returned data."""
-        return self.env.construct_scene()
-
     def build(self) -> None:
-        """Builds the scene once all entities have been added (via construct_scene). This operation is required before running the simulation."""
-        if self.env.scene is None:
-            self.construct_scene()
+        """
+        Builds the scene and other supporting components necessary for the training environment.
+        This assumes that the scene has already been constructed and assigned to the <env>.scene attribute.
+        """
         self.env.build()
-
-    def observations(self) -> torch.Tensor:
-        """Generate a list of observations for each environment."""
-        return self.env.observations()
 
     def step(
         self, actions: torch.Tensor
