@@ -1,4 +1,5 @@
 import torch
+import genesis as gs
 from gymnasium import spaces
 from typing import Any, Tuple
 from skrl.envs.wrappers.torch.base import Wrapper as SkrlWrapper
@@ -18,6 +19,11 @@ class SkrlEnvWapper(SkrlWrapper):
     def observation_space(self) -> spaces:
         """The observation space of the environment."""
         return self._env.observation_space
+    
+    @property
+    def device(self) -> torch.device:
+        """The device of the environment."""
+        return gs.device
 
     def reset(self) -> Tuple[torch.Tensor, Any]:
         """Reset the environment
