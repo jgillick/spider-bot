@@ -106,7 +106,7 @@ def main():
     cfg, log_path = load_training_config(SKRL_CONFIG, args.max_iterations)
     video_path = os.path.join(log_path, "videos")
     print(f"Logging to: {log_path}")
-    save_env_snapshots(log_path, cfg)
+    save_env_snapshots(log_path, cfg, ["./environment.py", SKRL_CONFIG])
 
     # Train agent
     train(cfg, args.num_envs, video_path)

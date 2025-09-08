@@ -2,6 +2,7 @@ import os
 import glob
 import pickle
 import subprocess
+import shutil
 from datetime import datetime
 
 from skrl.utils.runner.torch import Runner
@@ -61,7 +62,7 @@ def get_latest_checkpoint(log_dir: str) -> str:
     return checkpoint_files[-1]
 
 
-def save_env_snapshots(log_dir: str, cfg: dict):
+def save_env_snapshots(log_dir: str, cfg: dict, files: list[str] = []):
     """
     Save the environment snapshots to the logging directory.
 
@@ -74,6 +75,10 @@ def save_env_snapshots(log_dir: str, cfg: dict):
 
     # Training config
     pickle.dump([cfg], open(f"{log_dir}/snapshot/cfg.pkl", "wb"))
+
+    # Misc files
+    for file in files:
+        shutil.copy(file, os.path.join(log_dir, "snapshot", os.path.basename(file)))
 
     # Git diff
     try:

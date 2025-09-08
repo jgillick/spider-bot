@@ -395,7 +395,7 @@ class SpiderRobotEnv(ManagedEnvironment):
         ObservationManager(
             self,
             cfg={
-                "height_cmd": {"fn": self.height_command.observation},
+                # "height_cmd": {"fn": self.height_command.observation},
                 "velocity_cmd": {"fn": self.velocity_command.observation},
                 "robot_ang_vel": {
                     "fn": entity_ang_vel,
@@ -425,7 +425,7 @@ class SpiderRobotEnv(ManagedEnvironment):
                     "params": {"clip_to_max_force": True},
                     "noise": 0.01,
                 },
-                "robot_actions": {"fn": lambda: self.actions},
+                "robot_actions": {"fn": self.action_manager.get_actions},
             },
         )
 
