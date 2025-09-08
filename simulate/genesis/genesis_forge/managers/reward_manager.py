@@ -155,9 +155,13 @@ class RewardManager(BaseManager):
 
             episode_lengths = self._episode_length[envs_idx]
             valid_episodes = episode_lengths > 0
-            for name, value in self._episode_data.items():
-                # Log episodes with at least one step (otherwise it could cause a divide by zero error)
-                if torch.any(valid_episodes):
+            # Log episodes with at least one step (otherwise it could cause a divide by zero error)
+            if torch.any(valid_episodes):
+                for name, value in self._episode_data.items():
+                    weight = self.cfg[name].get("weight", 0.0)
+                    if weight == 0:
+                        continue
+                    
                     # Calculate average for each episode based on its actual length
                     episode_avg = torch.zeros_like(value[envs_idx])
                     episode_avg[valid_episodes] = (
@@ -165,11 +169,11 @@ class RewardManager(BaseManager):
                         / episode_lengths[valid_episodes]
                     )
 
-                    # Take the mean across valid episodes only
+                    # Take the mean across valid episodes
                     episode_mean = torch.mean(episode_avg[valid_episodes])
                     logging_dict[f"{self.logging_tag} / {name}"] = episode_mean
 
-                # Reset episodic sum
-                self._episode_data[name][envs_idx] = 0.0
+                    # Reset episodic sum
+                    self._episode_data[name][envs_idx] = 0.0
 
         self._episode_length[envs_idx] = 0
