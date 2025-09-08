@@ -458,6 +458,8 @@ class ContactManager(BaseManager):
         """
         Visualize the contact points.
         """
+        cfg = self.visualizer_cfg
+
         # Clear existing debug objects
         for node in self._debug_nodes:
             self.env.scene.clear_debug_object(node)
@@ -467,10 +469,10 @@ class ContactManager(BaseManager):
         if not self.debug_visualizer:
             return
 
-        # Filter to only the environments we want to visualize
-        cfg = self.visualizer_cfg
+        # Filter contact positions
         if cfg["envs_idx"] is not None:
             contact_pos = contact_pos[cfg["envs_idx"]]
+            link_mask = link_mask[cfg["envs_idx"]]
         contact_pos = contact_pos[link_mask]
 
         # Draw debug spheres

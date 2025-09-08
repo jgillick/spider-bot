@@ -22,7 +22,7 @@ models:
     network:
       - name: net
         input: STATES
-        layers: [256, 256, 128]
+        layers: [512, 256, 128]
         activations: elu
     output: ACTIONS
   value: # see deterministic_model parameters
@@ -31,7 +31,7 @@ models:
     network:
       - name: net
         input: STATES
-        layers: [256, 256, 128]
+        layers: [512, 256, 128]
         activations: elu
     output: ONE
 
@@ -47,7 +47,7 @@ agent:
   class: PPO
   # Target training batch size of ~98,304 (98,304 / num parallel envs = num_steps_per_env)
   # Based on: https://ar5iv.labs.arxiv.org/html/2109.11978
-  rollouts: 50
+  rollouts: 65
   learning_epochs: 5
   mini_batches: 4
   discount_factor: 0.99

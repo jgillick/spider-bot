@@ -77,7 +77,7 @@ class SpiderRobotEnv(ManagedEnvironment):
             show_viewer=not self.headless,
             sim_options=gs.options.SimOptions(dt=self.dt),
             viewer_options=gs.options.ViewerOptions(
-                camera_pos=(-2.5, -1.5, 1.0),
+                camera_pos=(-2.5, -1.5, 2.0),
                 camera_lookat=(0.0, 0.0, 0.0),
                 camera_fov=40,
                 max_FPS=60,
@@ -140,7 +140,7 @@ class SpiderRobotEnv(ManagedEnvironment):
 
         # Add camera
         self.camera = self.scene.add_camera(
-            pos=(-2.5, -1.5, 1.0),
+            pos=(-2.5, -1.5, 3.0),
             res=(1280, 960),
             fov=40,
             env_idx=0,
@@ -184,12 +184,12 @@ class SpiderRobotEnv(ManagedEnvironment):
         """
 
         # Command manager: instruct the robot to move in a certain direction
-        self.height_command = CommandManager(
-            self,
-            range={
-                "height": [0.12, 0.15],
-            },
-        )
+        # self.height_command = CommandManager(
+        #     self,
+        #     range={
+        #         "height": [0.12, 0.15],
+        #     },
+        # )
         self.velocity_command = VelocityCommandManager(
             self,
             # Starting ranges should be small, while robot is learning to stand
@@ -250,8 +250,8 @@ class SpiderRobotEnv(ManagedEnvironment):
                     "weight": -1000.0,
                     "fn": rewards.base_height,
                     "params": {
-                        # "target_height": 0.135,
-                        "height_command": self.height_command,
+                        "target_height": 0.14,
+                        # "height_command": self.height_command,
                         "terrain_manager": self.terrain_manager,
                     },
                 },
@@ -284,21 +284,21 @@ class SpiderRobotEnv(ManagedEnvironment):
                     "weight": -50.0,
                     "fn": rewards.flat_orientation_l2,
                 },
-                "Self contact": {
-                    "weight": -10.0,
-                    "fn": rewards.has_contact,
-                    "params": {
-                        "contact_manager": self.self_contact,
-                    },
-                },
                 # "Self contact": {
-                #     "weight": -0.012,
-                #     "fn": rewards.contact_force,
+                #     "weight": -10.0,
+                #     "fn": rewards.has_contact,
                 #     "params": {
                 #         "contact_manager": self.self_contact,
-                #         "threshold": 0.1,
                 #     },
                 # },
+                "Self contact": {
+                    "weight": -0.2,
+                    "fn": rewards.contact_force,
+                    "params": {
+                        "contact_manager": self.self_contact,
+                        "threshold": 0.2,
+                    },
+                },
                 "Foot air time": {
                     "weight": 1.25,
                     "fn": rewards.feet_air_time,
@@ -471,6 +471,10 @@ class SpiderRobotEnv(ManagedEnvironment):
         extras["episode"]["Metrics / Curriculum level"] = torch.tensor(
             self._curriculum_phase, device="cpu"
         )
+
+        # If we're playing a pre-trained agent, render the camera
+        if self.mode == "play":
+            self.camera.render()
 
         # Finish up
         return obs, reward, terminated, truncated, extras
