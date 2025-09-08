@@ -39,7 +39,7 @@ def train(
     """
 
     #  Create environment
-    env = SpiderRobotEnv(num_envs=num_envs, headless=True)
+    env = SpiderRobotEnv(num_envs=num_envs, headless=True, terrain="rough")
     env = VideoWrapper(
         env,
         video_length_sec=12,
@@ -62,7 +62,7 @@ def train(
 def record_video(cfg: dict, log_path: str, video_path: str):
     """Record a video of the best performing episode."""
     # Recording environment
-    env = SpiderRobotEnv(num_envs=1)
+    env = SpiderRobotEnv(num_envs=1, terrain="rough")
     env = VideoWrapper(
         env,
         out_dir=video_path,
