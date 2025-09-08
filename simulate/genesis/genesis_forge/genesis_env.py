@@ -211,7 +211,7 @@ class GenesisEnv:
 
     def close(self):
         """Close the environment."""
-        self.scene.reset()
+        pass
 
     def render(self):
         """Not implemented."""
