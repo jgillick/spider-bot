@@ -39,7 +39,7 @@ class RewardManager(BaseManager):
 
                 self.reward_manager = RewardManager(
                     self,
-                    term_cfg={
+                    cfg={
                         "Default pose": {
                             "fn": mdp.rewards.dof_similar_to_default,
                             "weight": -0.1,
@@ -61,7 +61,6 @@ class RewardManager(BaseManager):
                 self.reward_manager = RewardManager(
                     self,
                     cfg={
-
                         "Base height": {
                             "fn": mdp.rewards.base_height,
                             "params": { "target_height": 0.135 },
@@ -77,11 +76,12 @@ class RewardManager(BaseManager):
             def step(self, actions: torch.Tensor):
                 super().step(actions)
                 rewards = self.reward_manager.step()
+                # ... other step logic ...
                 return obs, rewards, terminations, timeouts, info
 
             def reset(self, envs_idx: list[int] | None = None):
                 super().reset(envs_idx)
-                self.reward_manager.reset(envs_idx)
+                # ... other reset logic ...
                 return obs, info
 
     """
@@ -93,9 +93,7 @@ class RewardManager(BaseManager):
         logging_enabled: bool = True,
         logging_tag: str = "Rewards",
     ):
-        super().__init__(env)
-        if hasattr(env, "add_reward_manager"):
-            env.add_reward_manager(self)
+        super().__init__(env, type="reward")
 
         self.cfg = cfg
         self.logging_enabled = logging_enabled

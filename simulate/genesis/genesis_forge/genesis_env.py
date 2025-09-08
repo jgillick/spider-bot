@@ -52,7 +52,7 @@ class GenesisEnv:
         self._extras = {}
         self._extras[extras_logging_key] = {}
 
-        self.actions: torch.Tensor = None
+        self._actions: torch.Tensor = None
         self.last_actions: torch.Tensor = None
 
         self.step_count: int = 0
@@ -99,6 +99,16 @@ class GenesisEnv:
         """
         return self._extras
 
+    @property
+    def actions(self) -> torch.Tensor:
+        """The current actions for each environment for this step."""
+        return self._actions
+
+    @actions.setter
+    def actions(self, actions: torch.Tensor):
+        """Set the actions for each environment for this step."""
+        self._actions = actions
+
     """
     Utilities
     """
@@ -121,22 +131,15 @@ class GenesisEnv:
     Operations
     """
 
-    def construct_scene(self) -> gs.Scene:
-        """
-        Construct the genesis scene.
-        """
-        raise NotImplementedError("construct_scene must be implemented in the subclass")
-
     def build(self) -> None:
-        """Builds the scene once all entities have been added (via construct_scene). This operation is required before running the simulation."""
-        if self.scene is None:
-            self.construct_scene()
-
+        """
+        Builds the scene and other supporting components necessary for the training environment.
+        This assumes that the scene has already been constructed and assigned to the <env>.scene attribute.
+        """
+        assert (
+            self.scene is not None
+        ), "The scene must be constructed and assigned to the <env>.scene attribute before building."
         self.scene.build(n_envs=self.num_envs)
-
-    def observations(self) -> torch.Tensor:
-        """Generate a list of observations for each environment."""
-        return torch.zeros((self.num_envs, 1), device=gs.device)
 
     def step(
         self, actions: torch.Tensor
@@ -155,11 +158,8 @@ class GenesisEnv:
         self.step_count += 1
         self.episode_length += 1
 
-        if self.actions is not None:
-            self.last_actions[:] = self.actions[:]
-        else:
-            self.last_actions = torch.zeros_like(actions, device=gs.device)
-        self.actions = actions
+        self.last_actions[:] = self.actions[:]
+        self._actions = actions
 
         return None, None, None, None, self._extras
 
