@@ -51,7 +51,7 @@ class SpiderRobotEnv(ManagedEnvironment):
         max_episode_length_s: int | None = 6,
         headless: bool = True,
         mode: EnvMode = "train",
-        terrain: str = "flat_terrain",
+        terrain: str = None,
     ):
         super().__init__(
             num_envs=num_envs,
@@ -105,12 +105,12 @@ class SpiderRobotEnv(ManagedEnvironment):
         )
 
         # Command manager: instruct the robot to move in a certain direction
-        self.height_command = CommandManager(
-            self,
-            range={
-                "height": [0.12, 0.15],
-            },
-        )
+        # self.height_command = CommandManager(
+        #     self,
+        #     range={
+        #         "height": [0.12, 0.15],
+        #     },
+        # )
         self.velocity_command = VelocityCommandManager(
             self,
             # Starting ranges should be small, while robot is learning to stand
@@ -163,8 +163,8 @@ class SpiderRobotEnv(ManagedEnvironment):
                     "weight": -1000.0,
                     "fn": rewards.base_height,
                     "params": {
-                        # "target_height": 0.135,
-                        "height_command": self.height_command,
+                        "target_height": 0.14,
+                        # "height_command": self.height_command,
                         "terrain_manager": self.terrain_manager,
                     },
                 },
@@ -197,21 +197,21 @@ class SpiderRobotEnv(ManagedEnvironment):
                     "weight": -50.0,
                     "fn": rewards.flat_orientation_l2,
                 },
-                "Self contact": {
-                    "weight": -10.0,
-                    "fn": rewards.has_contact,
-                    "params": {
-                        "contact_manager": self.self_contact,
-                    },
-                },
                 # "Self contact": {
-                #     "weight": -0.012,
-                #     "fn": rewards.contact_force,
+                #     "weight": -10.0,
+                #     "fn": rewards.has_contact,
                 #     "params": {
                 #         "contact_manager": self.self_contact,
-                #         "threshold": 0.1,
                 #     },
                 # },
+                "Self contact": {
+                    "weight": -0.2,
+                    "fn": rewards.contact_force,
+                    "params": {
+                        "contact_manager": self.self_contact,
+                        "threshold": 0.2,
+                    },
+                },
                 "Foot air time": {
                     "weight": 1.25,
                     "fn": rewards.feet_air_time,
@@ -313,15 +313,15 @@ class SpiderRobotEnv(ManagedEnvironment):
                 )
             ),
             morph=gs.morphs.Terrain(
-                n_subterrains=(1, 3),
-                subterrain_size=(12, 12),
+                n_subterrains=(1, 1),
+                subterrain_size=(24, 24),
                 vertical_scale=0.002,
                 subterrain_types=[
                     [
-                        "flat_terrain",
-                        # "fractal_terrain", 
-                        "discrete_obstacles_terrain",
-                        "pyramid_stairs_terrain",
+                        # "flat_terrain",
+                        "fractal_terrain", 
+                        # "discrete_obstacles_terrain",
+                        # "pyramid_stairs_terrain",
                     ],
                     # ["flat_terrain", "pyramid_stairs_terrain"],
                     # ["discrete_obstacles_terrain", "fractal_terrain"],   # "random_uniform_terrain"
@@ -341,11 +341,12 @@ class SpiderRobotEnv(ManagedEnvironment):
 
         # Add camera
         self.camera = self.scene.add_camera(
-            pos=(-2.5, -1.5, 1.0),
+            pos=(-2.5, -1.5, 2.0),
             res=(1280, 960),
             fov=40,
             env_idx=0,
-            debug=True,
+            debug=self.mode != "play",
+            GUI=self.mode == "play",
         )
 
         return self.scene
@@ -393,17 +394,17 @@ class SpiderRobotEnv(ManagedEnvironment):
         # Create observations
         return torch.cat(
             [
-                self.height_command.command,  # 1
+                # self.height_command.command,  # 1
                 self.velocity_command.command,  # 3
                 entity_ang_vel(self.robot),  # 3
                 entity_lin_vel(self.robot),  # 3
                 entity_projected_gravity(self.robot),  # 3
                 self.action_manager.get_dofs_position(noise=0.01),  # 24
                 self.action_manager.get_dofs_velocity(noise=0.1),  # 24
-                actions,  # 24
                 self.action_manager.get_dofs_force(
                     noise=0.01, clip_to_max_force=True
                 ),  # 24
+                actions,  # 24
             ],
             dim=-1,
         )
@@ -419,7 +420,7 @@ class SpiderRobotEnv(ManagedEnvironment):
         self.camera.set_pose(lookat=self.robot.get_pos())
 
         # Update curriculum
-        self._update_curriculum()
+        # self._update_curriculum()
 
         # Log metrics
         extras["episode"]["Metrics / Self Contact"] = torch.mean(
@@ -431,6 +432,10 @@ class SpiderRobotEnv(ManagedEnvironment):
         extras["episode"]["Metrics / Curriculum level"] = torch.tensor(
             self._curriculum_phase, device="cpu"
         )
+
+        # If we're playing a pre-trained agent, render the camera
+        if self.mode == "play":
+            self.camera.render()
 
         # Finish up
         return obs, reward, terminated, truncated, extras
@@ -499,14 +504,10 @@ class SpiderRobotEnv(ManagedEnvironment):
             self._training_terrain = None
             
         # Pick up the pace
-        elif self.step_count == 80_000:
-            self.velocity_command.range["lin_vel_x"] = [-1.5, 1.5]
-            self.velocity_command.range["lin_vel_y"] = [-1.5, 1.5]
-            self.velocity_command.range["ang_vel_z"] = [-1.5, 1.5]
-            # self.reward_manager.cfg["Similar to default"]["weight"] = 0.5
-            # self.reward_manager.cfg["Bad touch"]["weight"] = -10.0
-            # self.reward_manager.cfg["Foot contact (some)"]["weight"] = 5
-            # self.reward_manager.cfg["Foot contact (all)"]["weight"] = 0.1
+        # elif self.step_count == 80_000:
+        #     self.velocity_command.range["lin_vel_x"] = [-1.5, 1.5]
+        #     self.velocity_command.range["lin_vel_y"] = [-1.5, 1.5]
+        #     self.velocity_command.range["ang_vel_z"] = [-1.5, 1.5]
 
     def _penalize_leg_angle(self, _env: GenesisEnv):
         """
