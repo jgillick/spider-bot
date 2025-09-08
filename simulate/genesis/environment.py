@@ -77,7 +77,7 @@ class SpiderRobotEnv(ManagedEnvironment):
             show_viewer=not self.headless,
             sim_options=gs.options.SimOptions(dt=self.dt),
             viewer_options=gs.options.ViewerOptions(
-                camera_pos=(-2.5, -1.5, 1.0),
+                camera_pos=(-2.5, -1.5, 2.0),
                 camera_lookat=(0.0, 0.0, 0.0),
                 camera_fov=40,
                 max_FPS=60,
@@ -140,7 +140,7 @@ class SpiderRobotEnv(ManagedEnvironment):
 
         # Add camera
         self.camera = self.scene.add_camera(
-            pos=(-2.5, -1.5, 1.0),
+            pos=(-2.5, -1.5, 3.0),
             res=(1280, 960),
             fov=40,
             env_idx=0,
