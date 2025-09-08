@@ -18,7 +18,7 @@ from genesis_forge.managers import (
     VelocityCommandManager,
     RewardManager,
     TerminationManager,
-    PositionalActionManager,
+    PositionWithinLimitsActionManager,
     ContactManager,
     TerrainManager,
     EntityManager,
@@ -158,7 +158,7 @@ class SpiderRobotEnv(ManagedEnvironment):
         self.terrain_manager = TerrainManager(self, terrain_attr="terrain")
 
         # Define the DOF actuators
-        self.action_manager = PositionalActionManager(
+        self.action_manager = PositionWithinLimitsActionManager(
             self,
             joint_names=".*",
             default_pos={
