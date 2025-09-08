@@ -70,9 +70,7 @@ class CommandManager(BaseManager):
         range: CommandRange,
         resample_time_sec: float = 5.0,
     ):
-        super().__init__(env)
-        if hasattr(env, "add_command_manager"):
-            env.add_command_manager(self)
+        super().__init__(env, type="command")
 
         self._range = range
         self.resample_time_sec = resample_time_sec
@@ -155,6 +153,10 @@ class CommandManager(BaseManager):
         if env_ids is None:
             env_ids = torch.arange(self.env.num_envs, device=gs.device)
         self.resample_command(env_ids)
+
+    def observation(self) -> torch.Tensor:
+        """Function that returns the current command for each environment."""
+        return self._command
 
     def use_external_controller(self, controller: Callable[[int], CommandRange]):
         """
@@ -265,7 +267,9 @@ class CommandManager(BaseManager):
             "gamepad": gamepad,
             "axis_map": axis_map,
         }
-        self._gamepad_axis_command_buffer = torch.zeros_like(self._command, device=gs.device)
+        self._gamepad_axis_command_buffer = torch.zeros_like(
+            self._command, device=gs.device
+        )
 
     def resample_command(self, env_ids: Sequence[int]):
         """Create a new command for the given environment ids."""

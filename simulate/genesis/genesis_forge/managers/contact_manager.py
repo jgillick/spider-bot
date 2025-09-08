@@ -34,13 +34,17 @@ class ContactManager(BaseManager):
 
     Example with ManagedEnvironment::
         class MyEnv(ManagedEnvironment):
-            def __init__(self, *args, **kwargs):
-                super().__init__(*args, **kwargs)
 
+            # ... Construct scene and other env setup ...
+
+            def config(self):
+                # Define contact manager
                 self.foot_contact_manager = ContactManager(
                     self,
                     link_names=[".*_Foot"],
                 )
+
+                # Use contact manager in rewards
                 self.reward_manager = RewardManager(
                     self,
                     term_cfg={
@@ -54,6 +58,8 @@ class ContactManager(BaseManager):
                         },
                     },
                 )
+
+                # ... other managers here ...
 
     Example using the contact manager directly::
 
@@ -89,41 +95,34 @@ class ContactManager(BaseManager):
 
                 # ...additional reward calculations here...
 
-    Entity Filtering::
+    Filtering::
 
         class MyEnv(ManagedEnvironment):
             def __init__(self, *args, **kwargs):
                 super().__init__(*args, **kwargs)
 
+                self.scene = gs.Scene(
+                    # ... scene options ...
+                )
+
+                # Add terrain
+                self.terrain = self.scene.add_entity(gs.morphs.Plane())
+
+                # add robot
+                self.robot = self.scene.add_entity(
+                    gs.morphs.URDF(file="urdf/go2/urdf/go2.urdf"),
+                )
+
+            def config(self):
                 # Track all contacts between the robot's feet and the terrain
-                # See entity initialization in the construct_scene method below
                 self.contact_manager = ContactManager(
                     self,
                     entity_attr="robot",
-                    link_names=[".*_Foot"],
+                    link_names=[".*_foot"],
                     with_entity_attr="terrain",
                 )
 
                 # ...other managers here...
-
-            def construct_scene(self) -> gs.Scene:
-                scene = # ... create scene here ...
-
-                # Add terrain
-                self.terrain = scene.add_entity(
-                    gs.morphs.Plane(),
-                )
-
-                # add robot
-                self.robot = scene.add_entity(
-                    gs.morphs.MJCF(
-                        file=ROBOT_XML,
-                        pos=INITIAL_BODY_POSITION,
-                        quat=INITIAL_QUAT,
-                    ),
-                )
-
-                return scene
 
             # ...other operations here...
     """
@@ -152,9 +151,7 @@ class ContactManager(BaseManager):
             debug_visualizer: Whether to visualize the contact points.
             debug_visualizer_cfg: The configuration for the contact debug visualizer.
         """
-        super().__init__(env)
-        if hasattr(env, "add_contact_manager"):
-            env.add_contact_manager(self)
+        super().__init__(env, "contact")
 
         self._link_names = link_names
         self._air_time_contact_threshold = air_time_contact_threshold
