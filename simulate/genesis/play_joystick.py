@@ -64,7 +64,7 @@ def play():
     gs.init(logging_level="warning", backend=backend)
 
     # Customize environment for playing
-    env = SpiderRobotEnv(num_envs=1, headless=False, mode="play")
+    env = SpiderRobotEnv(num_envs=1, headless=False, terrain="rough", mode="play")
     env.build()
     env.reward_manager.enabled = False
     env.termination_manager.enabled = False
