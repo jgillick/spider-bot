@@ -157,7 +157,39 @@ class SpiderRobotEnv(ManagedEnvironment):
         # Terrain
         self.terrain_manager = TerrainManager(self, terrain_attr="terrain")
 
-        # Define the DOF actuators
+
+        ## 
+        # Robot manager
+        EntityManager(
+            self,
+            entity_attr="robot",
+            on_reset={
+                "zero_dof": {
+                    "fn": reset.zero_all_dofs_velocity,
+                },
+                "rotation": {
+                    "fn": reset.set_rotation,
+                    "params": {"z": (0, 2 * math.pi)},
+                },
+                "position": {
+                    "fn": reset.randomize_terrain_position,
+                    "params": {
+                        "terrain_manager": self.terrain_manager,
+                        "height_offset": 0.15,
+                    },
+                },
+                "mass shift": {
+                    "fn": reset.randomize_link_mass_shift,
+                    "params": {
+                        "link_name": "Body",
+                        "add_mass_range": (-1.0, 1.0),
+                    },
+                },
+            },
+        )
+
+        ##
+        # DOF action manager
         self.action_manager = PositionWithinLimitsActionManager(
             self,
             joint_names=".*",
@@ -179,9 +211,8 @@ class SpiderRobotEnv(ManagedEnvironment):
             # stiffness=0.1,
         )
 
-        """
-        Command managers
-        """
+        ##
+        # Command managers
 
         # Command manager: instruct the robot to move in a certain direction
         # self.height_command = CommandManager(
@@ -206,9 +237,8 @@ class SpiderRobotEnv(ManagedEnvironment):
             },
         )
 
-        """
-        Contact managers
-        """
+        ##
+        # Contact managers
 
         # Foot/step contact manager
         self.foot_contact_manager = ContactManager(
@@ -235,10 +265,9 @@ class SpiderRobotEnv(ManagedEnvironment):
             },
         )
 
-        """
-        Reward manager
-        """
-        RewardManager(
+        ##
+        # Rewards
+        self.reward_manager = RewardManager(
             self,
             logging_enabled=True,
             cfg={
@@ -331,10 +360,9 @@ class SpiderRobotEnv(ManagedEnvironment):
             },
         )
 
-        """
-        Termination manager
-        """
-        TerminationManager(
+        ##
+        # Terminations
+        self.termination_manager = TerminationManager(
             self,
             logging_enabled=True,
             term_cfg={
@@ -358,40 +386,9 @@ class SpiderRobotEnv(ManagedEnvironment):
             },
         )
 
-        """
-        Robot manager
-        """
-        EntityManager(
-            self,
-            entity_attr="robot",
-            on_reset={
-                "zero_dof": {
-                    "fn": reset.zero_all_dofs_velocity,
-                },
-                "rotation": {
-                    "fn": reset.set_rotation,
-                    "params": {"z": (0, 2 * math.pi)},
-                },
-                "position": {
-                    "fn": reset.randomize_terrain_position,
-                    "params": {
-                        "terrain_manager": self.terrain_manager,
-                        "height_offset": 0.15,
-                    },
-                },
-                "mass shift": {
-                    "fn": reset.randomize_link_mass_shift,
-                    "params": {
-                        "link_name": "Body",
-                        "add_mass_range": (-1.0, 1.0),
-                    },
-                },
-            },
-        )
 
-        """
-        Observations
-        """
+        ##
+        # Observations
         ObservationManager(
             self,
             cfg={
