@@ -14,7 +14,6 @@ from genesis.utils.geom import transform_by_quat, inv_quat
 
 from genesis_forge import GenesisEnv, ManagedEnvironment, EnvMode
 from genesis_forge.managers import (
-    CommandManager,
     VelocityCommandManager,
     RewardManager,
     TerminationManager,
@@ -437,7 +436,7 @@ class SpiderRobotEnv(ManagedEnvironment):
         super().build()
 
         # Track robot with camera
-        self.camera.follow_entity(self.robot, fixed_axis=(None, None, 1.0))
+        self.camera.follow_entity(self.robot, smoothing=0.05)
         self.camera.set_pose(lookat=self.robot.get_pos())
 
         # Fetch foot links
@@ -455,9 +454,6 @@ class SpiderRobotEnv(ManagedEnvironment):
         """
         obs, reward, terminated, truncated, extras = super().step(actions)
 
-        #  Keep the camera looking at the robot
-        self.camera.set_pose(lookat=self.robot.get_pos())
-
         # Update curriculum
         # self._update_curriculum()
 
@@ -472,6 +468,8 @@ class SpiderRobotEnv(ManagedEnvironment):
             self._curriculum_phase, device="cpu"
         )
 
+        #  Keep the camera looking at the robot
+        self.camera.set_pose(lookat=self.robot.get_pos()[0])
         # If we're playing a pre-trained agent, render the camera
         if self.mode == "play":
             self.camera.render()

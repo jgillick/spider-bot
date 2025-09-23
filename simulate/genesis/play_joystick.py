@@ -4,6 +4,7 @@ By default this uses the Logitech F310 gamepad.
 """
 
 import os
+import glob
 import argparse
 import torch
 import pickle
@@ -27,6 +28,28 @@ parser.add_argument(
 )
 parser.add_argument("dir", help="The training output directory.")
 args = parser.parse_args()
+
+
+def get_latest_checkpoint(log_dir: str) -> str:
+    """
+    Get the latest checkpoint from the log directory
+    """
+    checkpoint_dir = os.path.join(log_dir, "checkpoints")
+
+    # Best checkpoint
+    checkpoint_path = os.path.join(checkpoint_dir, "best_agent.pt")
+    if os.path.exists(checkpoint_path):
+        return checkpoint_path
+
+    # Latest checkpoint
+    checkpoint_files = glob.glob(os.path.join(checkpoint_dir, "agent_*.pt"))
+    if len(checkpoint_files) == 0:
+        print(
+            f"Warning: No checkpoint files found at '{checkpoint_dir}' (you might need to train more)."
+        )
+        return None
+    checkpoint_files.sort()
+    return checkpoint_files[-1]
 
 
 def get_training_config():
