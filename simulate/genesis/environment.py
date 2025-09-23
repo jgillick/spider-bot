@@ -4,7 +4,6 @@ Focuses on core objectives with progressive difficulty
 """
 
 import os
-import math
 import torch
 import numpy as np
 from PIL import Image
@@ -12,7 +11,7 @@ from typing import Literal
 import genesis as gs
 from genesis.utils.geom import transform_by_quat, inv_quat
 
-from genesis_forge import GenesisEnv, ManagedEnvironment, EnvMode
+from genesis_forge import GenesisEnv, ManagedEnvironment
 from genesis_forge.managers import (
     VelocityCommandManager,
     RewardManager,
@@ -23,14 +22,13 @@ from genesis_forge.managers import (
     EntityManager,
     ObservationManager,
 )
-from genesis_forge.managers.entity import reset
 from genesis_forge.utils import (
     entity_projected_gravity,
     entity_ang_vel,
     entity_lin_vel,
     links_idx_by_name_pattern,
 )
-from genesis_forge.mdp import rewards, terminations
+from genesis_forge.mdp import reset, rewards, terminations
 
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -38,6 +36,7 @@ SPIDER_XML = os.path.abspath(os.path.join(THIS_DIR, "../robot/SpiderBot.xml"))
 
 
 Terrain = Literal["flat", "rough", "mixed"]
+EnvMode = Literal["train", "eval", "play"]
 
 
 class SpiderRobotEnv(ManagedEnvironment):
@@ -59,9 +58,9 @@ class SpiderRobotEnv(ManagedEnvironment):
             dt=dt,
             max_episode_length_sec=max_episode_length_s,
             max_episode_random_scaling=0.1,
-            headless=headless,
         )
         self._curriculum_phase = 1
+        self.headless = headless
         self.construct_scene(terrain)
 
     """
@@ -145,6 +144,7 @@ class SpiderRobotEnv(ManagedEnvironment):
             env_idx=0,
             debug=True,
         )
+        self.camera.follow_entity(self.robot, smoothing=0.05)
 
         return self.scene
 
@@ -156,20 +156,12 @@ class SpiderRobotEnv(ManagedEnvironment):
         # Terrain
         self.terrain_manager = TerrainManager(self, terrain_attr="terrain")
 
-
-        ## 
+        ##
         # Robot manager
         EntityManager(
             self,
             entity_attr="robot",
             on_reset={
-                "zero_dof": {
-                    "fn": reset.zero_all_dofs_velocity,
-                },
-                "rotation": {
-                    "fn": reset.set_rotation,
-                    "params": {"z": (0, 2 * math.pi)},
-                },
                 "position": {
                     "fn": reset.randomize_terrain_position,
                     "params": {
@@ -181,7 +173,7 @@ class SpiderRobotEnv(ManagedEnvironment):
                     "fn": reset.randomize_link_mass_shift,
                     "params": {
                         "link_name": "Body",
-                        "add_mass_range": (-1.0, 1.0),
+                        "add_mass_range": (-0.5, 0.5),
                     },
                 },
             },
@@ -214,12 +206,6 @@ class SpiderRobotEnv(ManagedEnvironment):
         # Command managers
 
         # Command manager: instruct the robot to move in a certain direction
-        # self.height_command = CommandManager(
-        #     self,
-        #     range={
-        #         "height": [0.12, 0.15],
-        #     },
-        # )
         self.velocity_command = VelocityCommandManager(
             self,
             # Starting ranges should be small, while robot is learning to stand
@@ -229,12 +215,18 @@ class SpiderRobotEnv(ManagedEnvironment):
                 "ang_vel_z": [-1.0, 1.0],
             },
             standing_probability=0.02,
-            resample_time_s=5.0,
+            resample_time_sec=5.0,
             debug_visualizer=True,
             debug_visualizer_cfg={
                 "envs_idx": [0],
             },
         )
+        # self.height_command = CommandManager(
+        #     self,
+        #     range={
+        #         "height": [0.12, 0.15],
+        #     },
+        # )
 
         ##
         # Contact managers
@@ -272,14 +264,13 @@ class SpiderRobotEnv(ManagedEnvironment):
             cfg={
                 "Linear Z velocity": {
                     "weight": -10.0,
-                    "fn": rewards.lin_vel_z,
+                    "fn": rewards.lin_vel_z_l2,
                 },
                 "Base height": {
                     "weight": -1000.0,
                     "fn": rewards.base_height,
                     "params": {
                         "target_height": 0.14,
-                        # "height_command": self.height_command,
                         "terrain_manager": self.terrain_manager,
                     },
                 },
@@ -292,7 +283,7 @@ class SpiderRobotEnv(ManagedEnvironment):
                 },
                 "Action rate": {
                     "weight": -0.05,
-                    "fn": rewards.action_rate,
+                    "fn": rewards.action_rate_l2,
                 },
                 "Cmd linear velocity": {
                     "weight": 20.0,
@@ -385,7 +376,6 @@ class SpiderRobotEnv(ManagedEnvironment):
             },
         )
 
-
         ##
         # Observations
         ObservationManager(
@@ -414,11 +404,13 @@ class SpiderRobotEnv(ManagedEnvironment):
                 },
                 "robot_dofs_velocity": {
                     "fn": self.action_manager.get_dofs_velocity,
+                    "scale": 0.05,
                     "noise": 0.1,
                 },
                 "robot_dofs_force": {
                     "fn": self.action_manager.get_dofs_force,
                     "params": {"clip_to_max_force": True},
+                    "scale": 0.1,
                     "noise": 0.01,
                 },
                 "robot_actions": {"fn": self.action_manager.get_actions},
@@ -431,10 +423,6 @@ class SpiderRobotEnv(ManagedEnvironment):
         This operation is required before running the simulation.
         """
         super().build()
-
-        # Track robot with camera
-        self.camera.follow_entity(self.robot, smoothing=0.05)
-        self.camera.set_pose(lookat=self.robot.get_pos())
 
         # Fetch foot links
         self._foot_links_idx = links_idx_by_name_pattern(
