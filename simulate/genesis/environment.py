@@ -23,9 +23,6 @@ from genesis_forge.managers import (
     ObservationManager,
 )
 from genesis_forge.utils import (
-    entity_projected_gravity,
-    entity_ang_vel,
-    entity_lin_vel,
     links_idx_by_name_pattern,
 )
 from genesis_forge.mdp import reset, rewards, terminations
@@ -61,6 +58,7 @@ class SpiderRobotEnv(ManagedEnvironment):
         )
         self._curriculum_phase = 1
         self.headless = headless
+        self.mode = mode
         self.construct_scene(terrain)
 
     """
@@ -158,7 +156,7 @@ class SpiderRobotEnv(ManagedEnvironment):
 
         ##
         # Robot manager
-        EntityManager(
+        self.robot_manager = EntityManager(
             self,
             entity_attr="robot",
             on_reset={
@@ -169,7 +167,7 @@ class SpiderRobotEnv(ManagedEnvironment):
                         "height_offset": 0.15,
                     },
                 },
-                "mass shift": {
+                "mass_shift": {
                     "fn": reset.randomize_link_mass_shift,
                     "params": {
                         "link_name": "Body",
@@ -278,7 +276,7 @@ class SpiderRobotEnv(ManagedEnvironment):
                     "weight": -0.5,
                     "fn": rewards.dof_similar_to_default,
                     "params": {
-                        "dof_action_manager": self.action_manager,
+                        "action_manager": self.action_manager,
                     },
                 },
                 "Action rate": {
@@ -324,7 +322,7 @@ class SpiderRobotEnv(ManagedEnvironment):
                     "params": {
                         "contact_manager": self.foot_contact_manager,
                         "vel_cmd_manager": self.velocity_command,
-                        "threshold": 1.0,
+                        "time_threshold": 1.0,
                     },
                 },
                 "Leg angle": {
@@ -356,11 +354,11 @@ class SpiderRobotEnv(ManagedEnvironment):
             self,
             logging_enabled=True,
             term_cfg={
-                "Timeout": {
+                "timeout": {
                     "fn": terminations.timeout,
                     "time_out": True,
                 },
-                "Bad angle": {
+                "bad_orientation": {
                     "fn": terminations.bad_orientation,
                     "params": {
                         "limit_angle": 0.7,
@@ -383,37 +381,37 @@ class SpiderRobotEnv(ManagedEnvironment):
             cfg={
                 # "height_cmd": {"fn": self.height_command.observation},
                 "velocity_cmd": {"fn": self.velocity_command.observation},
-                "robot_ang_vel": {
-                    "fn": entity_ang_vel,
-                    "params": {"entity": self.robot},
+                "angle_velocity": {
+                    "fn": lambda env: self.robot_manager.get_angular_velocity(),
                     "noise": 0.01,
                 },
-                "robot_lin_vel": {
-                    "fn": entity_lin_vel,
-                    "params": {"entity": self.robot},
+                "linear_velocity": {
+                    "fn": lambda env: self.robot_manager.get_linear_velocity(),
                     "noise": 0.01,
                 },
-                "robot_projected_gravity": {
-                    "fn": entity_projected_gravity,
-                    "params": {"entity": self.robot},
+                "projected_gravity": {
+                    "fn": lambda env: self.robot_manager.get_projected_gravity(),
                     "noise": 0.01,
                 },
-                "robot_dofs_position": {
-                    "fn": self.action_manager.get_dofs_position,
+                "dof_position": {
+                    "fn": lambda env: self.action_manager.get_dofs_position(),
                     "noise": 0.01,
                 },
-                "robot_dofs_velocity": {
-                    "fn": self.action_manager.get_dofs_velocity,
+                "dof_velocity": {
+                    "fn": lambda env: self.action_manager.get_dofs_velocity(),
                     "scale": 0.05,
                     "noise": 0.1,
                 },
-                "robot_dofs_force": {
-                    "fn": self.action_manager.get_dofs_force,
-                    "params": {"clip_to_max_force": True},
+                "dofs_force": {
+                    "fn": lambda env: self.action_manager.get_dofs_force(
+                        clip_to_max_force=True
+                    ),
                     "scale": 0.1,
                     "noise": 0.01,
                 },
-                "robot_actions": {"fn": self.action_manager.get_actions},
+                "robot_actions": {
+                    "fn": lambda env: self.action_manager.get_actions(),
+                },
             },
         )
 
