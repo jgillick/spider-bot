@@ -1,7 +1,9 @@
 genesis-world>=0.3.3
+genesis-forge>=0.1.1
 torch
 # skrl[torch]
 skrl @ https://github.com/jgillick/skrl
 pyyaml
 hidapi
 tensorboardX
+rsl-rl-lib>=2.2.4
