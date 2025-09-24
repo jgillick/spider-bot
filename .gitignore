@@ -212,7 +212,6 @@ __marimo__/
 .vscode/
 *.tmp.usd
 ._*
-simulate/robot/export/
 simulate/issac/cloud.cfg
 simulate/issac/env.cfg
 simulate/*/logs
