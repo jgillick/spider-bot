@@ -45,20 +45,24 @@ RENAME_PARTS = {
 
 # Skip collider geoms for these geom meshes
 SKIP_COLLIDERS = [
+    "Body",
     "Leg_KneeMotorPulley",
     "Leg_Knee_motor_bearings",
     "Motor",
     "Leg_Body_Bracket",
     "Leg_Hip_Bracket",
     "Leg_End_Bearing_Holder",
+    "Leg_Tibia_BadTouch",
 ]
 
 DEFAULT_COLLISION_THRESHOLD = 0.1
 COLLISION_THRESHOLDS = {
-    "Leg_Tibia_Leg": 0.04,
-    "Leg_Femur": 0.05,
+    "Leg_Femur": 0.2,
+    "Leg_Tibia_Leg": 0.2,
     "Leg_Body_Bracket": 0.2,
 }
+
+REMOVE_BODIES = ["_Tibia_BadTouch"]
 
 DEFAULT_MATERIAL_NAME = "body_material"
 
@@ -76,6 +80,7 @@ def main(tree, input_dir, output_path, head=False, imu=False):
     tree = main_body(tree, head=head, imu=imu)
     tree = add_foot_friction(tree)
     tree = convert_euler_to_quat(tree)
+    tree = remove_bodies(tree)
     tree = process_meshes(tree, input_dir, output_dir)
 
     # Pretty print and output
@@ -433,6 +438,25 @@ def create_materials(tree):
     return tree
 
 
+def remove_bodies(tree):
+    """
+    Remove bodies from the XML tree.
+    """
+    # Get all parents in the XML tree
+    parents = {c: p for p in tree.iter() for c in p}
+
+    # Remove bodies and meshes that container the name in REMOVE_BODIES
+    for elem in tree.iter():
+        for name in REMOVE_BODIES:
+            if (
+                elem.tag in ("body", "mesh")
+                and "name" in elem.attrib
+                and elem.attrib["name"].endswith(name)
+            ):
+                parents[elem].remove(elem)
+    return tree
+
+
 def create_collision_meshes(mesh_path, collision_dir):
     """
     Create collision meshes from a mesh file.
@@ -773,8 +797,6 @@ if __name__ == "__main__":
         tree,
         input_dir=input_dir,
         output_path=args.output_path,
-        ground=args.ground,
-        light=args.light,
         head=args.head,
         imu=args.imu,
     )
