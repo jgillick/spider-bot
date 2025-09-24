@@ -3,6 +3,7 @@ Simplified Spider Robot Environment with Curriculum Learning
 Focuses on core objectives with progressive difficulty
 """
 
+import re
 import os
 import torch
 import numpy as np
@@ -21,9 +22,6 @@ from genesis_forge.managers import (
     TerrainManager,
     EntityManager,
     ObservationManager,
-)
-from genesis_forge.utils import (
-    links_idx_by_name_pattern,
 )
 from genesis_forge.mdp import reset, rewards, terminations
 
@@ -167,13 +165,6 @@ class SpiderRobotEnv(ManagedEnvironment):
                         "height_offset": 0.15,
                     },
                 },
-                "mass_shift": {
-                    "fn": reset.randomize_link_mass_shift,
-                    "params": {
-                        "link_name": "Body",
-                        "add_mass_range": (-0.5, 0.5),
-                    },
-                },
             },
         )
 
@@ -251,6 +242,7 @@ class SpiderRobotEnv(ManagedEnvironment):
             debug_visualizer=True,
             debug_visualizer_cfg={
                 "envs_idx": [0],
+                "size": 0.05,
             },
         )
 
@@ -258,57 +250,65 @@ class SpiderRobotEnv(ManagedEnvironment):
         # Rewards
         self.reward_manager = RewardManager(
             self,
-            logging_enabled=True,
             cfg={
-                "Linear Z velocity": {
-                    "weight": -10.0,
-                    "fn": rewards.lin_vel_z_l2,
-                },
-                "Base height": {
-                    "weight": -1000.0,
+                "base_height_target": {
+                    "weight": -50.0,
                     "fn": rewards.base_height,
                     "params": {
                         "target_height": 0.14,
                         "terrain_manager": self.terrain_manager,
+                        "entity_manager": self.robot_manager,
                     },
                 },
-                "Similar to default": {
-                    "weight": -0.5,
+                "tracking_lin_vel": {
+                    "weight": 1.0,
+                    "fn": rewards.command_tracking_lin_vel,
+                    "params": {
+                        "vel_cmd_manager": self.velocity_command,
+                        "entity_manager": self.robot_manager,
+                    },
+                },
+                "tracking_ang_vel": {
+                    "weight": 0.5,
+                    "fn": rewards.command_tracking_ang_vel,
+                    "params": {
+                        "vel_cmd_manager": self.velocity_command,
+                        "entity_manager": self.robot_manager,
+                    },
+                },
+                "lin_vel_z": {
+                    "weight": -1.0,
+                    "fn": rewards.lin_vel_z_l2,
+                    "params": {
+                        "entity_manager": self.robot_manager,
+                    },
+                },
+                "action_rate": {
+                    "weight": -0.005,
+                    "fn": rewards.action_rate_l2,
+                },
+                "similar_to_default": {
+                    "weight": -0.1,
                     "fn": rewards.dof_similar_to_default,
                     "params": {
                         "action_manager": self.action_manager,
                     },
                 },
-                "Action rate": {
-                    "weight": -0.05,
-                    "fn": rewards.action_rate_l2,
-                },
-                "Cmd linear velocity": {
-                    "weight": 20.0,
-                    "fn": rewards.command_tracking_lin_vel,
-                    "params": {
-                        "vel_cmd_manager": self.velocity_command,
-                    },
-                },
-                "Cmd angular velocity": {
-                    "weight": 10.0,
-                    "fn": rewards.command_tracking_ang_vel,
-                    "params": {
-                        "vel_cmd_manager": self.velocity_command,
-                    },
-                },
-                "Flat orientation": {
-                    "weight": -50.0,
+                "flat_orientation": {
+                    "weight": -2.5,
                     "fn": rewards.flat_orientation_l2,
+                    "params": {
+                        "entity_manager": self.robot_manager,
+                    },
                 },
-                # "Self contact": {
+                # "self_contact": {
                 #     "weight": -10.0,
                 #     "fn": rewards.has_contact,
                 #     "params": {
                 #         "contact_manager": self.self_contact,
                 #     },
                 # },
-                "Self contact": {
+                "self_contact": {
                     "weight": -0.2,
                     "fn": rewards.contact_force,
                     "params": {
@@ -316,8 +316,8 @@ class SpiderRobotEnv(ManagedEnvironment):
                         "threshold": 0.2,
                     },
                 },
-                "Foot air time": {
-                    "weight": 1.25,
+                "foot_air_time": {
+                    "weight": 2.5,
                     "fn": rewards.feet_air_time,
                     "params": {
                         "contact_manager": self.foot_contact_manager,
@@ -325,7 +325,7 @@ class SpiderRobotEnv(ManagedEnvironment):
                         "time_threshold": 1.0,
                     },
                 },
-                "Leg angle": {
+                "bad_leg_angle": {
                     "weight": -2.0,
                     "fn": self._penalize_leg_angle,
                 },
@@ -409,7 +409,7 @@ class SpiderRobotEnv(ManagedEnvironment):
                     "scale": 0.1,
                     "noise": 0.01,
                 },
-                "robot_actions": {
+                "actions": {
                     "fn": lambda env: self.action_manager.get_actions(),
                 },
             },
@@ -423,9 +423,10 @@ class SpiderRobotEnv(ManagedEnvironment):
         super().build()
 
         # Fetch foot links
-        self._foot_links_idx = links_idx_by_name_pattern(
-            self.robot, "Leg[1-8]_Tibia_Foot"
-        )
+        self._foot_links_idx = []
+        for link in self.robot.links:
+            if re.match("^Leg[1-8]_Tibia_Foot$", link.name):
+                self._foot_links_idx.append(link.idx_local)
         self._foot_link_gravity = torch.tensor([0.0, 0.0, -1.0], device=gs.device)
         self._foot_link_gravity = self._foot_link_gravity.unsqueeze(0).expand(
             self.num_envs, len(self._foot_links_idx), 3
