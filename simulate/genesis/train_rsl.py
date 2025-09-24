@@ -27,8 +27,8 @@ from rsl_rl.runners import OnPolicyRunner
 EXPERIMENT_NAME = "rsl_walking"
 
 parser = argparse.ArgumentParser(add_help=True)
-parser.add_argument("-n", "--num_envs", type=int, default=4096)
-parser.add_argument("--max_iterations", type=int, default=220)
+parser.add_argument("-n", "--num_envs", type=int, default=2048)
+parser.add_argument("--max_iterations", type=int, default=1200)
 parser.add_argument("-d", "--device", type=str, default="gpu")
 parser.add_argument("-e", "--exp_name", type=str, default=EXPERIMENT_NAME)
 args = parser.parse_args()
@@ -72,10 +72,10 @@ def training_cfg(exp_name: str, max_iterations: int):
         },
         "runner_class_name": "OnPolicyRunner",
         "seed": 1,
-        "num_steps_per_env": 24,
+        "num_steps_per_env": 48,
         "save_interval": 100,
         "empirical_normalization": None,
-        "obs_groups": {"policy": ["policy"]},
+        "obs_groups": {"policy": ["policy"], "critic": ["policy"]},
     }
 
 
