@@ -23,14 +23,14 @@ FINAL_VIDEO_DURATION_S = 15
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 
 parser = argparse.ArgumentParser(add_help=True)
-parser.add_argument("-n", "--num_envs", type=int, default=600)
-parser.add_argument("--max_iterations", type=int, default=500)
+parser.add_argument("-n", "--num_envs", type=int, default=3072)
+parser.add_argument("--max_iterations", type=int, default=3000)
 parser.add_argument("-d", "--device", type=str, default="gpu")
 args = parser.parse_args()
 
 
 def load_training_config(
-    yaml_path: str, max_iterations: int = None, log_base_dir: str | None = "./logs/skrl"
+    yaml_path: str, max_iterations: int = None, num_envs: int = None
 ) -> tuple[dict, str]:
     """
     Load the training configuration from the yaml file.
@@ -46,15 +46,17 @@ def load_training_config(
     cfg = Runner.load_cfg_from_yaml(yaml_path)
 
     # Logging directory
-    if log_base_dir is None:
-        log_base_dir = "./logs"
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    experiment_name = f"{timestamp}_{cfg['agent']['class']}"
+    log_base_dir = "./logs/skrl"
+    experiment_name = datetime.now().strftime("%Y%m%d_%H%M%S")
     log_path = os.path.join(log_base_dir, experiment_name)
 
     # Update configuration
     cfg["agent"]["experiment"]["directory"] = log_base_dir
     cfg["agent"]["experiment"]["experiment_name"] = experiment_name
+    # Target training batch size of ~98,304 (98,304 / num parallel envs = num_steps_per_env)
+    # Based on: https://ar5iv.labs.arxiv.org/html/2109.11978
+    if num_envs is not None:
+        cfg["agent"]["rollouts"] = round(98_304 / num_envs)
     if max_iterations:
         cfg["trainer"]["timesteps"] = max_iterations * cfg["agent"]["rollouts"]
 
@@ -120,10 +122,10 @@ def main():
     if args.device == "cpu":
         backend = gs.cpu
         torch.set_default_device("cpu")
-    gs.init(logging_level="warning", backend=backend)
+    gs.init(logging_level="warning", backend=backend, performance_mode=True)
 
     # Load training configuration
-    cfg, log_path = load_training_config(SKRL_CONFIG, args.max_iterations)
+    cfg, log_path = load_training_config(SKRL_CONFIG, args.max_iterations, args.num_envs)
     print(f"Logging to: {log_path}")
     save_env_snapshots(log_path, cfg, ["./environment.py", SKRL_CONFIG])
 

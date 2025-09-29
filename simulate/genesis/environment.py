@@ -43,7 +43,7 @@ class SpiderRobotEnv(ManagedEnvironment):
         self,
         num_envs: int = 1,
         dt: float = 1 / 100,
-        max_episode_length_s: int | None = 6,
+        max_episode_length_s: int | None = 8,
         headless: bool = True,
         mode: EnvMode = "train",
         terrain: Terrain = "flat",
@@ -52,11 +52,12 @@ class SpiderRobotEnv(ManagedEnvironment):
             num_envs=num_envs,
             dt=dt,
             max_episode_length_sec=max_episode_length_s,
-            max_episode_random_scaling=0.1,
+            max_episode_random_scaling=0.5,
         )
         self._curriculum_phase = 1
         self.headless = headless
         self.mode = mode
+        self._next_curriculum_update = self.max_episode_length_steps
         self.construct_scene(terrain)
 
     """
@@ -98,10 +99,20 @@ class SpiderRobotEnv(ManagedEnvironment):
                     )
                 ),
                 morph=gs.morphs.Terrain(
+                    pos=(-12, -12, 0),
                     n_subterrains=(1, 1),
                     subterrain_size=(24, 24),
-                    subterrain_types="fractal_terrain",
-                ),
+                    vertical_scale=0.001,
+                    subterrain_types=[["random_uniform_terrain"]],
+                    subterrain_parameters={
+                        "random_uniform_terrain": {
+                            "min_height": 0.0,
+                            "max_height": 0.1,
+                            "step": 0.05,
+                            "downsampled_scale": 0.25,
+                        },
+                    },
+            ),
             )
         elif terrain_type == "mixed":
             self.terrain = self.scene.add_entity(
@@ -134,8 +145,9 @@ class SpiderRobotEnv(ManagedEnvironment):
 
         # Add camera
         self.camera = self.scene.add_camera(
-            pos=(-2.5, -1.5, 3.0),
-            res=(1280, 960),
+            pos=(-2.5, -1.5, 1.0),
+            lookat=(0.0, 0.0, 0.0),
+            res=(1280, 720),
             fov=40,
             env_idx=0,
             debug=True,
@@ -188,7 +200,6 @@ class SpiderRobotEnv(ManagedEnvironment):
             max_force=8.0,
             frictionloss=0.1,
             noise_scale=0.02,
-            # stiffness=0.1,
         )
 
         ##
@@ -210,12 +221,6 @@ class SpiderRobotEnv(ManagedEnvironment):
                 "envs_idx": [0],
             },
         )
-        # self.height_command = CommandManager(
-        #     self,
-        #     range={
-        #         "height": [0.12, 0.15],
-        #     },
-        # )
 
         ##
         # Contact managers
@@ -231,13 +236,17 @@ class SpiderRobotEnv(ManagedEnvironment):
         # Detect self contacts
         self.self_contact = ContactManager(
             self,
+            entity_attr="robot",
             link_names=[
                 "Leg[1-8]_Femur",
                 "Leg[1-8]_Tibia_Leg",
+                # "*._Motor",
             ],
+            with_entity_attr="robot",
             with_links_names=[
                 "Leg[1-8]_Femur",
                 "Leg[1-8]_Tibia_Leg",
+                # "*._Motor",
             ],
             debug_visualizer=True,
             debug_visualizer_cfg={
@@ -251,73 +260,64 @@ class SpiderRobotEnv(ManagedEnvironment):
         self.reward_manager = RewardManager(
             self,
             cfg={
-                "base_height_target": {
+                "Linear Z velocity": {
+                    "weight": -0.1,
+                    "fn": rewards.lin_vel_z_l2,
+                },
+                "Base height": {
                     "weight": -50.0,
                     "fn": rewards.base_height,
                     "params": {
                         "target_height": 0.14,
                         "terrain_manager": self.terrain_manager,
-                        "entity_manager": self.robot_manager,
                     },
                 },
-                "tracking_lin_vel": {
-                    "weight": 1.0,
-                    "fn": rewards.command_tracking_lin_vel,
-                    "params": {
-                        "vel_cmd_manager": self.velocity_command,
-                        "entity_manager": self.robot_manager,
-                    },
-                },
-                "tracking_ang_vel": {
-                    "weight": 0.5,
-                    "fn": rewards.command_tracking_ang_vel,
-                    "params": {
-                        "vel_cmd_manager": self.velocity_command,
-                        "entity_manager": self.robot_manager,
-                    },
-                },
-                "lin_vel_z": {
-                    "weight": -1.0,
-                    "fn": rewards.lin_vel_z_l2,
-                    "params": {
-                        "entity_manager": self.robot_manager,
-                    },
-                },
-                "action_rate": {
-                    "weight": -0.005,
-                    "fn": rewards.action_rate_l2,
-                },
-                "similar_to_default": {
-                    "weight": -0.1,
+                "Similar to default": {
+                    "weight": -0.05, 
                     "fn": rewards.dof_similar_to_default,
                     "params": {
                         "action_manager": self.action_manager,
                     },
                 },
-                "flat_orientation": {
-                    "weight": -2.5,
-                    "fn": rewards.flat_orientation_l2,
+                "Action rate": {
+                    "weight": -5e-04,
+                    "fn": rewards.action_rate_l2,
+                },
+                "Cmd linear velocity": {
+                    "weight": 1.0,
+                    "fn": rewards.command_tracking_lin_vel,
                     "params": {
-                        "entity_manager": self.robot_manager,
+                        "vel_cmd_manager": self.velocity_command,
                     },
                 },
-                # "self_contact": {
-                #     "weight": -10.0,
-                #     "fn": rewards.has_contact,
-                #     "params": {
-                #         "contact_manager": self.self_contact,
-                #     },
-                # },
-                "self_contact": {
-                    "weight": -0.2,
-                    "fn": rewards.contact_force,
+                "Cmd angular velocity": {
+                    "weight": 0.5,
+                    "fn": rewards.command_tracking_ang_vel,
+                    "params": {
+                        "vel_cmd_manager": self.velocity_command,
+                    },
+                },
+                "Flat orientation": {
+                    "weight": -0.5,
+                    "fn": rewards.flat_orientation_l2,
+                },
+                "Self contact": {
+                    "weight": -15.0,
+                    "fn": rewards.has_contact,
                     "params": {
                         "contact_manager": self.self_contact,
-                        "threshold": 0.2,
                     },
                 },
-                "foot_air_time": {
-                    "weight": 2.5,
+                # "Self contact": {
+                #     "weight": -0.1, # -0.2
+                #     "fn": rewards.contact_force,
+                #     "params": {
+                #         "contact_manager": self.self_contact,
+                #         "threshold": 0.2,
+                #     },
+                # },
+                "Foot air time": {
+                    "weight": 0.2,
                     "fn": rewards.feet_air_time,
                     "params": {
                         "contact_manager": self.foot_contact_manager,
@@ -325,8 +325,8 @@ class SpiderRobotEnv(ManagedEnvironment):
                         "time_threshold": 1.0,
                     },
                 },
-                "bad_leg_angle": {
-                    "weight": -2.0,
+                "Leg angle": {
+                    "weight": -0.02,
                     "fn": self._penalize_leg_angle,
                 },
                 "Foot contact (some)": {
@@ -361,16 +361,9 @@ class SpiderRobotEnv(ManagedEnvironment):
                 "bad_orientation": {
                     "fn": terminations.bad_orientation,
                     "params": {
-                        "limit_angle": 0.7,
+                        "limit_angle": 70,
                     },
                 },
-                # "Self contact force": {
-                #     "fn": terminations.contact_force,
-                #     "params": {
-                #         "contact_manager": self.self_contact,
-                #         "threshold": 30.0,
-                #     },
-                # },
             },
         )
 
@@ -379,7 +372,6 @@ class SpiderRobotEnv(ManagedEnvironment):
         ObservationManager(
             self,
             cfg={
-                # "height_cmd": {"fn": self.height_command.observation},
                 "velocity_cmd": {"fn": self.velocity_command.observation},
                 "angle_velocity": {
                     "fn": lambda env: self.robot_manager.get_angular_velocity(),
@@ -410,7 +402,7 @@ class SpiderRobotEnv(ManagedEnvironment):
                     "noise": 0.01,
                 },
                 "actions": {
-                    "fn": lambda env: self.action_manager.get_actions(),
+                    "fn": lambda env: self.action_manager.raw_actions,
                 },
             },
         )
@@ -437,20 +429,18 @@ class SpiderRobotEnv(ManagedEnvironment):
         Perform a step in the environment.
         """
         obs, reward, terminated, truncated, extras = super().step(actions)
-
-        # Update curriculum
-        # self._update_curriculum()
+        # self._update_curriculum(extras)
 
         # Log metrics
-        extras["episode"]["Metrics / Self Contact"] = torch.mean(
-            rewards.has_contact(self, self.self_contact)
-        )
-        extras["episode"]["Metrics / Foot Contact"] = torch.mean(
-            rewards.has_contact(self, self.foot_contact_manager)
-        )
-        extras["episode"]["Metrics / Curriculum level"] = torch.tensor(
-            self._curriculum_phase, device="cpu"
-        )
+        # extras["episode"]["Metrics / Self Contact"] = torch.mean(
+        #     rewards.has_contact(self, self.self_contact)
+        # )
+        # extras["episode"]["Metrics / Foot Contact"] = torch.mean(
+        #     rewards.has_contact(self, self.foot_contact_manager)
+        # )
+        # extras["episode"]["Metrics / Curriculum level"] = torch.tensor(
+        #     self._curriculum_phase, device="cpu"
+        # )
 
         #  Keep the camera looking at the robot
         self.camera.set_pose(lookat=self.robot.get_pos()[0])
@@ -461,31 +451,35 @@ class SpiderRobotEnv(ManagedEnvironment):
         # Finish up
         return obs, reward, terminated, truncated, extras
 
+
     """
     Implementation
     """
 
-    def _update_curriculum(self):
+    def _update_curriculum(self, extras: dict):
         """
-        Update the training curriculum based on the current step or environment performance.
+        If the robot is able to walk, incrementally increase the velocity range.
         """
-        # Move to more uneven terrain
-        if self.step_count == 50_000:
-            self._training_terrain = "discrete_obstacles_terrain"
-            self.reward_manager.cfg["Base height"]["weight"] = -1.0
-            self.reward_manager.cfg["Self contact"]["weight"] = -1.0
-            self.set_max_episode_length(round(self.max_episode_length_sec * 1.5))
+        # Don't update on every reset
+        if self.step_count > self._next_curriculum_update:
+            self._next_curriculum_update = self.step_count + self.max_episode_length_steps
 
-        # Open all terrains
-        elif self.step_count == 60_000:
-            # Unsetting the terrain will open all subterrains
-            self._training_terrain = None
+            # If the reward is 80%+ of the max, increase the velocity range
+            reward_name = "Cmd linear velocity"
+            linear_velocity_reward = self.reward_manager.last_episode_mean_reward(reward_name)
+            if linear_velocity_reward >= 0.8 * self.reward_manager.cfg[reward_name]["weight"]:
+                print(f"Increasing velocity range {reward_name}: {linear_velocity_reward} >= {0.8 * self.reward_manager.cfg[reward_name]['weight']}")
+                if self.velocity_command.range["lin_vel_x"][1] < 1.5:
+                    self.velocity_command.range["lin_vel_x"][0] -= 0.1
+                    self.velocity_command.range["lin_vel_x"][1] += 0.1
+                if self.velocity_command.range["lin_vel_y"][1] < 1.0:
+                    self.velocity_command.range["lin_vel_y"][0] -= 0.1
+                    self.velocity_command.range["lin_vel_y"][1] += 0.1
+                    self.velocity_command.range["ang_vel_z"][0] -= 0.1
+                    self.velocity_command.range["ang_vel_z"][1] += 0.1
 
-        # Pick up the pace
-        elif self.step_count == 80_000:
-            self.velocity_command.range["lin_vel_x"] = [-1.5, 1.5]
-            self.velocity_command.range["lin_vel_y"] = [-1.5, 1.5]
-            self.velocity_command.range["ang_vel_z"] = [-1.5, 1.5]
+            extras["episode"]["Metrics / Linear velocity target"] = self.velocity_command.range["lin_vel_x"][1]
+        
 
     def _penalize_leg_angle(self, _env: GenesisEnv):
         """

@@ -4,6 +4,7 @@ import torch
 import shutil
 import pickle
 import argparse
+from datetime import datetime
 from importlib import metadata
 import genesis as gs
 
@@ -27,14 +28,16 @@ from rsl_rl.runners import OnPolicyRunner
 EXPERIMENT_NAME = "rsl_walking"
 
 parser = argparse.ArgumentParser(add_help=True)
-parser.add_argument("-n", "--num_envs", type=int, default=2048)
-parser.add_argument("--max_iterations", type=int, default=1200)
+parser.add_argument("-n", "--num_envs", type=int, default=3800)
+parser.add_argument("--max_iterations", type=int, default=1500)
 parser.add_argument("-d", "--device", type=str, default="gpu")
-parser.add_argument("-e", "--exp_name", type=str, default=EXPERIMENT_NAME)
 args = parser.parse_args()
 
 
-def training_cfg(exp_name: str, max_iterations: int):
+def training_cfg(exp_name: str, max_iterations: int, num_envs: int):
+    # Target training batch size of ~98,304 (98,304 / num parallel envs = num_steps_per_env)
+    # Based on: https://ar5iv.labs.arxiv.org/html/2109.11978
+    num_steps_per_env = round(98_304/ num_envs)
     return {
         "algorithm": {
             "class_name": "PPO",
@@ -72,7 +75,7 @@ def training_cfg(exp_name: str, max_iterations: int):
         },
         "runner_class_name": "OnPolicyRunner",
         "seed": 1,
-        "num_steps_per_env": 48,
+        "num_steps_per_env": num_steps_per_env,
         "save_interval": 100,
         "empirical_normalization": None,
         "obs_groups": {"policy": ["policy"], "critic": ["policy"]},
@@ -88,8 +91,8 @@ def main():
     gs.init(logging_level="warning", backend=backend, performance_mode=True)
 
     # Logging directory
-    log_base_dir = "./logs"
-    experiment_name = args.exp_name
+    log_base_dir = "./logs/rsl"
+    experiment_name = datetime.now().strftime("%Y%m%d_%H%M%S")
     log_path = os.path.join(log_base_dir, experiment_name)
     if os.path.exists(log_path):
         shutil.rmtree(log_path)
@@ -97,14 +100,14 @@ def main():
     print(f"Logging to: {log_path}")
 
     # Load training configuration and save snapshot of training configs
-    cfg = training_cfg(experiment_name, args.max_iterations)
+    cfg = training_cfg(experiment_name, args.max_iterations, args.num_envs)
     pickle.dump(
         [cfg],
         open(os.path.join(log_path, "cfgs.pkl"), "wb"),
     )
 
     # Create environment
-    env = SpiderRobotEnv(num_envs=args.num_envs, headless=True)
+    env = SpiderRobotEnv(num_envs=args.num_envs, headless=True, terrain="rough")
 
     # Record videos in regular intervals
     env = VideoWrapper(
