@@ -10,9 +10,8 @@ import numpy as np
 from PIL import Image
 from typing import Literal
 import genesis as gs
-from genesis.utils.geom import transform_by_quat, inv_quat
 
-from genesis_forge import GenesisEnv, ManagedEnvironment
+from genesis_forge import ManagedEnvironment
 from genesis_forge.managers import (
     VelocityCommandManager,
     RewardManager,
@@ -24,6 +23,8 @@ from genesis_forge.managers import (
     ObservationManager,
 )
 from genesis_forge.mdp import reset, rewards, terminations
+
+from rewards import foot_angle_penalty
 
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -54,10 +55,8 @@ class SpiderRobotEnv(ManagedEnvironment):
             max_episode_length_sec=max_episode_length_s,
             max_episode_random_scaling=0.5,
         )
-        self._curriculum_phase = 1
         self.headless = headless
         self.mode = mode
-        self._next_curriculum_update = self.max_episode_length_steps
         self.construct_scene(terrain)
 
     """
@@ -93,11 +92,11 @@ class SpiderRobotEnv(ManagedEnvironment):
             self.terrain = self.scene.add_entity(gs.morphs.Plane())
         elif terrain_type == "rough":
             self.terrain = self.scene.add_entity(
-                surface=gs.surfaces.Default(
-                    diffuse_texture=gs.textures.ImageTexture(
-                        image_array=tiled_image,
-                    )
-                ),
+                # surface=gs.surfaces.Default(
+                #     diffuse_texture=gs.textures.ImageTexture(
+                #         image_array=tiled_image,
+                #     )
+                # ),
                 morph=gs.morphs.Terrain(
                     pos=(-12, -12, 0),
                     n_subterrains=(1, 1),
@@ -151,6 +150,7 @@ class SpiderRobotEnv(ManagedEnvironment):
             fov=40,
             env_idx=0,
             debug=True,
+            GUI=self.mode == "play"
         )
         self.camera.follow_entity(self.robot, smoothing=0.05)
 
@@ -210,7 +210,7 @@ class SpiderRobotEnv(ManagedEnvironment):
             self,
             # Starting ranges should be small, while robot is learning to stand
             range={
-                "lin_vel_x": [-1.0, 1.0],
+                "lin_vel_x": [-1.5, 1.5],
                 "lin_vel_y": [-1.0, 1.0],
                 "ang_vel_z": [-1.0, 1.0],
             },
@@ -240,13 +240,13 @@ class SpiderRobotEnv(ManagedEnvironment):
             link_names=[
                 "Leg[1-8]_Femur",
                 "Leg[1-8]_Tibia_Leg",
-                # "*._Motor",
+                ".*_Motor",
             ],
             with_entity_attr="robot",
             with_links_names=[
                 "Leg[1-8]_Femur",
                 "Leg[1-8]_Tibia_Leg",
-                # "*._Motor",
+                ".*_Motor",
             ],
             debug_visualizer=True,
             debug_visualizer_cfg={
@@ -301,21 +301,20 @@ class SpiderRobotEnv(ManagedEnvironment):
                     "weight": -0.5,
                     "fn": rewards.flat_orientation_l2,
                 },
+                "body_acceleration": {
+                    "weight": -0.1,
+                    "fn": rewards.body_acceleration_exp,
+                    "params": {
+                        "entity_manager": self.robot_manager,
+                    },
+                },
                 "Self contact": {
-                    "weight": -15.0,
+                    "weight": -25.0,
                     "fn": rewards.has_contact,
                     "params": {
                         "contact_manager": self.self_contact,
                     },
                 },
-                # "Self contact": {
-                #     "weight": -0.1, # -0.2
-                #     "fn": rewards.contact_force,
-                #     "params": {
-                #         "contact_manager": self.self_contact,
-                #         "threshold": 0.2,
-                #     },
-                # },
                 "Foot air time": {
                     "weight": 0.2,
                     "fn": rewards.feet_air_time,
@@ -327,7 +326,7 @@ class SpiderRobotEnv(ManagedEnvironment):
                 },
                 "Leg angle": {
                     "weight": -0.02,
-                    "fn": self._penalize_leg_angle,
+                    "fn": foot_angle_penalty,
                 },
                 "Foot contact (some)": {
                     "weight": 0.0,  # 5.0,
@@ -407,29 +406,11 @@ class SpiderRobotEnv(ManagedEnvironment):
             },
         )
 
-    def build(self) -> None:
-        """
-        Builds the scene after all entities have been added (via construct_scene).
-        This operation is required before running the simulation.
-        """
-        super().build()
-
-        # Fetch foot links
-        self._foot_links_idx = []
-        for link in self.robot.links:
-            if re.match("^Leg[1-8]_Tibia_Foot$", link.name):
-                self._foot_links_idx.append(link.idx_local)
-        self._foot_link_gravity = torch.tensor([0.0, 0.0, -1.0], device=gs.device)
-        self._foot_link_gravity = self._foot_link_gravity.unsqueeze(0).expand(
-            self.num_envs, len(self._foot_links_idx), 3
-        )
-
     def step(self, actions: torch.Tensor):
         """
         Perform a step in the environment.
         """
         obs, reward, terminated, truncated, extras = super().step(actions)
-        # self._update_curriculum(extras)
 
         # Log metrics
         # extras["episode"]["Metrics / Self Contact"] = torch.mean(
@@ -438,13 +419,7 @@ class SpiderRobotEnv(ManagedEnvironment):
         # extras["episode"]["Metrics / Foot Contact"] = torch.mean(
         #     rewards.has_contact(self, self.foot_contact_manager)
         # )
-        # extras["episode"]["Metrics / Curriculum level"] = torch.tensor(
-        #     self._curriculum_phase, device="cpu"
-        # )
 
-        #  Keep the camera looking at the robot
-        self.camera.set_pose(lookat=self.robot.get_pos()[0])
-        # If we're playing a pre-trained agent, render the camera
         if self.mode == "play":
             self.camera.render()
 
@@ -452,48 +427,3 @@ class SpiderRobotEnv(ManagedEnvironment):
         return obs, reward, terminated, truncated, extras
 
 
-    """
-    Implementation
-    """
-
-    def _update_curriculum(self, extras: dict):
-        """
-        If the robot is able to walk, incrementally increase the velocity range.
-        """
-        # Don't update on every reset
-        if self.step_count > self._next_curriculum_update:
-            self._next_curriculum_update = self.step_count + self.max_episode_length_steps
-
-            # If the reward is 80%+ of the max, increase the velocity range
-            reward_name = "Cmd linear velocity"
-            linear_velocity_reward = self.reward_manager.last_episode_mean_reward(reward_name)
-            if linear_velocity_reward >= 0.8 * self.reward_manager.cfg[reward_name]["weight"]:
-                print(f"Increasing velocity range {reward_name}: {linear_velocity_reward} >= {0.8 * self.reward_manager.cfg[reward_name]['weight']}")
-                if self.velocity_command.range["lin_vel_x"][1] < 1.5:
-                    self.velocity_command.range["lin_vel_x"][0] -= 0.1
-                    self.velocity_command.range["lin_vel_x"][1] += 0.1
-                if self.velocity_command.range["lin_vel_y"][1] < 1.0:
-                    self.velocity_command.range["lin_vel_y"][0] -= 0.1
-                    self.velocity_command.range["lin_vel_y"][1] += 0.1
-                    self.velocity_command.range["ang_vel_z"][0] -= 0.1
-                    self.velocity_command.range["ang_vel_z"][1] += 0.1
-
-            extras["episode"]["Metrics / Linear velocity target"] = self.velocity_command.range["lin_vel_x"][1]
-        
-
-    def _penalize_leg_angle(self, _env: GenesisEnv):
-        """
-        Penalize the tibia bending in too far and under the robot.
-        The penalty is the sum of how far the projected gravity of each leg is below zero.
-        """
-        target_angle = 0.0  # penalize anything less than this
-
-        quats = self.robot.get_links_quat(links_idx_local=self._foot_links_idx)
-
-        # Transform link frames to world gravity frames
-        inv_quats = inv_quat(quats)
-        gravity_in_links = transform_by_quat(self._foot_link_gravity, inv_quats)
-        uprightness = -gravity_in_links[..., 2]
-
-        # Add up all the uprightness values less than zero
-        return torch.abs(torch.sum(uprightness * (uprightness < target_angle), dim=1))

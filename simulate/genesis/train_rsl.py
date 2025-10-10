@@ -29,7 +29,7 @@ EXPERIMENT_NAME = "rsl_walking"
 
 parser = argparse.ArgumentParser(add_help=True)
 parser.add_argument("-n", "--num_envs", type=int, default=3800)
-parser.add_argument("--max_iterations", type=int, default=1500)
+parser.add_argument("--max_iterations", type=int, default=2000)
 parser.add_argument("-d", "--device", type=str, default="gpu")
 args = parser.parse_args()
 
@@ -114,7 +114,7 @@ def main():
         env,
         video_length_sec=12,
         out_dir=os.path.join(log_path, "videos"),
-        episode_trigger=lambda episode_id: episode_id % 5 == 0,
+        episode_trigger=lambda episode_id: episode_id % 2 == 0,
     )
 
     # Build the environment
