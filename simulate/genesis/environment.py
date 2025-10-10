@@ -92,11 +92,11 @@ class SpiderRobotEnv(ManagedEnvironment):
             self.terrain = self.scene.add_entity(gs.morphs.Plane())
         elif terrain_type == "rough":
             self.terrain = self.scene.add_entity(
-                # surface=gs.surfaces.Default(
-                #     diffuse_texture=gs.textures.ImageTexture(
-                #         image_array=tiled_image,
-                #     )
-                # ),
+                surface=gs.surfaces.Default(
+                    diffuse_texture=gs.textures.ImageTexture(
+                        image_array=tiled_image,
+                    )
+                ),
                 morph=gs.morphs.Terrain(
                     pos=(-12, -12, 0),
                     n_subterrains=(1, 1),
