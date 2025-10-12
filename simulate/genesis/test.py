@@ -2,6 +2,7 @@ import os
 import torch
 import genesis as gs
 from genesis.engine.entities import RigidEntity
+from genesis.sensors.raycaster.patterns import GridPattern
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 SPIDER_XML = os.path.abspath(os.path.join(THIS_DIR, "../robot/SpiderBot.xml"))
@@ -126,6 +127,17 @@ def main():
         ),
     )
 
+    # Lidar sensors
+    sensor = scene.add_sensor(
+        gs.sensors.Lidar(
+            pattern=GridPattern(resolution=0.2, size=(0.4, 0.2)),
+            entity_idx=robot.idx,
+            pos_offset=(0.24, 0.0, 0.0),
+            euler_offset=(0.0, 0.0, 0.0),
+            draw_debug=True,
+        )
+    )
+
     # Build scene
     N_ENVS = 1
     scene.build(n_envs=N_ENVS)
@@ -162,7 +174,11 @@ def main():
         dofs_idx_local=dof_idx,
     )
 
-    for i in range(400):
+    for i in range(1000):
+        if i % 10 == 0:
+            r = sensor.read()
+            print(r.distances)
+
         robot.set_dofs_position(
             position=target_pos,
             dofs_idx_local=dof_idx,

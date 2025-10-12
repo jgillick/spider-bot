@@ -37,7 +37,7 @@ args = parser.parse_args()
 def training_cfg(exp_name: str, max_iterations: int, num_envs: int):
     # Target training batch size of ~98,304 (98,304 / num parallel envs = num_steps_per_env)
     # Based on: https://ar5iv.labs.arxiv.org/html/2109.11978
-    num_steps_per_env = round(98_304/ num_envs)
+    num_steps_per_env = round(98_304 / num_envs)
     return {
         "algorithm": {
             "class_name": "PPO",

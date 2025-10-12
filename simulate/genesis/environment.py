@@ -10,6 +10,7 @@ import numpy as np
 from PIL import Image
 from typing import Literal
 import genesis as gs
+from genesis.sensors.raycaster.patterns import GridPattern
 from genesis.utils.geom import transform_by_quat, inv_quat
 
 from genesis_forge import GenesisEnv, ManagedEnvironment
@@ -112,7 +113,7 @@ class SpiderRobotEnv(ManagedEnvironment):
                             "downsampled_scale": 0.25,
                         },
                     },
-            ),
+                ),
             )
         elif terrain_type == "mixed":
             self.terrain = self.scene.add_entity(
@@ -141,6 +142,16 @@ class SpiderRobotEnv(ManagedEnvironment):
                 pos=[0.0, 0.0, 0.14],
                 quat=[1.0, 0.0, 0.0, 0.0],
             ),
+        )
+
+        # Height lidar sensor
+        height_sensor = self.scene.add_sensor(
+            gs.sensors.Lidar(
+                pattern=GridPattern(resolution=0.2, size=(0.4, 0.2)),
+                entity_idx=self.robot.idx,
+                pos_offset=(0.24, 0.0, 0.0),
+                euler_offset=(0.0, 0.0, 0.0),
+            )
         )
 
         # Add camera
@@ -273,7 +284,7 @@ class SpiderRobotEnv(ManagedEnvironment):
                     },
                 },
                 "Similar to default": {
-                    "weight": -0.05, 
+                    "weight": -0.05,
                     "fn": rewards.dof_similar_to_default,
                     "params": {
                         "action_manager": self.action_manager,
@@ -451,7 +462,6 @@ class SpiderRobotEnv(ManagedEnvironment):
         # Finish up
         return obs, reward, terminated, truncated, extras
 
-
     """
     Implementation
     """
@@ -462,13 +472,22 @@ class SpiderRobotEnv(ManagedEnvironment):
         """
         # Don't update on every reset
         if self.step_count > self._next_curriculum_update:
-            self._next_curriculum_update = self.step_count + self.max_episode_length_steps
+            self._next_curriculum_update = (
+                self.step_count + self.max_episode_length_steps
+            )
 
             # If the reward is 80%+ of the max, increase the velocity range
             reward_name = "Cmd linear velocity"
-            linear_velocity_reward = self.reward_manager.last_episode_mean_reward(reward_name)
-            if linear_velocity_reward >= 0.8 * self.reward_manager.cfg[reward_name]["weight"]:
-                print(f"Increasing velocity range {reward_name}: {linear_velocity_reward} >= {0.8 * self.reward_manager.cfg[reward_name]['weight']}")
+            linear_velocity_reward = self.reward_manager.last_episode_mean_reward(
+                reward_name
+            )
+            if (
+                linear_velocity_reward
+                >= 0.8 * self.reward_manager.cfg[reward_name]["weight"]
+            ):
+                print(
+                    f"Increasing velocity range {reward_name}: {linear_velocity_reward} >= {0.8 * self.reward_manager.cfg[reward_name]['weight']}"
+                )
                 if self.velocity_command.range["lin_vel_x"][1] < 1.5:
                     self.velocity_command.range["lin_vel_x"][0] -= 0.1
                     self.velocity_command.range["lin_vel_x"][1] += 0.1
@@ -478,8 +497,9 @@ class SpiderRobotEnv(ManagedEnvironment):
                     self.velocity_command.range["ang_vel_z"][0] -= 0.1
                     self.velocity_command.range["ang_vel_z"][1] += 0.1
 
-            extras["episode"]["Metrics / Linear velocity target"] = self.velocity_command.range["lin_vel_x"][1]
-        
+            extras["episode"]["Metrics / Linear velocity target"] = (
+                self.velocity_command.range["lin_vel_x"][1]
+            )
 
     def _penalize_leg_angle(self, _env: GenesisEnv):
         """
