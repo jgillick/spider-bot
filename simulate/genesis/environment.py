@@ -16,7 +16,7 @@ from genesis_forge.managers import (
     VelocityCommandManager,
     RewardManager,
     TerminationManager,
-    PositionWithinLimitsActionManager,
+    PositionActionManager,
     ContactManager,
     TerrainManager,
     EntityManager,
@@ -182,7 +182,7 @@ class SpiderRobotEnv(ManagedEnvironment):
 
         ##
         # DOF action manager
-        self.action_manager = PositionWithinLimitsActionManager(
+        self.action_manager = PositionActionManager(
             self,
             joint_names=".*",
             default_pos={
@@ -195,6 +195,8 @@ class SpiderRobotEnv(ManagedEnvironment):
                 # Tibia joints
                 "Leg[1-8]_Tibia": 0.6,
             },
+            scale=1.0,
+            use_default_offset=True,
             pd_kp=50,
             pd_kv=0.5,
             max_force=8.0,
@@ -210,7 +212,7 @@ class SpiderRobotEnv(ManagedEnvironment):
             self,
             # Starting ranges should be small, while robot is learning to stand
             range={
-                "lin_vel_x": [-1.5, 1.5],
+                "lin_vel_x": [-1.0, 1.0],
                 "lin_vel_y": [-1.0, 1.0],
                 "ang_vel_z": [-1.0, 1.0],
             },
@@ -232,6 +234,13 @@ class SpiderRobotEnv(ManagedEnvironment):
             with_entity_attr="terrain",
             track_air_time=True,
         )
+
+        # Ground contact manager
+        # self.fall_contact_manager = ContactManager(
+        #     self,
+        #     link_names=[".*_Motor"],
+        #     with_entity_attr="terrain",
+        # )
 
         # Detect self contacts
         self.self_contact = ContactManager(
@@ -260,10 +269,6 @@ class SpiderRobotEnv(ManagedEnvironment):
         self.reward_manager = RewardManager(
             self,
             cfg={
-                "Linear Z velocity": {
-                    "weight": -0.1,
-                    "fn": rewards.lin_vel_z_l2,
-                },
                 "Base height": {
                     "weight": -50.0,
                     "fn": rewards.base_height,
@@ -301,27 +306,21 @@ class SpiderRobotEnv(ManagedEnvironment):
                     "weight": -0.5,
                     "fn": rewards.flat_orientation_l2,
                 },
-                "body_acceleration": {
-                    "weight": -0.1,
-                    "fn": rewards.body_acceleration_exp,
-                    "params": {
-                        "entity_manager": self.robot_manager,
-                    },
-                },
                 "Self contact": {
-                    "weight": -25.0,
-                    "fn": rewards.has_contact,
+                    "weight": -0.05,
+                    "fn": rewards.contact_force,
                     "params": {
                         "contact_manager": self.self_contact,
                     },
                 },
                 "Foot air time": {
-                    "weight": 0.2,
+                    "weight": 0.5,
                     "fn": rewards.feet_air_time,
                     "params": {
                         "contact_manager": self.foot_contact_manager,
                         "vel_cmd_manager": self.velocity_command,
-                        "time_threshold": 1.0,
+                        "time_threshold": 0.2,
+                        "time_threshold_max": 0.5,
                     },
                 },
                 "Leg angle": {
@@ -363,6 +362,13 @@ class SpiderRobotEnv(ManagedEnvironment):
                         "limit_angle": 70,
                     },
                 },
+                # "fall_contact": {
+                #     "fn": terminations.has_contact,
+                #     "params": {
+                #         "contact_manager": self.fall_contact_manager,
+                #         "min_contacts": 3,
+                #     },
+                # },
             },
         )
 
@@ -419,6 +425,13 @@ class SpiderRobotEnv(ManagedEnvironment):
         # extras["episode"]["Metrics / Foot Contact"] = torch.mean(
         #     rewards.has_contact(self, self.foot_contact_manager)
         # )
+        dof_force = self.action_manager.get_dofs_force().abs()
+        control_force = self.robot.get_dofs_control_force(dofs_idx_local=self.action_manager.dofs_idx).abs()
+        extras["episode"]["Metrics / avg_actual_force"] = torch.mean(dof_force)
+        extras["episode"]["Metrics / max_actual_force"] = torch.max(dof_force)
+        extras["episode"]["Metrics / avg_control_force"] = torch.mean(control_force)
+        extras["episode"]["Metrics / max_control_force"] = torch.max(control_force)
+        extras["episode"]["Metrics / avg_air_time"] = torch.mean(self.foot_contact_manager.last_air_time)
 
         if self.mode == "play":
             self.camera.render()
