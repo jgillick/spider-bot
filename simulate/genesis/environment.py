@@ -25,11 +25,12 @@ from genesis_forge.managers import (
 from genesis_forge.mdp import reset, rewards, terminations
 
 from rewards import foot_angle_penalty
+from gait_command import GaitCommandManager
 
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 SPIDER_XML = os.path.abspath(os.path.join(THIS_DIR, "../robot/SpiderBot.xml"))
-
+CURRICULUM_CHECK_EVERY_STEPS = 100
 
 Terrain = Literal["flat", "rough", "mixed"]
 EnvMode = Literal["train", "eval", "play"]
@@ -57,6 +58,7 @@ class SpiderRobotEnv(ManagedEnvironment):
         )
         self.headless = headless
         self.mode = mode
+        self._next_curriculum_check_step = CURRICULUM_CHECK_EVERY_STEPS
         self.construct_scene(terrain)
 
     """
@@ -111,7 +113,7 @@ class SpiderRobotEnv(ManagedEnvironment):
                             "downsampled_scale": 0.25,
                         },
                     },
-            ),
+                ),
             )
         elif terrain_type == "mixed":
             self.terrain = self.scene.add_entity(
@@ -150,7 +152,7 @@ class SpiderRobotEnv(ManagedEnvironment):
             fov=40,
             env_idx=0,
             debug=True,
-            GUI=self.mode == "play"
+            GUI=self.mode == "play",
         )
         self.camera.follow_entity(self.robot, smoothing=0.05)
 
@@ -265,10 +267,44 @@ class SpiderRobotEnv(ManagedEnvironment):
         )
 
         ##
+        # Gait command manager
+        self.gait_command_manager = GaitCommandManager(
+            self,
+            foot_names={
+                "L1": "Leg1_Tibia_Foot",
+                "L2": "Leg2_Tibia_Foot",
+                "L3": "Leg3_Tibia_Foot",
+                "L4": "Leg4_Tibia_Foot",
+                "R1": "Leg5_Tibia_Foot",
+                "R2": "Leg6_Tibia_Foot",
+                "R3": "Leg7_Tibia_Foot",
+                "R4": "Leg8_Tibia_Foot",
+            },
+            velocity_command_manager=self.velocity_command,
+            entity_manager=self.robot_manager,
+            terrain_manager=self.terrain_manager,
+        )
+
+        ##
         # Rewards
         self.reward_manager = RewardManager(
             self,
             cfg={
+                "gait_phase_reward": {
+                    "weight": 1.5,
+                    "fn": self.gait_command_manager.gait_phase_reward,
+                    "params": {
+                        "contact_manager": self.foot_contact_manager,
+                    },
+                },
+                "foot_height_reward": {
+                    "weight": 0.9,
+                    "fn": self.gait_command_manager.foot_height_reward,
+                },
+                "jump": {
+                    "weight": 1.0,
+                    "fn": self.gait_command_manager.jump_reward,
+                },
                 "Base height": {
                     "weight": -50.0,
                     "fn": rewards.base_height,
@@ -278,7 +314,7 @@ class SpiderRobotEnv(ManagedEnvironment):
                     },
                 },
                 "Similar to default": {
-                    "weight": -0.05, 
+                    "weight": -0.05,
                     "fn": rewards.dof_similar_to_default,
                     "params": {
                         "action_manager": self.action_manager,
@@ -327,22 +363,6 @@ class SpiderRobotEnv(ManagedEnvironment):
                     "weight": -0.02,
                     "fn": foot_angle_penalty,
                 },
-                "Foot contact (some)": {
-                    "weight": 0.0,  # 5.0,
-                    "fn": rewards.has_contact,
-                    "params": {
-                        "contact_manager": self.foot_contact_manager,
-                        "min_contacts": 4,
-                    },
-                },
-                "Foot contact (all)": {
-                    "weight": 0.0,  # 0.1,
-                    "fn": rewards.has_contact,
-                    "params": {
-                        "contact_manager": self.foot_contact_manager,
-                        "min_contacts": 8,
-                    },
-                },
             },
         )
 
@@ -378,6 +398,7 @@ class SpiderRobotEnv(ManagedEnvironment):
             self,
             cfg={
                 "velocity_cmd": {"fn": self.velocity_command.observation},
+                "gait_command": {"fn": self.gait_command_manager.observation},
                 "angle_velocity": {
                     "fn": lambda env: self.robot_manager.get_angular_velocity(),
                     "noise": 0.01,
@@ -426,12 +447,16 @@ class SpiderRobotEnv(ManagedEnvironment):
         #     rewards.has_contact(self, self.foot_contact_manager)
         # )
         dof_force = self.action_manager.get_dofs_force().abs()
-        control_force = self.robot.get_dofs_control_force(dofs_idx_local=self.action_manager.dofs_idx).abs()
+        control_force = self.robot.get_dofs_control_force(
+            dofs_idx_local=self.action_manager.dofs_idx
+        ).abs()
         extras["episode"]["Metrics / avg_actual_force"] = torch.mean(dof_force)
         extras["episode"]["Metrics / max_actual_force"] = torch.max(dof_force)
         extras["episode"]["Metrics / avg_control_force"] = torch.mean(control_force)
         extras["episode"]["Metrics / max_control_force"] = torch.max(control_force)
-        extras["episode"]["Metrics / avg_air_time"] = torch.mean(self.foot_contact_manager.last_air_time)
+        extras["episode"]["Metrics / avg_air_time"] = torch.mean(
+            self.foot_contact_manager.last_air_time
+        )
 
         if self.mode == "play":
             self.camera.render()
@@ -439,4 +464,41 @@ class SpiderRobotEnv(ManagedEnvironment):
         # Finish up
         return obs, reward, terminated, truncated, extras
 
+    def reset(self, envs_idx: list[int] | None = None):
+        reset = super().reset(envs_idx)
+        if envs_idx is not None:
+            self.update_curriculum()
+        return reset
 
+    def update_curriculum(self):
+        """
+        Check the curriculum
+        """
+        # Limit how often we check/update the curriculum
+        if self.step_count < self._next_curriculum_check_step:
+            return
+        self._next_curriculum_check_step = (
+            self.step_count + CURRICULUM_CHECK_EVERY_STEPS
+        )
+
+        # Gait phase
+        # Increase gaits and period range if the base gait reward is over 0.7
+        gait_phase_reward = self.reward_manager.last_episode_mean_reward(
+            "gait_phase_reward", before_weight=True
+        )
+        if gait_phase_reward > 0.7:
+            self.gait_command_manager.increment_num_gaits()
+            self.gait_command_manager.increment_gait_period_range()
+
+            # Adjust other rewards
+            self.reward_manager.cfg["Similar to default"]["weight"] = -0.01
+            if self.reward_manager.cfg["Self contact"]["weight"] <= -0.1:
+                self.reward_manager.cfg["Self contact"]["weight"] += -0.025
+
+        # Foot clearance
+        # Increase foot clearance range, if the base reward is over 0.8
+        foot_height_reward = self.reward_manager.last_episode_mean_reward(
+            "foot_height_reward", before_weight=True
+        )
+        if foot_height_reward > 0.8:
+            self.gait_command_manager.increment_foot_clearance_range()
