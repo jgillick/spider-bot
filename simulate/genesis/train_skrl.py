@@ -16,16 +16,17 @@ from genesis_forge.wrappers import (
 )
 from environment import SpiderRobotEnv
 
-SKRL_CONFIG = "./ppo.yaml"
+DEFAULT_SKRL_CONFIG = "./skrl/ppo.yaml"
 
 FINAL_VIDEO_DURATION_S = 15
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 
 parser = argparse.ArgumentParser(add_help=True)
-parser.add_argument("-n", "--num_envs", type=int, default=3072)
-parser.add_argument("--max_iterations", type=int, default=3000)
+parser.add_argument("-n", "--num_envs", type=int, default=4096)
+parser.add_argument("--max_iterations", type=int, default=2000)
 parser.add_argument("-d", "--device", type=str, default="gpu")
+parser.add_argument("-c", "--config", type=str, default=DEFAULT_SKRL_CONFIG)
 args = parser.parse_args()
 
 
@@ -47,7 +48,8 @@ def load_training_config(
 
     # Logging directory
     log_base_dir = "./logs/skrl"
-    experiment_name = datetime.now().strftime("%Y%m%d_%H%M%S")
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    experiment_name = f"{timestamp}_{cfg['agent']['class']}"
     log_path = os.path.join(log_base_dir, experiment_name)
 
     # Update configuration
@@ -125,12 +127,13 @@ def main():
     gs.init(logging_level="warning", backend=backend, performance_mode=True)
 
     # Load training configuration
-    cfg, log_path = load_training_config(SKRL_CONFIG, args.max_iterations, args.num_envs)
+    config = args.config
+    cfg, log_path = load_training_config(config, args.max_iterations, args.num_envs)
     print(f"Logging to: {log_path}")
-    save_env_snapshots(log_path, cfg, ["./environment.py", SKRL_CONFIG])
+    save_env_snapshots(log_path, cfg, ["./environment.py", config])
 
     #  Create environment
-    env = SpiderRobotEnv(num_envs=args.num_envs, headless=True, terrain="rough")
+    env = SpiderRobotEnv(num_envs=args.num_envs, headless=True, terrain="flat")
     env = VideoWrapper(
         env,
         video_length_sec=12,

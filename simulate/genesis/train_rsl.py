@@ -28,9 +28,10 @@ from rsl_rl.runners import OnPolicyRunner
 EXPERIMENT_NAME = "rsl_walking"
 
 parser = argparse.ArgumentParser(add_help=True)
-parser.add_argument("-n", "--num_envs", type=int, default=3800)
+parser.add_argument("-n", "--num_envs", type=int, default=4096)
 parser.add_argument("--max_iterations", type=int, default=2000)
 parser.add_argument("-d", "--device", type=str, default="gpu")
+parser.add_argument("-e", "--experiment_name", type=str)
 args = parser.parse_args()
 
 
@@ -92,7 +93,7 @@ def main():
 
     # Logging directory
     log_base_dir = "./logs/rsl"
-    experiment_name = datetime.now().strftime("%Y%m%d_%H%M%S")
+    experiment_name = args.experiment_name if args.experiment_name else datetime.now().strftime("%Y%m%d_%H%M%S")
     log_path = os.path.join(log_base_dir, experiment_name)
     if os.path.exists(log_path):
         shutil.rmtree(log_path)
@@ -107,7 +108,7 @@ def main():
     )
 
     # Create environment
-    env = SpiderRobotEnv(num_envs=args.num_envs, headless=True, terrain="rough")
+    env = SpiderRobotEnv(num_envs=args.num_envs, headless=True, terrain="flat")
 
     # Record videos in regular intervals
     env = VideoWrapper(
