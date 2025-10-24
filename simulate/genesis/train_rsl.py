@@ -29,7 +29,7 @@ EXPERIMENT_NAME = "rsl_walking"
 
 parser = argparse.ArgumentParser(add_help=True)
 parser.add_argument("-n", "--num_envs", type=int, default=4096)
-parser.add_argument("--max_iterations", type=int, default=2000)
+parser.add_argument("--max_iterations", type=int, default=6000)
 parser.add_argument("-d", "--device", type=str, default="gpu")
 parser.add_argument("-e", "--experiment_name", type=str)
 args = parser.parse_args()
