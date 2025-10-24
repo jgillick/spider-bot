@@ -207,26 +207,6 @@ class SpiderRobotEnv(ManagedEnvironment):
         )
 
         ##
-        # Command managers
-
-        # Command manager: instruct the robot to move in a certain direction
-        self.velocity_command = VelocityCommandManager(
-            self,
-            # Starting ranges should be small, while robot is learning to stand
-            range={
-                "lin_vel_x": [-1.0, 1.0],
-                "lin_vel_y": [-1.0, 1.0],
-                "ang_vel_z": [-1.0, 1.0],
-            },
-            standing_probability=0.02,
-            resample_time_sec=5.0,
-            debug_visualizer=True,
-            debug_visualizer_cfg={
-                "envs_idx": [0],
-            },
-        )
-
-        ##
         # Contact managers
 
         # Foot/step contact manager
@@ -280,9 +260,13 @@ class SpiderRobotEnv(ManagedEnvironment):
                 "R3": "Leg7_Tibia_Foot",
                 "R4": "Leg8_Tibia_Foot",
             },
-            velocity_command_manager=self.velocity_command,
             entity_manager=self.robot_manager,
             terrain_manager=self.terrain_manager,
+            resample_time_sec=5.0,
+            debug_visualizer=True,
+            debug_visualizer_cfg={
+                "envs_idx": [0],
+            },
         )
 
         ##
@@ -309,14 +293,14 @@ class SpiderRobotEnv(ManagedEnvironment):
                     "weight": 1.5,
                     "fn": rewards.command_tracking_lin_vel,
                     "params": {
-                        "vel_cmd_manager": self.velocity_command,
+                        "vel_cmd_manager": self.gait_command_manager,
                     },
                 },
                 "cmd_angular_vel": {
                     "weight": 0.5,
                     "fn": rewards.command_tracking_ang_vel,
                     "params": {
-                        "vel_cmd_manager": self.velocity_command,
+                        "vel_cmd_manager": self.gait_command_manager,
                     },
                 },
                 "height": {
@@ -398,7 +382,6 @@ class SpiderRobotEnv(ManagedEnvironment):
             self,
             history_len=5,
             cfg={
-                "velocity_cmd": {"fn": self.velocity_command.observation},
                 "gait_cmd": {"fn": self.gait_command_manager.observation},
                 "angle_velocity": {
                     "fn": lambda env: self.robot_manager.get_angular_velocity(),
@@ -428,14 +411,22 @@ class SpiderRobotEnv(ManagedEnvironment):
                     "scale": 0.1,
                     "noise": 0.01,
                 },
+                "actions": {
+                    "fn": lambda env: self.action_manager.raw_actions,
+                },
+            },
+        )
+        ObservationManager(
+            self,
+            history_len=5,
+            name="critic",
+            cfg={
+                "gait_cmd": {"fn": self.gait_command_manager.privileged_observation},
                 "foot_contact_force": {
                     "fn": observations.contact_force,
                     "params": {
                         "contact_manager": self.foot_contact_manager,
                     },
-                },
-                "actions": {
-                    "fn": lambda env: self.action_manager.raw_actions,
                 },
             },
         )
