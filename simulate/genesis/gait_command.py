@@ -404,10 +404,10 @@ class GaitCommandManager(VelocityCommandManager):
         """
         Calculate the reward for the feet being in the correct phase.
         """
-        reward = 0.0
+        reward = torch.zeros(self.env.num_envs, device=gs.device)
         for i in range(8):  # for each leg
             reward += self._foot_phase_reward(i, contact_manager).flatten()
-        return torch.exp(reward)
+        return torch.exp(reward / 8.0)  # Normalize by number of legs
 
     def jump_reward(self, env: GenesisEnv) -> torch.Tensor:
         """
@@ -469,18 +469,18 @@ class GaitCommandManager(VelocityCommandManager):
         standing_gait_idx = self._gait_selected == self._stand_idx
         phase[standing_gait_idx] = STANCE_PHASE
 
-        # Convert to radians
-        phase *= 2 * torch.pi
+        # Phase is in range [0, 1]. Split 50/50 between swing and stance.
+        # Swing: [0, 0.5), Stance: [0.5, 1.0]
+        swing_indices = phase < 0.5
+        stance_indices = phase >= 0.5
 
-        swing_indices = (phase >= 0.0) & (phase < torch.pi)
-        swing_indices = swing_indices.nonzero().flatten()
-        stance_indices = (phase >= torch.pi) & (phase < 2 * torch.pi)
-        stance_indices = stance_indices.nonzero().flatten()
+        # During swing: penalize ground contact force (want foot in air)
+        force_weight[swing_indices] = -1.0
+        vel_weight[swing_indices] = 0.0
 
-        force_weight[swing_indices, :] = -1  # force is penalized during swing phase
-        vel_weight[swing_indices, :] = 0  # speed is not penalized during swing phase
-        force_weight[stance_indices, :] = 0  # force is not penalized during stance
-        vel_weight[stance_indices, :] = -1  # speed is penalized during stance phase
+        # During stance: penalize foot velocity (want foot planted on ground)
+        force_weight[stance_indices] = 0.0
+        vel_weight[stance_indices] = -1.0
 
         return vel_weight * velocity + force_weight * force
 
