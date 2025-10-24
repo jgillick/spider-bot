@@ -18,10 +18,10 @@ if TYPE_CHECKING:
     from genesis.engine.entities import RigidEntity
 
 GAIT_PERIOD_RANGE = [0.3, 0.6]
-FOOT_CLEARANCE_RANGE = [0.1, 0.35]
+FOOT_CLEARANCE_RANGE = [0.04, 0.12]
 CURRICULUM_CHECK_EVERY_STEPS = 500
 
-GaitName = Literal["walk", "trot", "pronk", "pace", "bound", "canter"]
+GaitName = Literal["walk", "trot", "jump"]
 FootName = Literal["L1", "L2", "L3", "L4", "R1", "R2", "R3", "R4"]
 
 # Gait configuration
@@ -102,6 +102,7 @@ class GaitCommandManager(CommandManager):
         self._entity_mgr = entity_manager
         self._vel_command_mgr = velocity_command_manager
         self._terrain_mgr = terrain_manager
+        self._jump_idx = list(GAIT_OFFSETS.keys()).index("jump")
 
         # Initial ranges - these will be expanded in the curriculum
         self._num_gaits = 1
@@ -143,14 +144,23 @@ class GaitCommandManager(CommandManager):
         if self._gamepad is not None:
             self._process_gamepad_input()
 
-        is_moving = torch.norm(self._vel_command_mgr.command[:, :2], dim=-1) > 0.1
-        is_moving = is_moving.unsqueeze(-1)
+        # is_moving = torch.norm(self._vel_command_mgr.command[:, :2], dim=-1) > 0.1
+        # is_moving = is_moving.unsqueeze(-1)
+        # return torch.cat(
+        #     [
+        #         self._gait_idx.unsqueeze(-1),
+        #         self._foot_offset * is_moving,
+        #         self._target_foot_height * is_moving,
+        #         self._gait_period * is_moving,
+        #     ],
+        #     dim=-1,
+        # )
         return torch.cat(
             [
                 self._gait_idx.unsqueeze(-1),
-                self._foot_offset * is_moving,
-                self._target_foot_height * is_moving,
-                self._gait_period * is_moving,
+                self._foot_offset,
+                self._target_foot_height,
+                self._gait_period,
             ],
             dim=-1,
         )
@@ -242,7 +252,6 @@ class GaitCommandManager(CommandManager):
         Increment the gait time and phase
         """
         super().step()
-        self._log_metrics()
 
         # Get foot height off the terrain
         foot_pos = self._robot.get_links_pos(links_idx_local=self._foot_link_idx)
@@ -253,6 +262,9 @@ class GaitCommandManager(CommandManager):
                 )
                 foot_pos[:, i, 2] += terrain_height
         self._curr_foot_height = foot_pos[:, :, 2]
+
+        # Metrics
+        self._log_metrics()
 
         # Update periodic gait values
         self._gait_time = (self._gait_time + self.env.dt) % self._gait_period
@@ -352,7 +364,8 @@ class GaitCommandManager(CommandManager):
             num_feet_airborne / 8.0
         ) * 0.3  # 30% partial credit for learning
 
-        return jump_quality * (all_feet_off + learning_bonus)
+        is_jump_gait = self._gait_idx == self._jump_idx
+        return jump_quality * (all_feet_off + learning_bonus) * is_jump_gait
 
     """
     Private methods
@@ -364,7 +377,6 @@ class GaitCommandManager(CommandManager):
         """
         Calculate the individual foot phase reward
         """
-        link = self._foot_links[foot_idx]
         force_weight = torch.zeros(
             self.env.num_envs, 1, dtype=torch.float, device=gs.device
         )
@@ -373,6 +385,7 @@ class GaitCommandManager(CommandManager):
         )
 
         # Force / velocity
+        link = self._foot_links[foot_idx]
         force = torch.norm(contact_manager.get_contact_forces(link.idx), dim=-1).view(
             -1, 1
         )
@@ -497,3 +510,7 @@ class GaitCommandManager(CommandManager):
             self.env.extras[self.env.extras_logging_key][
                 f"Metrics / gait_{gait_name}_envs"
             ] = count
+        
+        # Foot height
+        self.env.extras[self.env.extras_logging_key][
+                "Metrics / avg_foot_height"] = self._curr_foot_height.mean(dim=-1).mean()
