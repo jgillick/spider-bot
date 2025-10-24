@@ -38,7 +38,7 @@ args = parser.parse_args()
 def training_cfg(exp_name: str, max_iterations: int, num_envs: int):
     # Target training batch size of ~98,304 (98,304 / num parallel envs = num_steps_per_env)
     # Based on: https://ar5iv.labs.arxiv.org/html/2109.11978
-    num_steps_per_env = round(98_304/ num_envs)
+    num_steps_per_env = round(98_304 / num_envs)
     return {
         "algorithm": {
             "class_name": "PPO",
@@ -79,7 +79,7 @@ def training_cfg(exp_name: str, max_iterations: int, num_envs: int):
         "num_steps_per_env": num_steps_per_env,
         "save_interval": 100,
         "empirical_normalization": None,
-        "obs_groups": {"policy": ["policy"], "critic": ["policy"]},
+        "obs_groups": {"policy": ["policy"], "critic": ["policy", "critic"]},
     }
 
 
@@ -93,7 +93,11 @@ def main():
 
     # Logging directory
     log_base_dir = "./logs/rsl"
-    experiment_name = args.experiment_name if args.experiment_name else datetime.now().strftime("%Y%m%d_%H%M%S")
+    experiment_name = (
+        args.experiment_name
+        if args.experiment_name
+        else datetime.now().strftime("%Y%m%d_%H%M%S")
+    )
     log_path = os.path.join(log_base_dir, experiment_name)
     if os.path.exists(log_path):
         shutil.rmtree(log_path)
