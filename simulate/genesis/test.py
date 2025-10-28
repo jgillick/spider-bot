@@ -1,7 +1,11 @@
 import os
 import torch
 import genesis as gs
-from genesis.engine.entities import RigidEntity
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from genesis.engine.entities import RigidEntity
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 SPIDER_XML = os.path.abspath(os.path.join(THIS_DIR, "../robot/SpiderBot.xml"))
@@ -135,8 +139,8 @@ def main():
 
     # Gains and torque limits
     num_actuators = len(STABLE_POS)
-    robot.set_dofs_kp([20] * num_actuators, dof_idx)
-    robot.set_dofs_kv([0.5] * num_actuators, dof_idx)
+    robot.set_dofs_kp([50] * num_actuators, dof_idx)
+    robot.set_dofs_kv([1.2] * num_actuators, dof_idx)
     robot.set_dofs_force_range(
         [-MAX_TORQUE] * num_actuators,
         [MAX_TORQUE] * num_actuators,
@@ -158,15 +162,16 @@ def main():
     )
     target_pos = stable_pos
     robot.set_dofs_position(
-        position=target_pos,
+        position=ground_pos,
         dofs_idx_local=dof_idx,
     )
 
-    for i in range(400):
-        robot.set_dofs_position(
-            position=target_pos,
-            dofs_idx_local=dof_idx,
-        )
+    for i in range(1000):
+        if i > 0 and i % 200 == 0:
+            robot.control_dofs_position(
+                position=target_pos,
+                dofs_idx_local=dof_idx,
+            )
 
         scene.step()
 

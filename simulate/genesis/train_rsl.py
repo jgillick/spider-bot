@@ -29,7 +29,7 @@ EXPERIMENT_NAME = "rsl_walking"
 
 parser = argparse.ArgumentParser(add_help=True)
 parser.add_argument("-n", "--num_envs", type=int, default=4096)
-parser.add_argument("--max_iterations", type=int, default=2000)
+parser.add_argument("--max_iterations", type=int, default=5000)
 parser.add_argument("-d", "--device", type=str, default="gpu")
 parser.add_argument("-e", "--experiment_name", type=str)
 args = parser.parse_args()
@@ -58,8 +58,8 @@ def training_cfg(exp_name: str, max_iterations: int, num_envs: int):
         "init_member_classes": {},
         "policy": {
             "activation": "elu",
-            "actor_hidden_dims": [512, 256, 128],
-            "critic_hidden_dims": [512, 256, 128],
+            "actor_hidden_dims": [1024, 512, 256],
+            "critic_hidden_dims": [1024, 512, 256],
             "init_noise_std": 1.0,
             "class_name": "ActorCritic",
         },
