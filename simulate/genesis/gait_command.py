@@ -147,13 +147,9 @@ class GaitCommandManager(VelocityCommandManager):
         self, env: GenesisEnv, contact_manager: ContactManager
     ) -> torch.Tensor:
         """
-        Return private command observations
+        Return priviledged observations
         """
-        return torch.cat(
-            [
-                torch.norm(contact_manager.contacts[:, :, :], dim=-1),
-            ],
-        )
+        return torch.norm(contact_manager.contacts[:, :, :], dim=-1)
 
     def use_gamepad(self, gamepad: Gamepad):
         """

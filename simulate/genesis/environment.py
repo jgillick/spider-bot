@@ -15,7 +15,6 @@ from genesis_forge import ManagedEnvironment, GenesisEnv
 from genesis_forge.managers import (
     RewardManager,
     TerminationManager,
-    PositionActionManager,
     PositionWithinLimitsActionManager,
     ContactManager,
     TerrainManager,
@@ -54,6 +53,7 @@ class SpiderRobotEnv(ManagedEnvironment):
         headless: bool = True,
         mode: EnvMode = "train",
         terrain: Terrain = "flat",
+        height_sensor: bool = False,
     ):
         super().__init__(
             num_envs=num_envs,
@@ -63,6 +63,7 @@ class SpiderRobotEnv(ManagedEnvironment):
         )
         self.headless = headless
         self.mode = mode
+        self.use_height_sensor = height_sensor
         self._curriculum_level = 1
         self._next_curriculum_check_step = CURRICULUM_CHECK_EVERY_STEPS
         self.construct_scene(terrain)
@@ -114,8 +115,8 @@ class SpiderRobotEnv(ManagedEnvironment):
                     subterrain_parameters={
                         "random_uniform_terrain": {
                             "min_height": 0.0,
-                            "max_height": 0.1,
-                            "step": 0.05,
+                            "max_height": 0.08,
+                            "step": 0.04,
                             "downsampled_scale": 0.25,
                         },
                     },
@@ -149,6 +150,18 @@ class SpiderRobotEnv(ManagedEnvironment):
                 quat=[1.0, 0.0, 0.0, 0.0],
             ),
         )
+
+        # Height sensor
+        self.height_sensor = None
+        if self.use_height_sensor:
+            self.height_sensor = self.scene.add_sensor(
+                gs.sensors.Lidar(
+                    pattern=gs.sensors.GridPattern(resolution=0.2, size=(0.8, 0.8)),
+                    entity_idx=self.robot.idx,
+                    pos_offset=(0.24, 0.0, 0.0),
+                    euler_offset=(0.0, 0.0, 0.0),
+                )
+            )
 
         # Add camera
         self.camera = self.scene.add_camera(
@@ -435,6 +448,9 @@ class SpiderRobotEnv(ManagedEnvironment):
                 "air_time_target": {
                     "fn": self.air_time_observation,
                 },
+                "height_sensor": {
+                    "fn": self.height_sensor_observation,
+                }
             },
         )
 
@@ -463,11 +479,21 @@ class SpiderRobotEnv(ManagedEnvironment):
             self.update_curriculum()
         return reset
 
+    def height_sensor_observation(self, env: GenesisEnv) -> torch.Tensor:
+        if self.height_sensor is None:
+            return torch.tensor([])
+        heights = self.height_sensor.read().distances
+        # Convert heights tensor shape: (n_envs, 5, 5) -> (n_envs, 25)
+        return heights.flatten(start_dim=-2)
+
     def air_time_observation(self, env: GenesisEnv) -> float:
+        """Return the mid point of the current foot air time target range"""
         params = self.reward_manager.cfg["foot_air_time"].params
+        mid_point = (params["time_threshold"] + params["time_threshold_max"]) / 2.0
         obs = torch.zeros(env.num_envs, 1, device=gs.device)
-        obs[:, 0] = (params["time_threshold"] + params["time_threshold_max"]) / 2.0
+        obs[:] = mid_point
         return obs
+        
 
     def inc_value(self, value: float, cfg: IncConfig):
         value += cfg["inc"]
