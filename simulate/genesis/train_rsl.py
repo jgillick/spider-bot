@@ -25,10 +25,9 @@ except (metadata.PackageNotFoundError, ImportError) as e:
     raise ImportError("Please install install 'rsl-rl-lib>=2.2.4'.") from e
 from rsl_rl.runners import OnPolicyRunner
 
-EXPERIMENT_NAME = "rsl_walking"
 
 parser = argparse.ArgumentParser(add_help=True)
-parser.add_argument("-n", "--num_envs", type=int, default=4096)
+parser.add_argument("-n", "--num_envs", type=int, default=3800)
 parser.add_argument("--max_iterations", type=int, default=8000)
 parser.add_argument("-d", "--device", type=str, default="gpu")
 parser.add_argument("-e", "--experiment_name", type=str)
@@ -39,6 +38,10 @@ def training_cfg(exp_name: str, max_iterations: int, num_envs: int):
     # Target training batch size of ~98,304 (98,304 / num parallel envs = num_steps_per_env)
     # Based on: https://ar5iv.labs.arxiv.org/html/2109.11978
     num_steps_per_env = round(98_304 / num_envs)
+    if num_steps_per_env < 16:
+        num_steps_per_env = 16
+    elif num_steps_per_env > 150:
+        num_steps_per_env = 150
     return {
         "algorithm": {
             "class_name": "PPO",
@@ -112,7 +115,7 @@ def main():
     )
 
     # Create environment
-    env = SpiderRobotEnv(num_envs=args.num_envs, headless=True, terrain="flat")
+    env = SpiderRobotEnv(num_envs=args.num_envs, headless=True, terrain="mixed", height_sensor=False)
 
     # Record videos in regular intervals
     env = VideoWrapper(
