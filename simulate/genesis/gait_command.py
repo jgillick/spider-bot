@@ -31,9 +31,12 @@ class FootNames(TypedDict):
 
 class GaitCommandManager(VelocityCommandManager):
 
+    # Create diagonal foot pairs that should alternate in steps
     foot_group_cfg = [
-        ["L1", "L3", "R2", "R4"],
-        ["L2", "L4", "R1", "R3"],
+        ["L1", "R2"],
+        ["L2", "R1"],
+        ["L3", "R4"],
+        ["L4", "R3"],
     ]
 
     def __init__(
@@ -118,11 +121,13 @@ class GaitCommandManager(VelocityCommandManager):
         super().build()
 
         # Organize feet into the movement groups
-        self._foot_groups = [[], []]
+        self._foot_groups = []
         for key, link_name in self._foot_names.items():
             link = self._robot.get_link(link_name)
             self._foot_link_idx.append(link.idx_local)
             for g, group in enumerate(self.foot_group_cfg):
+                if len(self._foot_groups) < g + 1:
+                    self._foot_groups.append([])
                 if key in group:
                     self._foot_groups[g].append(link.idx)
 

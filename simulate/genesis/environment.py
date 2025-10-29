@@ -277,13 +277,6 @@ class SpiderRobotEnv(ManagedEnvironment):
         self.reward_manager = RewardManager(
             self,
             cfg={
-                # "gait_phase_reward": {
-                #     "weight": 1.5,
-                #     "fn": self.gait_command_manager.gait_phase_reward,
-                #     "params": {
-                #         "contact_manager": self.foot_contact_manager,
-                #     },
-                # },
                 "foot_sync": {
                     "weight": 0.25,
                     "fn": self.gait_command_manager.foot_sync_reward,
@@ -291,18 +284,6 @@ class SpiderRobotEnv(ManagedEnvironment):
                         "contact_manager": self.foot_contact_manager,
                     },
                 },
-                # "foot_height_reward": {
-                #     "weight": 1.0,
-                #     "fn": self.gait_command_manager.foot_height_reward,
-                # },
-                # "jump": {
-                #     "weight": 1.0,
-                #     "fn": self.gait_command_manager.jump_reward,
-                #     "params": {
-                #         "entity_manager": self.robot_manager,
-                #         "terrain_manager": self.terrain_manager,
-                #     },
-                # },
                 "cmd_linear_vel": {
                     "weight": 1.0,
                     "fn": rewards.command_tracking_lin_vel,
@@ -337,8 +318,12 @@ class SpiderRobotEnv(ManagedEnvironment):
                 #     "fn": rewards.action_rate_l2,
                 # },
                 "flat_orientation": {
-                    "weight": -1.0,
+                    "weight": -1.5,
                     "fn": rewards.flat_orientation_l2,
+                },
+                "ang_vel_xy_l2": {
+                    "weight": -0.05,
+                    "fn": rewards.ang_vel_xy_l2,
                 },
                 "foot_air_time": {
                     "weight": 0.5,
@@ -400,7 +385,7 @@ class SpiderRobotEnv(ManagedEnvironment):
         # Observations
         ObservationManager(
             self,
-            # history_len=4,
+            history_len=4,
             cfg={
                 "gait_cmd": {"fn": self.gait_command_manager.observation},
                 "angle_velocity": {
@@ -438,7 +423,7 @@ class SpiderRobotEnv(ManagedEnvironment):
         )
         ObservationManager(
             self,
-            # history_len=4,
+            history_len=4,
             name="critic",
             cfg={
                 "gait_cmd": {
@@ -464,16 +449,7 @@ class SpiderRobotEnv(ManagedEnvironment):
         obs, reward, terminated, truncated, extras = super().step(actions)
 
         # Log metrics
-        # dof_force = self.action_manager.get_dofs_force().abs()
-        # control_force = self.robot.get_dofs_control_force(
-        #     dofs_idx_local=self.action_manager.dofs_idx
-        # ).abs()
         extras["episode"]["Metrics / curriculum_level"] = self._curriculum_level
-        # extras["episode"]["Metrics / avg_actual_force"] = torch.mean(dof_force)
-        # extras["episode"]["Metrics / avg_control_force"] = torch.mean(control_force)
-        # extras["episode"]["Metrics / avg_air_time"] = torch.mean(
-        #     self.foot_contact_manager.last_air_time
-        # )
 
         if self.mode == "play":
             self.camera.render()
@@ -526,10 +502,9 @@ class SpiderRobotEnv(ManagedEnvironment):
         cmd_linear_vel = self.reward_manager.last_episode_mean_reward(
             "cmd_linear_vel", before_weight=True
         )
-        if cmd_linear_vel > 0.7:
+        if cmd_linear_vel > 0.8:
             self._curriculum_level += 1
             self.gait_command_manager.increase_velocity()
-            # self.gait_command_manager.jumping_probability = 0.1
             self.inc_reward_weight("similar_to_default", {"inc": 0.001, "limit": 0.01})
             self.inc_reward_weight("foot_sync", {"inc": 0.05, "limit": 0.5})
 
