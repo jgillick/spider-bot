@@ -550,10 +550,9 @@ class SpiderRobotEnv(ManagedEnvironment):
             self.gait_command_manager.increase_velocity()
 
             # Max height
-            if height_reward > 0.025:
-                max_height = self.height_command_manager.range["height"][1]
-                max_height = min(max_height + 0.005, 0.18)
-                self.height_command_manager.range["height"][1] = max_height
+            max_height = self.height_command_manager.range["height"][1]
+            max_height = min(max_height + 0.005, 0.18)
+            self.height_command_manager.range["height"][1] = max_height
 
             # Reduce the similar to default reward
             self.inc_reward_weight("similar_to_default", {"inc": 0.001, "limit": 0.01})
