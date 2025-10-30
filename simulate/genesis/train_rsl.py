@@ -30,6 +30,8 @@ parser = argparse.ArgumentParser(add_help=True)
 parser.add_argument("-n", "--num_envs", type=int, default=4096)
 parser.add_argument("--max_iterations", type=int, default=8000)
 parser.add_argument("-d", "--device", type=str, default="gpu")
+parser.add_argument("-t", "--terrain", type=str, default="flat", help="Set terrain: flat, rough, mixed")
+parser.add_argument("--lidar", action='store_true', default=False, help="Enable the lidar height sensor.")
 parser.add_argument("-e", "--experiment_name", type=str)
 args = parser.parse_args()
 
@@ -115,7 +117,12 @@ def main():
     )
 
     # Create environment
-    env = SpiderRobotEnv(num_envs=args.num_envs, headless=True, terrain="flat", height_sensor=False)
+    env = SpiderRobotEnv(
+        num_envs=args.num_envs,
+        headless=True,
+        terrain=args.terrain,
+        height_sensor=args.lidar,
+    )
 
     # Record videos in regular intervals
     env = VideoWrapper(
