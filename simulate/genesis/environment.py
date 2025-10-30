@@ -20,6 +20,7 @@ from genesis_forge.managers import (
     TerrainManager,
     EntityManager,
     ObservationManager,
+    CommandManager,
 )
 from genesis_forge.mdp import reset, rewards, terminations
 
@@ -286,6 +287,16 @@ class SpiderRobotEnv(ManagedEnvironment):
         )
 
         ##
+        # Height command
+        self.height_command_manager = CommandManager(
+            self,
+            resample_time_sec=2.5,
+            range={
+                "height": [0.1, 0.14],
+            },
+        )
+
+        ##
         # Rewards
         self.reward_manager = RewardManager(
             self,
@@ -315,8 +326,9 @@ class SpiderRobotEnv(ManagedEnvironment):
                     "weight": -50.0,
                     "fn": rewards.base_height,
                     "params": {
-                        "target_height": 0.135,
+                        # "target_height": 0.135,
                         "terrain_manager": self.terrain_manager,
+                        "height_command": self.height_command_manager,
                     },
                 },
                 "similar_to_default": {
@@ -401,6 +413,7 @@ class SpiderRobotEnv(ManagedEnvironment):
             history_len=4,
             cfg={
                 "gait_cmd": {"fn": self.gait_command_manager.observation},
+                "height_cmd": {"fn": self.height_command_manager.observation},
                 "angle_velocity": {
                     "fn": lambda env: self.robot_manager.get_angular_velocity(),
                     "noise": 0.01,
@@ -466,6 +479,7 @@ class SpiderRobotEnv(ManagedEnvironment):
 
         # Log metrics
         extras["episode"]["Metrics / curriculum_level"] = self._curriculum_level
+        extras["episode"]["Metrics / max_height"] = self.height_command_manager.range["height"][1]
 
         if self.mode == "play":
             self.camera.render()
@@ -528,12 +542,26 @@ class SpiderRobotEnv(ManagedEnvironment):
         cmd_linear_vel = self.reward_manager.last_episode_mean_reward(
             "cmd_linear_vel", before_weight=True
         )
+        height_reward = self.reward_manager.last_episode_mean_reward(
+            "height", before_weight=False
+        )
         if cmd_linear_vel > 0.8:
             self._curriculum_level += 1
             self.gait_command_manager.increase_velocity()
+
+            # Max height
+            if height_reward > 0.025:
+                max_height = self.height_command_manager.range["height"][1]
+                max_height = min(max_height + 0.005, 0.18)
+                self.height_command_manager.range["height"][1] = max_height
+
+            # Reduce the similar to default reward
             self.inc_reward_weight("similar_to_default", {"inc": 0.001, "limit": 0.01})
+
+            # Increase the foot sync reward
             self.inc_reward_weight("foot_sync", {"inc": 0.05, "limit": 0.5})
 
+            # Incrase the air time target range
             self.inc_reward_weight("foot_air_time", {"inc": 0.05, "limit": 1.0})
             self.inc_reward_param(
                 "foot_air_time", "time_threshold", {"inc": 0.05, "limit": 0.3}
