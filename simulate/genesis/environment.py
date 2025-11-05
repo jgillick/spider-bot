@@ -3,7 +3,6 @@ Simplified Spider Robot Environment with Curriculum Learning
 Focuses on core objectives with progressive difficulty
 """
 
-import re
 import os
 import torch
 import numpy as np
@@ -20,17 +19,18 @@ from genesis_forge.managers import (
     TerrainManager,
     EntityManager,
     ObservationManager,
-    CommandManager,
+    VelocityCommandManager,
 )
-from genesis_forge.mdp import reset, rewards, terminations
+from genesis_forge.mdp import reset, rewards, terminations, observations
 
 from foot_angle_mdp import FootAngleMdp
-from gait_command import GaitCommandManager
+from gait_reward import GaitReward
 
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 SPIDER_XML = os.path.abspath(os.path.join(THIS_DIR, "../robot/SpiderBot.xml"))
-CURRICULUM_CHECK_EVERY_STEPS = 800
+CURRICULUM_CHECK_EVERY_STEPS = 500
+CURRICULUM_AVG_SAMPLES = 3
 
 Terrain = Literal["flat", "rough", "mixed"]
 EnvMode = Literal["train", "eval", "play"]
@@ -65,8 +65,10 @@ class SpiderRobotEnv(ManagedEnvironment):
         self.headless = headless
         self.mode = mode
         self.use_height_sensor = height_sensor
-        self._curriculum_level = 1
-        self._next_curriculum_check_step = CURRICULUM_CHECK_EVERY_STEPS
+        self.curriculum_level = 1
+        self.curriculum_samples = []
+        self.next_curriculum_check_step = CURRICULUM_CHECK_EVERY_STEPS
+        self.terrain_type = terrain
         self.construct_scene(terrain)
 
     """
@@ -136,10 +138,19 @@ class SpiderRobotEnv(ManagedEnvironment):
                     subterrain_types=[
                         [
                             "flat_terrain",
-                            "discrete_obstacles_terrain",
+                            # "discrete_obstacles_terrain",
                             "pyramid_stairs_terrain",
+                            "random_uniform_terrain",
                         ],
                     ],
+                    subterrain_parameters={
+                        "random_uniform_terrain": {
+                            "min_height": 0.0,
+                            "max_height": 0.08,
+                            "step": 0.04,
+                            "downsampled_scale": 0.25,
+                        },
+                    },
                 ),
             )
 
@@ -223,7 +234,7 @@ class SpiderRobotEnv(ManagedEnvironment):
             pd_kv=1.2,
             max_force=8.0,
             frictionloss=0.1,
-            noise_scale=0.02,
+            noise_scale=0.0,
         )
 
         ##
@@ -261,38 +272,17 @@ class SpiderRobotEnv(ManagedEnvironment):
 
         ##
         # Gait command manager
-        self.gait_command_manager = GaitCommandManager(
+        self.vel_command_manager = VelocityCommandManager(
             self,
-            foot_names={
-                "L1": "Leg1_Tibia_Foot",
-                "L2": "Leg2_Tibia_Foot",
-                "L3": "Leg3_Tibia_Foot",
-                "L4": "Leg4_Tibia_Foot",
-                "R1": "Leg5_Tibia_Foot",
-                "R2": "Leg6_Tibia_Foot",
-                "R3": "Leg7_Tibia_Foot",
-                "R4": "Leg8_Tibia_Foot",
-            },
-            velocity_range={
-                "lin_vel_x": [-1.0, 1.0],
+            range={
+                "lin_vel_x": [-0.5, 0.5],
                 "lin_vel_y": [-0.5, 0.5],
                 "ang_vel_z": [-0.5, 0.5],
             },
             resample_time_sec=4.0,
-            jumping_probability=0.0,
             debug_visualizer=True,
             debug_visualizer_cfg={
                 "envs_idx": [0],
-            },
-        )
-
-        ##
-        # Height command
-        self.height_command_manager = CommandManager(
-            self,
-            resample_time_sec=2.5,
-            range={
-                "height": [0.1, 0.14],
             },
         )
 
@@ -301,34 +291,39 @@ class SpiderRobotEnv(ManagedEnvironment):
         self.reward_manager = RewardManager(
             self,
             cfg={
-                "foot_sync": {
+                "gait": {
                     "weight": 0.25,
-                    "fn": self.gait_command_manager.foot_sync_reward,
+                    "fn": GaitReward,
                     "params": {
                         "contact_manager": self.foot_contact_manager,
+                        "foot_groups": [
+                            ["Leg1_Tibia_Foot", "Leg6_Tibia_Foot"],
+                            ["Leg2_Tibia_Foot", "Leg5_Tibia_Foot"],
+                            ["Leg3_Tibia_Foot", "Leg8_Tibia_Foot"],
+                            ["Leg4_Tibia_Foot", "Leg7_Tibia_Foot"],
+                        ],
                     },
                 },
                 "cmd_linear_vel": {
                     "weight": 1.0,
                     "fn": rewards.command_tracking_lin_vel,
                     "params": {
-                        "vel_cmd_manager": self.gait_command_manager,
+                        "vel_cmd_manager": self.vel_command_manager,
                     },
                 },
                 "cmd_angular_vel": {
                     "weight": 0.5,
                     "fn": rewards.command_tracking_ang_vel,
                     "params": {
-                        "vel_cmd_manager": self.gait_command_manager,
+                        "vel_cmd_manager": self.vel_command_manager,
                     },
                 },
                 "height": {
-                    "weight": -50.0,
+                    "weight": -100.0,
                     "fn": rewards.base_height,
                     "params": {
-                        # "target_height": 0.135,
+                        "target_height": 0.135,
                         "terrain_manager": self.terrain_manager,
-                        "height_command": self.height_command_manager,
                     },
                 },
                 "similar_to_default": {
@@ -355,7 +350,7 @@ class SpiderRobotEnv(ManagedEnvironment):
                     "fn": rewards.feet_air_time,
                     "params": {
                         "contact_manager": self.foot_contact_manager,
-                        "vel_cmd_manager": self.gait_command_manager,
+                        "vel_cmd_manager": self.vel_command_manager,
                         "time_threshold": 0.2,
                         "time_threshold_max": 0.5,
                     },
@@ -381,8 +376,15 @@ class SpiderRobotEnv(ManagedEnvironment):
             logging_enabled=True,
             term_cfg={
                 "timeout": {
-                    "fn": terminations.timeout,
                     "time_out": True,
+                    "fn": terminations.timeout,
+                },
+                "out_of_bounds": {
+                    "time_out": True,
+                    "fn": terminations.out_of_bounds,
+                    "params": {
+                        "terrain_manager": self.terrain_manager,
+                    },
                 },
                 "bad_orientation": {
                     "fn": terminations.bad_orientation,
@@ -412,8 +414,9 @@ class SpiderRobotEnv(ManagedEnvironment):
             self,
             history_len=4,
             cfg={
-                "gait_cmd": {"fn": self.gait_command_manager.observation},
-                "height_cmd": {"fn": self.height_command_manager.observation},
+                "command": {
+                    "fn": self.vel_command_manager.observation,
+                },
                 "angle_velocity": {
                     "fn": lambda env: self.robot_manager.get_angular_velocity(),
                     "noise": 0.01,
@@ -452,18 +455,18 @@ class SpiderRobotEnv(ManagedEnvironment):
             history_len=4,
             name="critic",
             cfg={
-                "gait_cmd": {
-                    "fn": self.gait_command_manager.privileged_observation,
-                    "params": {
-                        "contact_manager": self.foot_contact_manager,
-                    },
-                },
                 "air_time_target": {
                     "fn": self.air_time_observation,
                 },
                 "height_sensor": {
                     "fn": self.height_sensor_observation,
-                }
+                },
+                "foot_contacts": {
+                    "fn": observations.contact_force,
+                    "params": {
+                        "contact_manager": self.foot_contact_manager,
+                    },
+                },
             },
         )
 
@@ -478,8 +481,23 @@ class SpiderRobotEnv(ManagedEnvironment):
         obs, reward, terminated, truncated, extras = super().step(actions)
 
         # Log metrics
-        extras["episode"]["Metrics / curriculum_level"] = self._curriculum_level
-        extras["episode"]["Metrics / max_height"] = self.height_command_manager.range["height"][1]
+        extras["episode"]["Metrics / curriculum_level"] = self.curriculum_level
+        extras["episode"]["Metrics / max_velocity"] = self.vel_command_manager.range[
+            "lin_vel_x"
+        ][1]
+        extras["episode"]["Metrics / foot_air_time_midpoint"] = (
+            self.reward_manager["foot_air_time"].params["time_threshold"]
+            + self.reward_manager["foot_air_time"].params["time_threshold_max"]
+        ) / 2.0
+        extras["episode"]["Metrics / foot_air_time_weight"] = self.reward_manager[
+            "foot_air_time"
+        ].weight
+        extras["episode"]["Metrics / gait_weight"] = self.reward_manager[
+            "gait"
+        ].weight
+        extras["episode"]["Metrics / similar_to_default_weight"] = self.reward_manager[
+            "similar_to_default"
+        ].weight
 
         if self.mode == "play":
             self.camera.render()
@@ -502,69 +520,55 @@ class SpiderRobotEnv(ManagedEnvironment):
 
     def air_time_observation(self, env: GenesisEnv) -> float:
         """Return the mid point of the current foot air time target range"""
-        params = self.reward_manager.cfg["foot_air_time"].params
+        params = self.reward_manager["foot_air_time"].params
         mid_point = (params["time_threshold"] + params["time_threshold_max"]) / 2.0
         obs = torch.zeros(env.num_envs, 1, device=gs.device)
         obs[:] = mid_point
         return obs
-        
-
-    def inc_value(self, value: float, cfg: IncConfig):
-        value += cfg["inc"]
-        if cfg["limit"] is not None:
-            if cfg["inc"] > 0:
-                value = min(value, cfg["limit"])
-            else:
-                value = max(value, cfg["limit"])
-        return value
-
-    def inc_reward_param(self, reward_name: str, param_name: str, cfg: IncConfig):
-        value = self.reward_manager.cfg[reward_name].params[param_name]
-        self.reward_manager.cfg[reward_name].params[param_name] = self.inc_value(
-            value, cfg
-        )
-
-    def inc_reward_weight(self, reward_name: str, cfg: IncConfig):
-        value = self.reward_manager.cfg[reward_name].weight
-        self.reward_manager.cfg[reward_name].weight = self.inc_value(value, cfg)
 
     def update_curriculum(self):
         """
         Check the curriculum
         """
         # Limit how often we check/update the curriculum
-        if self.step_count < self._next_curriculum_check_step:
+        if self.step_count < self.next_curriculum_check_step:
             return
-        self._next_curriculum_check_step = (
-            self.step_count + CURRICULUM_CHECK_EVERY_STEPS
-        )
 
-        cmd_linear_vel = self.reward_manager.last_episode_mean_reward(
-            "cmd_linear_vel", before_weight=True
-        )
-        height_reward = self.reward_manager.last_episode_mean_reward(
-            "height", before_weight=False
-        )
-        if cmd_linear_vel > 0.8:
-            self._curriculum_level += 1
-            self.gait_command_manager.increase_velocity()
-
-            # Max height
-            max_height = self.height_command_manager.range["height"][1]
-            max_height = min(max_height + 0.005, 0.18)
-            self.height_command_manager.range["height"][1] = max_height
-
-            # Reduce the similar to default reward
-            self.inc_reward_weight("similar_to_default", {"inc": 0.001, "limit": 0.01})
-
-            # Increase the foot sync reward
-            self.inc_reward_weight("foot_sync", {"inc": 0.05, "limit": 0.5})
-
-            # Incrase the air time target range
-            self.inc_reward_weight("foot_air_time", {"inc": 0.05, "limit": 1.0})
-            self.inc_reward_param(
-                "foot_air_time", "time_threshold", {"inc": 0.05, "limit": 0.3}
+        # Calculate the average linear velocity reward, over the last few episodes
+        # This prevents a momentary spike causing a level up
+        if len(self.curriculum_samples) < CURRICULUM_AVG_SAMPLES:
+            cmd_linear_vel = self.reward_manager.last_episode_mean_reward(
+                "cmd_linear_vel", before_weight=True
             )
-            self.inc_reward_param(
-                "foot_air_time", "time_threshold_max", {"inc": 0.05, "limit": 1.0}
+            self.curriculum_samples.append(cmd_linear_vel)
+            if len(self.curriculum_samples) < CURRICULUM_AVG_SAMPLES:
+                return
+        cmd_linear_avg = sum(self.curriculum_samples) / len(self.curriculum_samples)
+
+        # Level up
+        if cmd_linear_avg > 0.8:
+            self.curriculum_level += 1
+            self.vel_command_manager.increment_range("lin_vel_x", 0.05, limit=1.0)
+            self.vel_command_manager.increment_range("lin_vel_y", 0.05, limit=1.0)
+            self.vel_command_manager.increment_range("ang_vel_z", 0.05, limit=1.0)
+
+            # Reduce the similar_to_default reward
+            self.reward_manager["similar_to_default"].increment_weight(
+                0.001, limit=-0.01
             )
+
+            # Increase the gait reward
+            self.reward_manager["gait"].increment_weight(0.05, limit=0.5)
+
+            # Increase the foot_air_time target range
+            self.reward_manager["foot_air_time"].increment_weight(0.05, limit=1.0)
+            self.reward_manager["foot_air_time"].increment_param(
+                "time_threshold", 0.05, limit=0.3
+            )
+            self.reward_manager["foot_air_time"].increment_param(
+                "time_threshold_max", 0.05, limit=1.0
+            )
+
+        # Reset the curriculum checks
+        self.next_curriculum_check_step = self.step_count + CURRICULUM_CHECK_EVERY_STEPS
+        self.curriculum_samples = []
