@@ -62,6 +62,7 @@ def play():
     log_path = args.dir
     [cfg] = pickle.load(open(os.path.join(log_path, "cfgs.pkl"), "rb"))
     model = get_latest_model(log_path)
+    print(f"Playing model: {model}")
 
     # Processor backend (GPU or CPU)
     backend = gs.gpu
@@ -71,27 +72,23 @@ def play():
     gs.init(logging_level="warning", backend=backend, performance_mode=True)
 
     # Customize environment for playing
-    env = SpiderRobotEnv(num_envs=1, headless=False, terrain="mixed", height_sensor=False, mode="play")
+    env = SpiderRobotEnv(num_envs=1, headless=False, terrain="flat", height_sensor=False, mode="play")
     env.build()
     env.reward_manager.enabled = False
     env.termination_manager.enabled = False
     env.self_contact.enabled = False
     env.action_manager.noise_scale = 0.0
-    env.gait_command_manager.range = {
+    env.vel_command_manager.range = {
         "lin_vel_x": [-1.0, 1.0],
         "lin_vel_y": [-1.0, 1.0],
         "ang_vel_z": [-0.5, 0.5],
     }
-    env.height_command_manager.range = {"height": [0.12, 0.15]}
 
     # Connect to gamepad
     print("🎮 Connecting to gamepad...")
     gamepad = Gamepad()
-    env.gait_command_manager.use_gamepad(
+    env.vel_command_manager.use_gamepad(
         gamepad, lin_vel_y_axis=0, lin_vel_x_axis=1, ang_vel_z_axis=2
-    )
-    env.height_command_manager.use_gamepad(
-        gamepad, { "height": 3 }
     )
 
     # Eval
