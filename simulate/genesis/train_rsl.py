@@ -29,7 +29,7 @@ from rsl_rl.runners import OnPolicyRunner
 
 parser = argparse.ArgumentParser(add_help=True)
 parser.add_argument("-n", "--num_envs", type=int, default=4096)
-parser.add_argument("-i", "--max_iterations", type=int, default=8000)
+parser.add_argument("-i", "--max_iterations", type=int, default=6000)
 parser.add_argument("-d", "--device", type=str, default="gpu")
 parser.add_argument("-t", "--terrain", type=str, default="flat", help="Set terrain: flat, rough, mixed")
 parser.add_argument("--lidar", action='store_true', default=False, help="Enable the lidar height sensor.")
@@ -126,6 +126,7 @@ def main():
     # Record videos in regular intervals
     env = VideoWrapper(
         env,
+        fps=30,
         video_length_sec=12,
         out_dir=os.path.join(log_path, "videos"),
         episode_trigger=lambda episode_id: episode_id % 2 == 0,
