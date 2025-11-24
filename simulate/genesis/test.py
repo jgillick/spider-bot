@@ -99,13 +99,16 @@ ZERO_POSE = {
 }
 
 PD_KP = 50.0
-PD_KV = 0.5
+PD_KV = 1.2
+DAMPING = 0.5
+ARMATURE = 1.68e-4
+FRICTION_LOSS = 0.1
 MAX_TORQUE = 8.0
 
 
 def main():
     gs.init(
-        backend=gs.cpu,
+        # backend=gs.cpu,
         logging_level="warning",
     )
 
@@ -139,8 +142,11 @@ def main():
 
     # Gains and torque limits
     num_actuators = len(STABLE_POS)
-    robot.set_dofs_kp([50] * num_actuators, dof_idx)
-    robot.set_dofs_kv([1.2] * num_actuators, dof_idx)
+    robot.set_dofs_kp([PD_KP] * num_actuators, dof_idx)
+    robot.set_dofs_kv([PD_KV] * num_actuators, dof_idx)
+    robot.set_dofs_damping([DAMPING] * num_actuators, dof_idx)
+    robot.set_dofs_armature([ARMATURE] * num_actuators, dof_idx)
+    robot.set_dofs_frictionloss([FRICTION_LOSS] * num_actuators, dof_idx)
     robot.set_dofs_force_range(
         [-MAX_TORQUE] * num_actuators,
         [MAX_TORQUE] * num_actuators,
@@ -167,7 +173,12 @@ def main():
     )
 
     for i in range(1000):
-        if i > 0 and i % 200 == 0:
+        if i < 99:
+            robot.control_dofs_position(
+                position=ground_pos,
+                dofs_idx_local=dof_idx,
+            )
+        else:
             robot.control_dofs_position(
                 position=target_pos,
                 dofs_idx_local=dof_idx,

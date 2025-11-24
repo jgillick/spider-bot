@@ -21,6 +21,7 @@ from genesis_forge.managers import (
     ObservationManager,
     VelocityCommandManager,
 )
+from genesis_forge.managers.actuator import ActuatorManager, NoisyValue
 from genesis_forge.mdp import reset, rewards, terminations, observations
 
 from foot_angle_mdp import FootAngleMdp
@@ -29,8 +30,8 @@ from gait_reward import GaitReward
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 SPIDER_XML = os.path.abspath(os.path.join(THIS_DIR, "../robot/SpiderBot.xml"))
-CURRICULUM_CHECK_EVERY_STEPS = 500
-CURRICULUM_AVG_SAMPLES = 3
+CURRICULUM_CHECK_EVERY_STEPS = 800
+CURRICULUM_AVG_SAMPLES = 5
 
 Terrain = Literal["flat", "rough", "mixed"]
 EnvMode = Literal["train", "eval", "play"]
@@ -50,7 +51,7 @@ class SpiderRobotEnv(ManagedEnvironment):
         self,
         num_envs: int = 1,
         dt: float = 1 / 100,
-        max_episode_length_s: int | None = 8,
+        max_episode_length_s: int | None = 6,
         headless: bool = True,
         mode: EnvMode = "train",
         terrain: Terrain = "flat",
@@ -60,7 +61,7 @@ class SpiderRobotEnv(ManagedEnvironment):
             num_envs=num_envs,
             dt=dt,
             max_episode_length_sec=max_episode_length_s,
-            max_episode_random_scaling=0.1,
+            # max_episode_random_scaling=0.1,
         )
         self.headless = headless
         self.mode = mode
@@ -69,6 +70,14 @@ class SpiderRobotEnv(ManagedEnvironment):
         self.curriculum_samples = []
         self.next_curriculum_check_step = CURRICULUM_CHECK_EVERY_STEPS
         self.terrain_type = terrain
+
+        self.max_velocity_x = 1.2
+        self.max_velocity_y = 0.8
+        self.max_velocity_z = 1.0
+        self.velocity_inc = 0.05
+        if terrain != "flat":
+            self.velocity_inc = 0.025
+
         self.construct_scene(terrain)
 
     """
@@ -94,6 +103,7 @@ class SpiderRobotEnv(ManagedEnvironment):
                 enable_collision=True,
                 enable_joint_limit=True,
                 enable_self_collision=True,
+                max_collision_pairs=35,
             ),
         )
 
@@ -133,13 +143,13 @@ class SpiderRobotEnv(ManagedEnvironment):
                     )
                 ),
                 morph=gs.morphs.Terrain(
-                    n_subterrains=(1, 3),
-                    subterrain_size=(12, 12),
+                    n_subterrains=(1, 2),
+                    subterrain_size=(24, 12),
                     subterrain_types=[
                         [
                             "flat_terrain",
                             # "discrete_obstacles_terrain",
-                            "pyramid_stairs_terrain",
+                            # "pyramid_stairs_terrain",
                             "random_uniform_terrain",
                         ],
                     ],
@@ -210,31 +220,36 @@ class SpiderRobotEnv(ManagedEnvironment):
                     "params": {
                         "terrain_manager": self.terrain_manager,
                         "height_offset": 0.15,
+                        "subterrain": self.curriculum_terrain,
                     },
                 },
             },
         )
 
         ##
-        # DOF action manager
-        self.action_manager = PositionWithinLimitsActionManager(
+        # Actuators and Actions
+        self.actuator_manager = ActuatorManager(
             self,
             joint_names=".*",
             default_pos={
-                # Hip joints
                 "Leg[1-2]_Hip": -1.0,
                 "Leg[3-6]_Hip": 1.0,
                 "Leg[7-8]_Hip": -1.0,
-                # Femur joints
                 "Leg[1-8]_Femur": 0.5,
-                # Tibia joints
                 "Leg[1-8]_Tibia": 0.6,
             },
-            pd_kp=50,
-            pd_kv=1.2,
-            max_force=8.0,
-            frictionloss=0.1,
-            noise_scale=0.0,
+            kp=NoisyValue(52, 5),
+            kv=NoisyValue(1.2, 0.1),
+            max_force=NoisyValue(8.0, 1.0),
+            frictionloss=NoisyValue(0.1, 0.05),
+            # armature=1.68e-4,
+            damping=NoisyValue(0.4, 0.1),
+
+        )
+        self.action_manager = PositionWithinLimitsActionManager(
+            self,
+            delay_step=1,
+            actuator_manager=self.actuator_manager,
         )
 
         ##
@@ -267,17 +282,18 @@ class SpiderRobotEnv(ManagedEnvironment):
             debug_visualizer_cfg={
                 "envs_idx": [0],
                 "size": 0.05,
+                "fps": 10,
             },
         )
 
         ##
-        # Gait command manager
+        # Command manager
         self.vel_command_manager = VelocityCommandManager(
             self,
             range={
-                "lin_vel_x": [-0.5, 0.5],
+                "lin_vel_x": [-1.0, 1.0],
                 "lin_vel_y": [-0.5, 0.5],
-                "ang_vel_z": [-0.5, 0.5],
+                "ang_vel_z": [-1.0, 1.0],
             },
             resample_time_sec=4.0,
             debug_visualizer=True,
@@ -373,7 +389,6 @@ class SpiderRobotEnv(ManagedEnvironment):
         # Terminations
         self.termination_manager = TerminationManager(
             self,
-            logging_enabled=True,
             term_cfg={
                 "timeout": {
                     "time_out": True,
@@ -412,7 +427,7 @@ class SpiderRobotEnv(ManagedEnvironment):
         # Observations
         ObservationManager(
             self,
-            history_len=4,
+            history_len=5,
             cfg={
                 "command": {
                     "fn": self.vel_command_manager.observation,
@@ -435,15 +450,8 @@ class SpiderRobotEnv(ManagedEnvironment):
                 },
                 "dof_velocity": {
                     "fn": lambda env: self.action_manager.get_dofs_velocity(),
-                    "scale": 0.05,
-                    "noise": 0.1,
-                },
-                "dofs_force": {
-                    "fn": lambda env: self.action_manager.get_dofs_force(
-                        clip_to_max_force=True
-                    ),
                     "scale": 0.1,
-                    "noise": 0.01,
+                    "noise": 0.1,
                 },
                 "actions": {
                     "fn": lambda env: self.action_manager.raw_actions,
@@ -452,7 +460,7 @@ class SpiderRobotEnv(ManagedEnvironment):
         )
         ObservationManager(
             self,
-            history_len=4,
+            history_len=5,
             name="critic",
             cfg={
                 "air_time_target": {
@@ -548,9 +556,9 @@ class SpiderRobotEnv(ManagedEnvironment):
         # Level up
         if cmd_linear_avg > 0.8:
             self.curriculum_level += 1
-            self.vel_command_manager.increment_range("lin_vel_x", 0.05, limit=1.0)
-            self.vel_command_manager.increment_range("lin_vel_y", 0.05, limit=1.0)
-            self.vel_command_manager.increment_range("ang_vel_z", 0.05, limit=1.0)
+            self.vel_command_manager.increment_range("lin_vel_x", self.velocity_inc, limit=self.max_velocity_x)
+            self.vel_command_manager.increment_range("lin_vel_y", self.velocity_inc, limit=self.max_velocity_y)
+            self.vel_command_manager.increment_range("ang_vel_z", self.velocity_inc, limit=self.max_velocity_z)
 
             # Reduce the similar_to_default reward
             self.reward_manager["similar_to_default"].increment_weight(
@@ -572,3 +580,11 @@ class SpiderRobotEnv(ManagedEnvironment):
         # Reset the curriculum checks
         self.next_curriculum_check_step = self.step_count + CURRICULUM_CHECK_EVERY_STEPS
         self.curriculum_samples = []
+    
+    def curriculum_terrain(self) -> Terrain:
+        """
+        Select the terrain type for the environment.
+        """
+        if self.terrain_type == "mixed" and self.curriculum_level <= 3:
+                return "flat_terrain"
+        return None
