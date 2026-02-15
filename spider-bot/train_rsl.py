@@ -1,3 +1,4 @@
+import math
 import os
 import copy
 import torch
@@ -28,7 +29,7 @@ from rsl_rl.runners import OnPolicyRunner
 
 parser = argparse.ArgumentParser(add_help=True)
 parser.add_argument("-n", "--num_envs", type=int, default=4096)
-parser.add_argument("--max_iterations", type=int, default=8000)
+parser.add_argument("-i", "--max_iterations", type=int, default=6000)
 parser.add_argument("-d", "--device", type=str, default="gpu")
 parser.add_argument("-t", "--terrain", type=str, default="flat", help="Set terrain: flat, rough, mixed")
 parser.add_argument("--lidar", action='store_true', default=False, help="Enable the lidar height sensor.")
@@ -39,11 +40,7 @@ args = parser.parse_args()
 def training_cfg(exp_name: str, max_iterations: int, num_envs: int):
     # Target training batch size of ~98,304 (98,304 / num parallel envs = num_steps_per_env)
     # Based on: https://ar5iv.labs.arxiv.org/html/2109.11978
-    num_steps_per_env = round(98_304 / num_envs)
-    if num_steps_per_env < 16:
-        num_steps_per_env = 16
-    elif num_steps_per_env > 150:
-        num_steps_per_env = 150
+    num_steps_per_env = math.ceil(98_304 / num_envs)
     return {
         "algorithm": {
             "class_name": "PPO",
@@ -98,11 +95,13 @@ def main():
 
     # Logging directory
     log_base_dir = "./logs/rsl"
-    experiment_name = (
-        args.experiment_name
-        if args.experiment_name
-        else datetime.now().strftime("%Y%m%d_%H%M%S")
-    )
+    experiment_name = datetime.now().strftime("%Y%m%d_%H%M%S")
+    if args.experiment_name:
+        experiment_name = args.experiment_name
+    else:
+        experiment_name += f"_{args.terrain}"
+        if args.lidar:
+            experiment_name += "_lidar"
     log_path = os.path.join(log_base_dir, experiment_name)
     if os.path.exists(log_path):
         shutil.rmtree(log_path)
@@ -127,6 +126,7 @@ def main():
     # Record videos in regular intervals
     env = VideoWrapper(
         env,
+        fps=30,
         video_length_sec=12,
         out_dir=os.path.join(log_path, "videos"),
         episode_trigger=lambda episode_id: episode_id % 2 == 0,
