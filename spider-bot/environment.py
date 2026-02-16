@@ -29,7 +29,7 @@ from gait_reward import GaitReward
 
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
-SPIDER_XML = os.path.abspath(os.path.join(THIS_DIR, "../robot/SpiderBot.xml"))
+SPIDER_XML = os.path.abspath(os.path.join(THIS_DIR, "../model/SpiderBot.xml"))
 CURRICULUM_CHECK_EVERY_STEPS = 800
 CURRICULUM_AVG_SAMPLES = 5
 
@@ -244,12 +244,12 @@ class SpiderRobotEnv(ManagedEnvironment):
             frictionloss=NoisyValue(0.1, 0.05),
             # armature=1.68e-4,
             damping=NoisyValue(0.4, 0.1),
-
         )
         self.action_manager = PositionWithinLimitsActionManager(
             self,
             delay_step=1,
             actuator_manager=self.actuator_manager,
+            soft_limit_scale_factor=0.9,
         )
 
         ##
@@ -500,9 +500,7 @@ class SpiderRobotEnv(ManagedEnvironment):
         extras["episode"]["Metrics / foot_air_time_weight"] = self.reward_manager[
             "foot_air_time"
         ].weight
-        extras["episode"]["Metrics / gait_weight"] = self.reward_manager[
-            "gait"
-        ].weight
+        extras["episode"]["Metrics / gait_weight"] = self.reward_manager["gait"].weight
         extras["episode"]["Metrics / similar_to_default_weight"] = self.reward_manager[
             "similar_to_default"
         ].weight
@@ -556,9 +554,15 @@ class SpiderRobotEnv(ManagedEnvironment):
         # Level up
         if cmd_linear_avg > 0.8:
             self.curriculum_level += 1
-            self.vel_command_manager.increment_range("lin_vel_x", self.velocity_inc, limit=self.max_velocity_x)
-            self.vel_command_manager.increment_range("lin_vel_y", self.velocity_inc, limit=self.max_velocity_y)
-            self.vel_command_manager.increment_range("ang_vel_z", self.velocity_inc, limit=self.max_velocity_z)
+            self.vel_command_manager.increment_range(
+                "lin_vel_x", self.velocity_inc, limit=self.max_velocity_x
+            )
+            self.vel_command_manager.increment_range(
+                "lin_vel_y", self.velocity_inc, limit=self.max_velocity_y
+            )
+            self.vel_command_manager.increment_range(
+                "ang_vel_z", self.velocity_inc, limit=self.max_velocity_z
+            )
 
             # Reduce the similar_to_default reward
             self.reward_manager["similar_to_default"].increment_weight(
@@ -580,11 +584,11 @@ class SpiderRobotEnv(ManagedEnvironment):
         # Reset the curriculum checks
         self.next_curriculum_check_step = self.step_count + CURRICULUM_CHECK_EVERY_STEPS
         self.curriculum_samples = []
-    
+
     def curriculum_terrain(self) -> Terrain:
         """
         Select the terrain type for the environment.
         """
         if self.terrain_type == "mixed" and self.curriculum_level <= 3:
-                return "flat_terrain"
+            return "flat_terrain"
         return None
