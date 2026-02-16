@@ -461,7 +461,7 @@ class SpiderRobotEnv(ManagedEnvironment):
         ObservationManager(
             self,
             history_len=5,
-            name="critic",
+            name="privileged",
             cfg={
                 "air_time_target": {
                     "fn": self.air_time_observation,
