@@ -1,6 +1,6 @@
 # Robot Model
 
-This holds the MuJoCo robot configuration file and 3D meshes.
+The functional 3D model of the robot, converted from Fusion360, and processed for reinforcement learning environments.
 
 To generate these files:
 
