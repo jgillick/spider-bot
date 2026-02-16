@@ -21,6 +21,17 @@ MOTOR_UNITS_PER_REV = 8.0
 MOTOR_TO_RAD = TWO_PI / MOTOR_UNITS_PER_REV  # π/4
 RAD_TO_MOTOR = MOTOR_UNITS_PER_REV / TWO_PI  # 4/π
 
+# MIT protocol ranges (output-shaft side, per SteadyWin manual)
+MIT_POS_MIN, MIT_POS_MAX = -12.5, 12.5  # rad
+MIT_VEL_MIN, MIT_VEL_MAX = -65.0, 65.0  # rad/s
+MIT_KP_MIN, MIT_KP_MAX = 0.0, 500.0
+MIT_KD_MIN, MIT_KD_MAX = 0.0, 5.0
+MIT_TORQUE_MIN, MIT_TORQUE_MAX = -50.0, 50.0  # Nm
+
+# How long (seconds) without a heartbeat before is_connected becomes False.
+# Default heartbeat_rate_ms on the motor is 100 ms, so 0.5 s is generous.
+HEARTBEAT_TIMEOUT = 0.5
+
 # SDO endpoint IDs
 ENCODER_OFFSET_ENDPOINT_ID = 362
 ENCODER_POSITION_ESTIMATE_ID = 349
@@ -146,7 +157,9 @@ class SimpleCanController:
         self._axis_error = 0
         self._target_position: Optional[float] = None
         self._zero_offset = 0.0  # Virtual zero (motor units)
+        self._mit_torque = 0.0  # Latest torque from MIT feedback (Nm, output-shaft)
 
+        self._last_heartbeat_time: Optional[float] = None
         self._bus: Optional[can.Bus] = None
 
     def connect(self) -> None:
@@ -165,6 +178,7 @@ class SimpleCanController:
         if self._bus is not None:
             self._bus.shutdown()
             self._bus = None
+        self._last_heartbeat_time = None
 
     def __enter__(self):
         self.connect()
@@ -176,7 +190,10 @@ class SimpleCanController:
 
     @property
     def is_connected(self) -> bool:
-        return self._bus is not None
+        """True only if the CAN bus is open AND a heartbeat was received recently."""
+        if self._bus is None or self._last_heartbeat_time is None:
+            return False
+        return (time.monotonic() - self._last_heartbeat_time) < HEARTBEAT_TIMEOUT
 
     @property
     def position(self) -> float:
@@ -211,6 +228,11 @@ class SimpleCanController:
         return self._target_position * MOTOR_TO_RAD
 
     @property
+    def mit_torque(self) -> float:
+        """Latest torque reported by MIT feedback (Nm, output-shaft side)"""
+        return self._mit_torque
+
+    @property
     def zero_offset(self) -> float:
         """Current virtual zero offset (radians)"""
         return self._zero_offset * MOTOR_TO_RAD
@@ -230,8 +252,20 @@ class SimpleCanController:
                 continue
 
             if cmd_id == CANCommand.HEARTBEAT and len(msg.data) >= 5:
+                self._last_heartbeat_time = time.monotonic()
                 self._axis_error = struct.unpack("<I", msg.data[0:4])[0]
                 self._axis_state = AxisState(msg.data[4])
+
+            elif cmd_id == CANCommand.MIT_CONTROL and len(msg.data) >= 6:
+                # MIT feedback: BYTE0=node_id, BYTE1-2=pos(16b),
+                # BYTE3+BYTE4[7:4]=vel(12b), BYTE4[3:0]+BYTE5=torque(12b)
+                d = msg.data
+                pos_int = (d[1] << 8) | d[2]
+                vel_int = (d[3] << 4) | ((d[4] >> 4) & 0xF)
+                t_int = ((d[4] & 0xF) << 8) | d[5]
+                self._mit_torque = (
+                    t_int * (MIT_TORQUE_MAX - MIT_TORQUE_MIN) / 4095 + MIT_TORQUE_MIN
+                )
 
             elif cmd_id == CANCommand.GET_ENCODER_ESTIMATES and len(msg.data) >= 8:
                 self._position, self._velocity = struct.unpack("<ff", msg.data)
@@ -262,8 +296,6 @@ class SimpleCanController:
         cmd_id = can_id & 0x1F
         recv_node = can_id >> 5
         return cmd_id, recv_node
-
-    # === High-level commands ===
 
     def set_zero_here(self) -> None:
         """Set current position as the new virtual zero"""
@@ -366,6 +398,74 @@ class SimpleCanController:
         new_pos = self.position + delta
         self.move_to(new_pos, vel_ff, torque_ff)
 
+    def send_mit_control(
+        self,
+        position: float,
+        kp: float = 52.0,
+        kd: float = 1.2,
+        velocity: float = 0.0,
+        torque: float = 0.0,
+    ) -> None:
+        """
+        Send an MIT impedance-control command (CAN cmd 0x008).
+
+        The motor applies: torque_out = kp*(position - pos_actual)
+                                      + kd*(velocity - vel_actual)
+                                      + torque
+
+        Args:
+            position: Target position in radians  (range -12.5 … 12.5)
+            velocity: Target velocity in rad/s     (range -65 … 65)
+            kp:       Position gain                (range 0 … 500)
+            kd:       Velocity/damping gain        (range 0 … 5)
+            torque:   Feed-forward torque in Nm    (range -50 … 50)
+        """
+        # Clamp to valid ranges
+        position = max(MIT_POS_MIN, min(MIT_POS_MAX, position))
+        velocity = max(MIT_VEL_MIN, min(MIT_VEL_MAX, velocity))
+        kp = max(MIT_KP_MIN, min(MIT_KP_MAX, kp))
+        kd = max(MIT_KD_MIN, min(MIT_KD_MAX, kd))
+        torque = max(MIT_TORQUE_MIN, min(MIT_TORQUE_MAX, torque))
+
+        # Convert floats → scaled integers
+        pos_int = int((position - MIT_POS_MIN) * 65535 / (MIT_POS_MAX - MIT_POS_MIN))
+        vel_int = int((velocity - MIT_VEL_MIN) * 4095 / (MIT_VEL_MAX - MIT_VEL_MIN))
+        kp_int = int((kp - MIT_KP_MIN) * 4095 / (MIT_KP_MAX - MIT_KP_MIN))
+        kd_int = int((kd - MIT_KD_MIN) * 4095 / (MIT_KD_MAX - MIT_KD_MIN))
+        t_int = int(
+            (torque - MIT_TORQUE_MIN) * 4095 / (MIT_TORQUE_MAX - MIT_TORQUE_MIN)
+        )
+
+        # Clamp to bit-widths just in case of FP rounding
+        pos_int = max(0, min(0xFFFF, pos_int))  # 16 bits
+        vel_int = max(0, min(0xFFF, vel_int))  # 12 bits
+        kp_int = max(0, min(0xFFF, kp_int))  # 12 bits
+        kd_int = max(0, min(0xFFF, kd_int))  # 12 bits
+        t_int = max(0, min(0xFFF, t_int))  # 12 bits
+
+        # Pack into 8 bytes:
+        #   BYTE0   position[15:8]
+        #   BYTE1   position[7:0]
+        #   BYTE2   velocity[11:4]
+        #   BYTE3   velocity[3:0] << 4 | kp[11:8]
+        #   BYTE4   kp[7:0]
+        #   BYTE5   kd[11:4]
+        #   BYTE6   kd[3:0] << 4 | torque[11:8]
+        #   BYTE7   torque[7:0]
+        data = bytes(
+            [
+                (pos_int >> 8) & 0xFF,
+                pos_int & 0xFF,
+                (vel_int >> 4) & 0xFF,
+                ((vel_int & 0xF) << 4) | ((kp_int >> 8) & 0xF),
+                kp_int & 0xFF,
+                (kd_int >> 4) & 0xFF,
+                ((kd_int & 0xF) << 4) | ((t_int >> 8) & 0xF),
+                t_int & 0xFF,
+            ]
+        )
+        self._send(CANCommand.MIT_CONTROL, data)
+
     def set_velocity(self, velocity: float, torque_ff: float = 0.0) -> None:
         """Set velocity (requires velocity control mode)."""
         vel_rev = rad_to_rev(velocity)
@@ -395,8 +495,6 @@ class SimpleCanController:
     def estop(self) -> None:
         """Emergency stop"""
         self._send(CANCommand.ESTOP)
-
-    # === Low-level commands ===
 
     def set_state(self, state: AxisState) -> None:
         """Set axis state"""

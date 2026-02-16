@@ -146,7 +146,8 @@ def run_controller_loop(motor, port):
                         try:
                             pos = float(input_buffer)
                             print(f"\n\nCommanding position: {pos} rad")
-                            motor.move_to(pos)
+                            # motor.move_to(pos)
+                            motor.send_mit_control(pos)
                         except ValueError:
                             print(f"\n\nInvalid input: {input_buffer}")
                     input_buffer = ""
