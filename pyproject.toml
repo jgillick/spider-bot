@@ -1,0 +1,15 @@
+[project]
+name = "spiderbot"
+version = "0.1.0"
+description = "Your friendly neighborhood eight-legged robot"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "genesis-forge>=0.3.0",
+    "genesis-world>=0.3.14",
+    "hidapi>=0.15.0",
+    "python-can[serial]>=4.6.1",
+    "rsl-rl-lib>=4.0.1",
+    "tensorboardx>=2.6.4",
+    "torch>=2.10.0",
+]
