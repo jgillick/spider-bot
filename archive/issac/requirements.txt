@@ -1,0 +1,11 @@
+
+tensorboard
+tensorflow
+
+# Optional: For advanced RL algorithms
+ray[rllib]>=2.6.0
+optuna>=3.2.0
+
+# Optional: For model export and deployment
+onnx>=1.14.0
+onnxruntime>=1.15.0
