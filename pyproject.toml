@@ -6,11 +6,12 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "genesis-forge>=0.3.0",
-    "genesis-world>=0.3.14",
+    "genesis-world>=0.4.0",
     "hidapi>=0.15.0",
     "python-can[serial]>=4.6.1",
     "pyyaml>=6.0.3",
     "rsl-rl-lib>=4.0.1",
-    "tensorboardx>=2.6.4",
+    "setuptools<81",
+    "tensorboard>=2.20.0",
     "torch>=2.10.0",
 ]
