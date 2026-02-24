@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Interactive motor position controller CLI.
-Uses the odrive_can API for motor control.
+Uses CanMotorController for single-node motor control via CAN bus.
 """
 
 import sys
@@ -10,13 +10,15 @@ import select
 import termios
 import tty
 import shutil
+from typing import Optional
 
 try:
     from serial.tools import list_ports
 except ImportError:
     list_ports = None
 
-from simple_can import SimpleCanController
+from .can_motor_controller import CanMotorController
+from .protocol import AxisState, ControlMode, InputMode
 
 # Configuration
 BITRATE = 500000
@@ -58,11 +60,25 @@ def choose_port():
         print("Invalid choice.")
 
 
-def run_controller_loop(motor, port):
+def _enable(bus: CanMotorController, node_id: int) -> None:
+    """Enable closed-loop position control on *node_id*."""
+    bus.send_clear_errors(node_id)
+    time.sleep(0.05)
+    bus.send_set_control_mode(node_id, ControlMode.POSITION_CONTROL, InputMode.PASSTHROUGH)
+    time.sleep(0.05)
+    bus.send_set_state(node_id, AxisState.CLOSED_LOOP_CONTROL)
+    time.sleep(0.05)
+
+
+def run_controller_loop(bus: CanMotorController, node_id: int, port: str) -> str:
     """
-    Run the main control loop. Returns 'quit' or 'reconnect'.
+    Run the main control loop.  Returns ``'quit'`` or ``'reconnect'``.
     """
     old_settings = termios.tcgetattr(sys.stdin)
+
+    # Virtual zero offset (radians, absolute encoder frame).
+    zero_offset: float = 0.0
+    target_position: Optional[float] = None  # radians, relative to virtual zero
 
     try:
         tty.setcbreak(sys.stdin.fileno())
@@ -84,18 +100,19 @@ def run_controller_loop(motor, port):
         last_update = 0
 
         while True:
-            motor.update()
+            state = bus.get_state(node_id)
+            position = state.position - zero_offset
 
             if time.time() - last_update > 0.1:
                 target_str = (
-                    f"{motor.target_position:.3f}"
-                    if motor.target_position is not None
+                    f"{target_position:.3f}"
+                    if target_position is not None
                     else "---"
                 )
                 status = (
-                    f"\rPos: {motor.position:8.3f} rad | "
-                    f"Vel: {motor.velocity:7.3f} rad/s | "
-                    f"State: {motor.axis_state.name:12s} | "
+                    f"\rPos: {position:8.3f} rad | "
+                    f"Vel: {state.velocity:7.3f} rad/s | "
+                    f"State: {state.axis_state.name:12s} | "
                     f"Target: {target_str:>8s} | "
                     f"Input: {input_buffer:10s}"
                 )
@@ -116,29 +133,31 @@ def run_controller_loop(motor, port):
 
                 elif char == "e":
                     print("\n\nEnabling closed loop control...")
-                    motor.enable()
+                    _enable(bus, node_id)
                     input_buffer = ""
                     time.sleep(0.5)
 
                 elif char == "i":
                     print("\n\nDisabling motor...")
-                    motor.disable()
+                    bus.send_set_state(node_id, AxisState.IDLE)
                     input_buffer = ""
 
                 elif char == "z":
                     print("\n\nSetting current position as zero (software)...")
-                    motor.set_zero_here()
+                    zero_offset = state.position
+                    target_position = 0.0
                     input_buffer = ""
 
                 elif char == "Z":
                     print("\n\nSaving current position as zero to motor flash...")
-                    motor.save_zero_to_motor()
+                    bus.save_zero_to_motor(node_id)
                     input_buffer = ""
                     return "reconnect"
 
                 elif char == "h":
                     print("\n\nGoing to zero (home)...")
-                    motor.move_to(0.0)
+                    target_position = 0.0
+                    bus.send_position(node_id, zero_offset)
                     input_buffer = ""
 
                 elif char == "\n" or char == "\r":
@@ -147,7 +166,8 @@ def run_controller_loop(motor, port):
                             pos = float(input_buffer)
                             print(f"\n\nCommanding position: {pos} rad")
                             # motor.move_to(pos)
-                            motor.send_mit_control(pos)
+                            bus.send_mit_control(node_id, pos)
+                            target_position = pos
                         except ValueError:
                             print(f"\n\nInvalid input: {input_buffer}")
                     input_buffer = ""
@@ -175,8 +195,9 @@ def main():
 
     while True:
         print(f"\nConnecting to motor on {port}...")
-        with SimpleCanController(NODE_ID, port=port, bitrate=BITRATE) as motor:
-            result = run_controller_loop(motor, port)
+        with CanMotorController(channel=port, bitrate=BITRATE) as bus:
+            bus.register_node(NODE_ID)
+            result = run_controller_loop(bus, NODE_ID, port)
 
         if result == "quit":
             break

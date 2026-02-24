@@ -1,5 +1,6 @@
 import os
 import glob
+import time
 import argparse
 import torch
 import pickle
@@ -9,10 +10,13 @@ from rsl_rl.runners import OnPolicyRunner
 from genesis_forge.wrappers import RslRlWrapper
 from genesis_forge.gamepads import Gamepad
 from environment import SpiderRobotEnv
+from motor.can_motor_controller import CanMotorController
+from motor.protocol import AxisState, ControlMode, InputMode
 
-from motor.simple_can import SimpleCanController
-
-from genesis_forge.gamepads import Gamepad
+MOTOR_KP = 38.0
+MOTOR_KD = 1.2
+MOTOR_SMOOTHING = 0.3  # EMA alpha: 0=no movement, 1=no smoothing
+MOTOR_DEADBAND = 0.01   # radians — ignore changes smaller than this
 
 parser = argparse.ArgumentParser(add_help=True)
 parser.add_argument(
@@ -62,14 +66,21 @@ def choose_port():
         print("Invalid choice.")
 
 
-def connect_to_can() -> dict[str, SimpleCanController]:
-    """Connect to the CAN bus."""
+def connect_to_can() -> CanMotorController:
+    """Open the CAN bus, register all motor nodes, and enable closed-loop control."""
     port = choose_port()
-    conn = {}
-    for name, node_id in CAN_ACTUATOR_MAP.items():
-        conn[name] = SimpleCanController(node_id, port=port, bitrate=CAN_BITRATE)
-        conn[name].connect()
-    return conn
+    bus = CanMotorController(channel=port, bitrate=CAN_BITRATE)
+    for node_id in CAN_ACTUATOR_MAP.values():
+        bus.register_node(node_id)
+    bus.start()
+    for node_id in CAN_ACTUATOR_MAP.values():
+        bus.send_clear_errors(node_id)
+        time.sleep(0.05)
+        bus.send_set_control_mode(node_id, ControlMode.POSITION_CONTROL, InputMode.PASSTHROUGH)
+        time.sleep(0.05)
+        bus.send_set_state(node_id, AxisState.CLOSED_LOOP_CONTROL)
+        time.sleep(0.05)
+    return bus
 
 
 def get_latest_model(log_dir: str) -> str:
@@ -111,7 +122,9 @@ def play():
 
     # Connect to the CAN bus
     print("🚌 Connecting to the CAN bus...")
-    actuators = connect_to_can()
+    bus = connect_to_can()
+
+    print("🔌 Initializing simulator...")
 
     # Processor backend (GPU or CPU)
     backend = gs.gpu
@@ -150,6 +163,7 @@ def play():
     policy = runner.get_inference_policy(device=gs.device)
 
     obs, _ = env.reset()
+    smoothed_positions = {node_id: None for node_id in CAN_ACTUATOR_MAP.values()}
     try:
         with torch.no_grad():
             while True:
@@ -158,9 +172,15 @@ def play():
 
                 # Move the actuators
                 actuator_values = base_env.action_manager.get_actions_dict()
-                for name, actuator in actuators.items():
-                    actuator.update()
-                    actuator.send_mit_control(actuator_values[name])
+                for name, node_id in CAN_ACTUATOR_MAP.items():
+                    target = actuator_values[name]
+                    prev = smoothed_positions[node_id]
+                    if prev is None:
+                        prev = target
+                    smoothed = MOTOR_SMOOTHING * target + (1.0 - MOTOR_SMOOTHING) * prev
+                    smoothed_positions[node_id] = smoothed
+                    if abs(smoothed - prev) > MOTOR_DEADBAND:
+                        bus.send_mit_control(node_id, smoothed, kp=MOTOR_KP, kd=MOTOR_KD)
 
     except KeyboardInterrupt:
         pass
@@ -169,6 +189,8 @@ def play():
             raise e
     except Exception as e:
         raise e
+    finally:
+        bus.stop()
     env.close()
     gamepad.stop()
 
