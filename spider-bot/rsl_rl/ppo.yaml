@@ -18,7 +18,7 @@ runner:
 
   # Logging
   logger: tensorboard
-  save_interval: 50 # Check for potential saves every `save_interval` iterations
+  save_interval: 100 # Check for potential saves every `save_interval` iterations
   experiment_name: spider-bot
   run_name: ""
 
@@ -29,8 +29,8 @@ runner:
     activation: elu
     obs_normalization: false
     stochastic: true
-    init_noise_std: 1.0
-    noise_std_type: "scalar" # 'scalar' or 'log'
+    init_noise_std: 0.8
+    noise_std_type: "log" # 'scalar' or 'log'
     state_dependent_std: false
 
   # Critic
@@ -60,7 +60,7 @@ runner:
 
     # Surrogate loss
     desired_kl: 0.01
-    entropy_coef: 0.01
+    entropy_coef: 0.005
     gamma: 0.99
     lam: 0.95
     max_grad_norm: 1.0
