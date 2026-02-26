@@ -28,9 +28,14 @@ from rsl_rl.runners import OnPolicyRunner
 
 DEFAULT_RSL_CONFIG = "./rsl_rl/ppo.yaml"
 
+# Training parameters
+TOTAL_BATCH = 196_608
+MIN_STEPS_PER_ENV = 24
+TARGET_MINI_BATCH = 24_576
+
 parser = argparse.ArgumentParser(add_help=True)
 parser.add_argument("-n", "--num_envs", type=int, default=4096)
-parser.add_argument("-i", "--max_iterations", type=int, default=6000)
+parser.add_argument("-i", "--max_iterations", type=int, default=8_000)
 parser.add_argument("-d", "--device", type=str, default="gpu")
 parser.add_argument("-c", "--config", type=str, default=DEFAULT_RSL_CONFIG)
 parser.add_argument(
@@ -55,12 +60,19 @@ def training_cfg(yaml_path: str, exp_name: str, max_iterations: int, num_envs: i
     with open(yaml_path) as f:
         cfg = yaml.safe_load(f)
 
-    # Target training batch size of ~98,304 (98,304 / num parallel envs = num_steps_per_env)
-    # Based on: https://ar5iv.labs.arxiv.org/html/2109.11978
-    num_steps_per_env = math.ceil(98_304 / num_envs)
-    cfg["runner"]["num_steps_per_env"] = num_steps_per_env
     cfg["runner"]["experiment_name"] = exp_name
     cfg["runner"]["max_iterations"] = max_iterations
+
+    # Adjust parameters based on the number of environments
+    # Target training batch size of ~98,304 (98,304 / num parallel envs = num_steps_per_env)
+    # Based on: https://arxiv.org/abs/2109.11978
+    num_steps_per_env = math.ceil(TOTAL_BATCH / num_envs)
+    total_batch = num_envs * num_steps_per_env
+    num_mini_batches = round(total_batch / TARGET_MINI_BATCH)
+    num_learning_epochs = 6 - round(math.log2(num_envs / 2048))
+    cfg["runner"]["num_steps_per_env"] = max(MIN_STEPS_PER_ENV, num_steps_per_env)
+    cfg["runner"]["algorithm"]["num_mini_batches"] = max(4, num_mini_batches)
+    cfg["runner"]["algorithm"]["num_learning_epochs"] = max(3, num_learning_epochs)
 
     return cfg["runner"]
 
