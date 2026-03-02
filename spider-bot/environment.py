@@ -25,6 +25,7 @@ from genesis_forge.managers.actuator import ActuatorManager, NoisyValue
 from genesis_forge.mdp import reset, rewards, terminations, observations
 
 from foot_angle_mdp import FootAngleMdp
+from foot_clearance_mdp import FootClearanceMdp
 from gait_reward import GaitReward
 
 
@@ -349,20 +350,20 @@ class SpiderRobotEnv(ManagedEnvironment):
                     },
                 },
                 "height": {
-                    "weight": -100.0,
+                    "weight": -30.0,
                     "fn": rewards.base_height,
                     "params": {
                         "target_height": 0.135,
                         "terrain_manager": self.terrain_manager,
                     },
                 },
-                "similar_to_default": {
-                    "weight": -0.05,
-                    "fn": rewards.dof_similar_to_default,
-                    "params": {
-                        "action_manager": self.action_manager,
-                    },
-                },
+                # "similar_to_default": {
+                #     "weight": -0.05,
+                #     "fn": rewards.dof_similar_to_default,
+                #     "params": {
+                #         "action_manager": self.action_manager,
+                #     },
+                # },
                 "flat_orientation": {
                     "weight": -1.5,
                     "fn": rewards.flat_orientation_l2,
@@ -381,11 +382,35 @@ class SpiderRobotEnv(ManagedEnvironment):
                         "time_threshold_max": 0.8,
                     },
                 },
+                "feet_ground_time": {
+                    "weight": -1.0,
+                    "fn": rewards.feet_ground_time,
+                    "params": {
+                        "contact_manager": self.foot_contact_manager,
+                        "time_threshold": 0.3,
+                    },
+                },
+                "feet_max_air_time": {
+                    "weight": -1.0,
+                    "fn": self.feet_max_air_time_reward,
+                    "params": {
+                        "max_air_time": 1.2,
+                    },
+                },
                 "feet_slide": {
                     "weight": -0.1,
                     "fn": rewards.feet_slide,
                     "params": {
                         "contact_manager": self.foot_contact_manager,
+                    },
+                },
+                "foot_clearance": {
+                    "weight": -20,
+                    "fn": FootClearanceMdp,
+                    "params": {
+                        "target_clearance": 0.1,
+                        "contact_manager": self.foot_contact_manager,
+                        "terrain_manager": self.terrain_manager,
                     },
                 },
                 "leg_angle": {
@@ -400,16 +425,16 @@ class SpiderRobotEnv(ManagedEnvironment):
                     },
                 },
                 "action_rate": {
-                    "weight": -5e-04,
+                    "weight": -1e-03,
                     "fn": rewards.action_rate_l2,
                 },
-                "actuator_torque": {
-                    "weight": -1e-04,
-                    "fn": rewards.dof_torque_l2,
-                    "params": {
-                        "actuator_manager": self.actuator_manager,
-                    },
-                },
+                # "actuator_torque": {
+                #     "weight": -1e-04,
+                #     "fn": rewards.dof_torque_l2,
+                #     "params": {
+                #         "actuator_manager": self.actuator_manager,
+                #     },
+                # },
                 "action_acceleration": {
                     "weight": -1e-04,
                     "fn": rewards.action_acceleration_l2,
@@ -517,9 +542,9 @@ class SpiderRobotEnv(ManagedEnvironment):
             "lin_vel_x"
         ][1]
         extras["episode"]["Metrics / gait_weight"] = self.reward_manager["gait"].weight
-        extras["episode"]["Metrics / similar_to_default_weight"] = self.reward_manager[
-            "similar_to_default"
-        ].weight
+        # extras["episode"]["Metrics / similar_to_default_weight"] = self.reward_manager[
+        #     "similar_to_default"
+        # ].weight
 
 
         action_rate = torch.abs(self.last_actions - self.actions)
@@ -552,6 +577,36 @@ class SpiderRobotEnv(ManagedEnvironment):
         obs = torch.zeros(env.num_envs, 1, device=gs.device)
         obs[:] = mid_point
         return obs
+    
+    def feet_max_air_time_reward(
+        self,
+        env: GenesisEnv,
+        max_air_time: float,
+    ) -> torch.Tensor:
+        """Penalise any foot that stays airborne longer than ``max_air_time``.
+
+        Unlike ``feet_air_time`` (which fires once at touchdown), this is a
+        continuous per-step penalty that grows linearly with every additional
+        second the foot remains in the air beyond the threshold.  This gives
+        the policy an ongoing gradient to bring a retracted leg back down,
+        which ``feet_air_time`` alone cannot provide.
+
+        Should be registered with a negative weight.  Set ``max_air_time``
+        comfortably above the expected swing duration (e.g. 1.5× the
+        ``time_threshold_max`` used in ``feet_air_time``) so that normal
+        stepping is unaffected.
+
+        Args:
+            env: The Genesis Forge environment.
+            max_air_time: Seconds a foot may be airborne before the penalty
+                          starts accumulating.
+
+        Returns:
+            Per-environment sum of excess air time across all feet,
+            shape ``(n_envs,)``.
+        """
+        excess = (self.foot_contact_manager.current_air_time - max_air_time).clamp(min=0.0)
+        return excess.sum(dim=-1)
 
     def imu_observation(self, env: GenesisEnv) -> torch.Tensor:
         """
@@ -599,9 +654,9 @@ class SpiderRobotEnv(ManagedEnvironment):
             )
 
             # Reduce the similar_to_default reward
-            self.reward_manager["similar_to_default"].increment_weight(
-                0.002, limit=-0.001
-            )
+            # self.reward_manager["similar_to_default"].increment_weight(
+            #     0.002, limit=-0.001
+            # )
 
             # Increase the gait reward
             self.reward_manager["gait"].increment_weight(0.05, limit=0.5)
