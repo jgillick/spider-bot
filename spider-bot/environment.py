@@ -357,13 +357,13 @@ class SpiderRobotEnv(ManagedEnvironment):
                         "terrain_manager": self.terrain_manager,
                     },
                 },
-                # "similar_to_default": {
-                #     "weight": -0.05,
-                #     "fn": rewards.dof_similar_to_default,
-                #     "params": {
-                #         "action_manager": self.action_manager,
-                #     },
-                # },
+                "similar_to_default": {
+                    "weight": -0.01,
+                    "fn": rewards.dof_similar_to_default,
+                    "params": {
+                        "action_manager": self.action_manager,
+                    },
+                },
                 "flat_orientation": {
                     "weight": -1.5,
                     "fn": rewards.flat_orientation_l2,
@@ -425,11 +425,11 @@ class SpiderRobotEnv(ManagedEnvironment):
                     },
                 },
                 "action_rate": {
-                    "weight": -1e-03,
+                    "weight": -0.02,
                     "fn": rewards.action_rate_l2,
                 },
                 # "actuator_torque": {
-                #     "weight": -1e-04,
+                #     "weight": -3e-5,
                 #     "fn": rewards.dof_torque_l2,
                 #     "params": {
                 #         "actuator_manager": self.actuator_manager,
@@ -564,11 +564,18 @@ class SpiderRobotEnv(ManagedEnvironment):
         return reset
 
     def height_sensor_observation(self, env: GenesisEnv) -> torch.Tensor:
+        # Get height above terrain from simulator
         if self.height_sensor is None:
-            return torch.tensor([])
+            base_pos = self.robot.get_pos()
+            height_offset = self.terrain_manager.get_terrain_height(
+                base_pos[:, 0], base_pos[:, 1]
+            )
+            height = base_pos[:, 2] - height_offset
+            return height.unsqueeze(-1) # (n_envs, 1)
+        
+        # Get the height grid from lidar sensor
         heights = self.height_sensor.read().distances
-        # Convert heights tensor shape: (n_envs, 5, 5) -> (n_envs, 25)
-        return heights.flatten(start_dim=-2)
+        return heights.flatten(start_dim=-2) # (n_envs, 5, 5) -> (n_envs, 25)
 
     def air_time_observation(self, env: GenesisEnv) -> float:
         """Return the mid point of the current foot air time target range"""
