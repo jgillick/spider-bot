@@ -103,7 +103,7 @@ def main():
     # Load training configuration and save snapshot of training configs
     cfg = training_cfg(args.config, experiment_name, args.max_iterations, args.num_envs)
     pickle.dump(
-        [cfg],
+        {"args": args, "rsl_rl": cfg},
         open(os.path.join(log_path, "cfgs.pkl"), "wb"),
     )
 
