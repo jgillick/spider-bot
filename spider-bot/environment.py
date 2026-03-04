@@ -31,8 +31,8 @@ from gait_reward import GaitReward
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 SPIDER_XML = os.path.abspath(os.path.join(THIS_DIR, "../model/SpiderBot.xml"))
-CURRICULUM_CHECK_EVERY_STEPS = 1200
-CURRICULUM_AVG_SAMPLES = 5
+CURRICULUM_CHECK_EVERY_STEPS = 2400
+CURRICULUM_AVG_SAMPLES = 10
 CURRICULUM_MAX_LEVEL = 50
 
 Terrain = Literal["flat", "rough", "mixed"]
@@ -76,12 +76,12 @@ class SpiderRobotEnv(ManagedEnvironment):
         self.max_velocity_x = 1.2
         self.max_velocity_y = 1.0
         self.max_velocity_z = 1.0
-        self.velocity_inc = 0.05
+        self.velocity_inc = 0.025
         if terrain != "flat":
-            self.max_velocity_x = 0.8
+            self.max_velocity_x = 0.9
             self.max_velocity_y = 0.7
             self.max_velocity_z = 0.8
-            self.velocity_inc = 0.025
+            self.velocity_inc = 0.01
 
         self.construct_scene(terrain)
 
@@ -394,7 +394,7 @@ class SpiderRobotEnv(ManagedEnvironment):
                     "weight": -1.0,
                     "fn": self.feet_max_air_time_reward,
                     "params": {
-                        "max_air_time": 1.2,
+                        "max_air_time": 1.0,
                     },
                 },
                 "feet_slide": {
@@ -405,7 +405,7 @@ class SpiderRobotEnv(ManagedEnvironment):
                     },
                 },
                 "foot_clearance": {
-                    "weight": -20,
+                    "weight": -15,
                     "fn": FootClearanceMdp,
                     "params": {
                         "target_clearance": 0.1,
@@ -662,7 +662,7 @@ class SpiderRobotEnv(ManagedEnvironment):
 
             # Reduce the similar_to_default reward
             # self.reward_manager["similar_to_default"].increment_weight(
-            #     0.002, limit=-0.001
+            #     0.001, limit=-0.01
             # )
 
             # Increase the gait reward
