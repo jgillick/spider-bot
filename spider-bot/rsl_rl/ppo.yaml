@@ -29,7 +29,7 @@ runner:
     activation: elu
     obs_normalization: false
     stochastic: true
-    init_noise_std: 0.8
+    init_noise_std: 1.0
     noise_std_type: "log" # 'scalar' or 'log'
     state_dependent_std: false
 

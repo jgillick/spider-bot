@@ -34,6 +34,8 @@ SPIDER_XML = os.path.abspath(os.path.join(THIS_DIR, "../model/SpiderBot.xml"))
 CURRICULUM_CHECK_EVERY_STEPS = 2400
 CURRICULUM_AVG_SAMPLES = 10
 CURRICULUM_MAX_LEVEL = 50
+CURRICULUM_MIN_EPISODE_LENGTH_RATIO = 0.6
+CURRICULUM_COOLDOWN_STEPS = 4800
 
 Terrain = Literal["flat", "rough", "mixed"]
 EnvMode = Literal["train", "eval", "play"]
@@ -70,6 +72,7 @@ class SpiderRobotEnv(ManagedEnvironment):
         self.use_height_sensor = height_sensor
         self.curriculum_level = 1
         self.curriculum_samples = []
+        self.curriculum_ep_length_samples = []
         self.next_curriculum_check_step = CURRICULUM_CHECK_EVERY_STEPS
         self.terrain_type = terrain
 
@@ -397,22 +400,22 @@ class SpiderRobotEnv(ManagedEnvironment):
                         "max_air_time": 1.0,
                     },
                 },
-                "feet_slide": {
-                    "weight": -0.1,
-                    "fn": rewards.feet_slide,
-                    "params": {
-                        "contact_manager": self.foot_contact_manager,
-                    },
-                },
-                "foot_clearance": {
-                    "weight": -15,
-                    "fn": FootClearanceMdp,
-                    "params": {
-                        "target_clearance": 0.1,
-                        "contact_manager": self.foot_contact_manager,
-                        "terrain_manager": self.terrain_manager,
-                    },
-                },
+                # "feet_slide": {
+                #     "weight": -0.1,
+                #     "fn": rewards.feet_slide,
+                #     "params": {
+                #         "contact_manager": self.foot_contact_manager,
+                #     },
+                # },
+                # "foot_clearance": {
+                #     "weight": -15,
+                #     "fn": FootClearanceMdp,
+                #     "params": {
+                #         "target_clearance": 0.1,
+                #         "contact_manager": self.foot_contact_manager,
+                #         "terrain_manager": self.terrain_manager,
+                #     },
+                # },
                 "leg_angle": {
                     "weight": -0.02,
                     "fn": self.foot_angle_mdp.reward,
@@ -546,6 +549,9 @@ class SpiderRobotEnv(ManagedEnvironment):
         #     "similar_to_default"
         # ].weight
 
+        extras["episode"]["Metrics / torque_avg"] = self.robot.get_dofs_force().abs().mean()
+        extras["episode"]["Metrics / torque_ctl_avg"] = self.robot.get_dofs_control_force().abs().mean()
+
 
         action_rate = torch.abs(self.last_actions - self.actions)
         extras["episode"]["Metrics / action_rate_avg"] = action_rate.mean()
@@ -558,10 +564,12 @@ class SpiderRobotEnv(ManagedEnvironment):
         return obs, reward, terminated, truncated, extras
 
     def reset(self, envs_idx: list[int] | None = None):
-        reset = super().reset(envs_idx)
+        if envs_idx is not None:
+            self._last_reset_mean_ep_length = self.episode_length[envs_idx].float().mean().item()
+        result = super().reset(envs_idx)
         if envs_idx is not None:
             self.update_curriculum()
-        return reset
+        return result
 
     def height_sensor_observation(self, env: GenesisEnv) -> torch.Tensor:
         # Get height above terrain from simulator
@@ -636,19 +644,22 @@ class SpiderRobotEnv(ManagedEnvironment):
         if self.step_count < self.next_curriculum_check_step:
             return
 
-        # Calculate the average linear velocity reward, over the last few episodes
-        # This prevents a momentary spike causing a level up
+        # Collect samples over multiple resets to prevent momentary spikes causing a level up
         if len(self.curriculum_samples) < CURRICULUM_AVG_SAMPLES:
             cmd_linear_vel = self.reward_manager.last_episode_mean_reward(
                 "cmd_linear_vel", before_weight=True
             )
             self.curriculum_samples.append(cmd_linear_vel)
+            self.curriculum_ep_length_samples.append(self._last_reset_mean_ep_length)
             if len(self.curriculum_samples) < CURRICULUM_AVG_SAMPLES:
                 return
-        cmd_linear_avg = sum(self.curriculum_samples) / len(self.curriculum_samples)
 
-        # Level up
-        if cmd_linear_avg > 0.8:
+        cmd_linear_avg = sum(self.curriculum_samples) / len(self.curriculum_samples)
+        ep_length_avg = sum(self.curriculum_ep_length_samples) / len(self.curriculum_ep_length_samples)
+        min_ep_length = self.max_episode_length_steps * CURRICULUM_MIN_EPISODE_LENGTH_RATIO
+
+        # Level up when the policy both tracks commands well and survives long enough
+        if cmd_linear_avg > 0.8 and ep_length_avg >= min_ep_length:
             self.curriculum_level += 1
             self.vel_command_manager.increment_range(
                 "lin_vel_x", self.velocity_inc, limit=self.max_velocity_x
@@ -668,9 +679,13 @@ class SpiderRobotEnv(ManagedEnvironment):
             # Increase the gait reward
             self.reward_manager["gait"].increment_weight(0.05, limit=0.5)
 
-        # Reset the curriculum checks
-        self.next_curriculum_check_step = self.step_count + CURRICULUM_CHECK_EVERY_STEPS
+            # Cooldown: wait longer before the next level-up can be considered
+            self.next_curriculum_check_step = self.step_count + CURRICULUM_COOLDOWN_STEPS
+        else:
+            self.next_curriculum_check_step = self.step_count + CURRICULUM_CHECK_EVERY_STEPS
+
         self.curriculum_samples = []
+        self.curriculum_ep_length_samples = []
 
     def curriculum_terrain(self) -> Terrain:
         """
