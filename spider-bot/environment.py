@@ -4,6 +4,7 @@ Focuses on core objectives with progressive difficulty
 """
 
 import os
+import re
 import torch
 import numpy as np
 from PIL import Image
@@ -12,6 +13,7 @@ import genesis as gs
 
 from genesis_forge import ManagedEnvironment, GenesisEnv
 from genesis_forge.managers import (
+    PositionActionManager,
     RewardManager,
     TerminationManager,
     PositionWithinLimitsActionManager,
@@ -54,7 +56,7 @@ class SpiderRobotEnv(ManagedEnvironment):
     def __init__(
         self,
         num_envs: int = 1,
-        dt: float = 1 / 100,
+        dt: float = 1 / 50,
         max_episode_length_s: int | None = 6,
         headless: bool = True,
         mode: EnvMode = "train",
@@ -75,15 +77,20 @@ class SpiderRobotEnv(ManagedEnvironment):
         self.curriculum_ep_length_samples = []
         self.next_curriculum_check_step = CURRICULUM_CHECK_EVERY_STEPS
         self.terrain_type = terrain
+        self.joint_groups = {
+            "hip": [],
+            "femur": [],
+            "tibia": [],
+        }
 
         self.max_velocity_x = 1.2
         self.max_velocity_y = 1.0
         self.max_velocity_z = 1.0
         self.velocity_inc = 0.025
         if terrain != "flat":
-            self.max_velocity_x = 0.9
-            self.max_velocity_y = 0.7
-            self.max_velocity_z = 0.8
+            self.max_velocity_x = 1.0
+            self.max_velocity_y = 1.0
+            self.max_velocity_z = 1.0
             self.velocity_inc = 0.01
 
         self.construct_scene(terrain)
@@ -98,7 +105,7 @@ class SpiderRobotEnv(ManagedEnvironment):
         """
         self.scene = gs.Scene(
             show_viewer=not self.headless,
-            sim_options=gs.options.SimOptions(dt=self.dt),
+            sim_options=gs.options.SimOptions(dt=self.dt, substeps=4),
             viewer_options=gs.options.ViewerOptions(
                 camera_pos=(-2.5, -1.5, 2.0),
                 camera_lookat=(0.0, 0.0, 0.0),
@@ -181,6 +188,7 @@ class SpiderRobotEnv(ManagedEnvironment):
                 quat=[1.0, 0.0, 0.0, 0.0],
             ),
         )
+        self.get_joint_groups()
 
         # IMU Sensor
         self.imu = self.scene.add_sensor(
@@ -192,8 +200,8 @@ class SpiderRobotEnv(ManagedEnvironment):
                 gyro_noise=(0.01, 0.01, 0.01),
                 acc_random_walk=(0.001, 0.001, 0.001),
                 gyro_random_walk=(0.001, 0.001, 0.001),
-                delay=0.01,
-                jitter=0.01,
+                delay=self.dt,
+                jitter=self.dt,
                 interpolate=True,
             )
         )
@@ -223,6 +231,19 @@ class SpiderRobotEnv(ManagedEnvironment):
         self.camera.follow_entity(self.robot, smoothing=0.05)
 
         return self.scene
+    
+    def get_joint_groups(self):
+        """
+        Get the link groups.
+        """
+        for joint in self.robot.joints:
+            if joint.type != gs.JOINT_TYPE.REVOLUTE:
+                continue
+            name = joint.name
+            match = re.match(r"^Leg[1-8]_(Hip|Femur|Tibia)$", name)
+            if match:
+                group = match.group(1).lower()
+                self.joint_groups[group].append(joint.idx_local)
 
     def config(self):
         """
@@ -263,15 +284,23 @@ class SpiderRobotEnv(ManagedEnvironment):
                 "Leg[1-8]_Femur": 0.5,
                 "Leg[1-8]_Tibia": 0.6,
             },
-            kp=NoisyValue(52, 5),
+            kp=NoisyValue(40, 5),
             kv=NoisyValue(1.2, 0.1),
             max_force=NoisyValue(8.0, 1.0),
             frictionloss=NoisyValue(0.1, 0.05),
             damping=NoisyValue(0.4, 0.1),
         )
-        self.action_manager = PositionWithinLimitsActionManager(
+        # self.action_manager = PositionWithinLimitsActionManager(
+        #     self,
+        #     delay_step=1,
+        #     soft_limit_scale_factor=0.95,
+        #     actuator_manager=self.actuator_manager,
+        # )
+        self.action_manager = PositionActionManager(
             self,
             delay_step=1,
+            scale=0.25,
+            use_default_offset=True,
             soft_limit_scale_factor=0.95,
             actuator_manager=self.actuator_manager,
         )
@@ -428,16 +457,9 @@ class SpiderRobotEnv(ManagedEnvironment):
                     },
                 },
                 "action_rate": {
-                    "weight": -0.02,
+                    "weight": -0.04,
                     "fn": rewards.action_rate_l2,
                 },
-                # "actuator_torque": {
-                #     "weight": -3e-5,
-                #     "fn": rewards.dof_torque_l2,
-                #     "params": {
-                #         "actuator_manager": self.actuator_manager,
-                #     },
-                # },
                 "action_acceleration": {
                     "weight": -1e-04,
                     "fn": rewards.action_acceleration_l2,
@@ -487,7 +509,7 @@ class SpiderRobotEnv(ManagedEnvironment):
         # Observations
         ObservationManager(
             self,
-            history_len=5,
+            history_len=2,
             cfg={
                 "command": {
                     "fn": self.vel_command_manager.observation,
@@ -511,7 +533,7 @@ class SpiderRobotEnv(ManagedEnvironment):
         )
         ObservationManager(
             self,
-            history_len=5,
+            history_len=2,
             name="privileged",
             cfg={
                 "height_sensor": {
@@ -526,6 +548,14 @@ class SpiderRobotEnv(ManagedEnvironment):
                         "contact_manager": self.foot_contact_manager,
                     },
                 },
+                "control_force": {
+                    "fn": lambda env: self.robot.get_dofs_control_force(),
+                    "scale": 0.1,
+                },
+                "force": {
+                    "fn": lambda env: self.robot.get_dofs_force(),
+                    "scale": 0.1,
+                }
             },
         )
 
@@ -539,6 +569,24 @@ class SpiderRobotEnv(ManagedEnvironment):
         """
         obs, reward, terminated, truncated, extras = super().step(actions)
 
+        extras = self.log_metrics(extras)
+        extras = self.log_actuator_metrics(extras)
+
+        if self.mode == "play":
+            self.camera.render()
+
+        # Finish up
+        return obs, reward, terminated, truncated, extras
+
+    def reset(self, envs_idx: list[int] | None = None):
+        if envs_idx is not None:
+            self._last_reset_mean_ep_length = self.episode_length[envs_idx].float().mean().item()
+        result = super().reset(envs_idx)
+        if envs_idx is not None:
+            self.update_curriculum()
+        return result
+    
+    def log_metrics(self, extras: dict):
         # Log metrics
         extras["episode"]["Metrics / curriculum_level"] = self.curriculum_level
         extras["episode"]["Metrics / max_velocity"] = self.vel_command_manager.range[
@@ -557,19 +605,31 @@ class SpiderRobotEnv(ManagedEnvironment):
         extras["episode"]["Metrics / action_rate_avg"] = action_rate.mean()
         extras["episode"]["Metrics / action_rate_max"] = action_rate.max()
 
-        if self.mode == "play":
-            self.camera.render()
+        action_rate = torch.abs(self.action_manager.last_actions - self.action_manager.actions)
+        extras["episode"]["Metrics / position_delta_avg"] = action_rate.mean()
+        extras["episode"]["Metrics / position_delta_max"] = action_rate.max()
 
-        # Finish up
-        return obs, reward, terminated, truncated, extras
+        return extras
+    
+    def log_actuator_metrics(self, extras: dict):
+        percentiles = [50, 90, 95, 99]
+        q_tensors = torch.tensor([p / 100.0 for p in percentiles], device=gs.device)
 
-    def reset(self, envs_idx: list[int] | None = None):
-        if envs_idx is not None:
-            self._last_reset_mean_ep_length = self.episode_length[envs_idx].float().mean().item()
-        result = super().reset(envs_idx)
-        if envs_idx is not None:
-            self.update_curriculum()
-        return result
+        for group in self.joint_groups:
+            for idx in self.joint_groups[group]:
+                group_torque = self.robot.get_dofs_control_force(idx).abs()
+                # extras["episode"][f"Actuators / {group}_torque_avg"] = group_torque.mean()
+                # extras["episode"][f"Actuators / {group}_torque_max"] = group_torque.max()
+
+                # group_velocity = self.robot.get_dofs_velocity(idx).abs()
+                # extras["episode"][f"Actuators / {group}_velocity_avg"] = group_velocity.mean()
+                # extras["episode"][f"Actuators / {group}_velocity_max"] = group_velocity.max()
+                
+                torque_pcts = torch.quantile(group_torque.float().flatten(), q_tensors)
+                for i, p in enumerate(percentiles):
+                    extras["episode"][f"Actuators / {group}_torque_p{p}"] = torque_pcts[i]
+
+        return extras
 
     def height_sensor_observation(self, env: GenesisEnv) -> torch.Tensor:
         # Get height above terrain from simulator

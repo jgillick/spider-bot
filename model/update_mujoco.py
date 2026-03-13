@@ -14,7 +14,6 @@ from copy import deepcopy
 import xml.etree.ElementTree as ET
 
 from constants import (
-    ACTUATOR_TORQUE_RANGE,
     HIP_RANGES,
     FEMUR_RANGE,
     TIBIA_RANGE,
@@ -134,17 +133,6 @@ def update_joint_values(tree):
         print("No <default> found.")
         exit(1)
 
-    # Joint defaults
-    ET.SubElement(
-        default,
-        "joint",
-        {
-            "limited": "true",
-            "actuatorfrclimited": "true",
-            "actuatorfrcrange": " ".join(ACTUATOR_TORQUE_RANGE),
-        },
-    )
-
     # Ranges
     femur_joint_def = ET.SubElement(
         default,
@@ -251,9 +239,6 @@ def add_defaults(tree):
         "motor",
         {
             "gear": "1",
-            "ctrlrange": " ".join(ACTUATOR_TORQUE_RANGE),
-            "forcelimited": "true",
-            "forcerange": " ".join(ACTUATOR_TORQUE_RANGE),
         },
     )
 
