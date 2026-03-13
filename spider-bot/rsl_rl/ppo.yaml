@@ -27,7 +27,7 @@ runner:
     class_name: MLPModel
     hidden_dims: [1024, 512, 256]
     activation: elu
-    obs_normalization: false
+    obs_normalization: true
     stochastic: true
     init_noise_std: 1.0
     noise_std_type: "log" # 'scalar' or 'log'
@@ -38,7 +38,7 @@ runner:
     class_name: MLPModel
     hidden_dims: [1024, 512, 256]
     activation: elu
-    obs_normalization: false
+    obs_normalization: true
     stochastic: false
 
   # Algorithm
