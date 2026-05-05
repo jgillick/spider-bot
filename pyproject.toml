@@ -8,10 +8,24 @@ dependencies = [
     "genesis-forge>=0.3.0",
     "genesis-world>=0.4.0",
     "hidapi>=0.15.0",
+    "odrive>=0.6.7",
     "python-can[serial]>=4.6.1",
     "pyyaml>=6.0.3",
     "rsl-rl-lib>=4.0.1",
+    "scipy>=1.11.0",
     "setuptools<81",
     "tensorboard>=2.20.0",
     "torch>=2.10.0",
 ]
+
+[project.scripts]
+sysid = "hardware.sysid.__main__:main"
+
+[tool.setuptools.packages.find]
+include = ["hardware*"]
+
+[tool.uv]
+package = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
