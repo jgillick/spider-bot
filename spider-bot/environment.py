@@ -32,7 +32,7 @@ from gait_reward import GaitReward
 
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
-SPIDER_XML = os.path.abspath(os.path.join(THIS_DIR, "../model/SpiderBot.xml"))
+SPIDER_XML = os.path.abspath(os.path.join(THIS_DIR, "../model/v2/SpiderBot.xml"))
 CURRICULUM_CHECK_EVERY_STEPS = 2400
 CURRICULUM_AVG_SAMPLES = 10
 CURRICULUM_MAX_LEVEL = 50
@@ -184,7 +184,7 @@ class SpiderRobotEnv(ManagedEnvironment):
         self.robot = self.scene.add_entity(
             gs.morphs.MJCF(
                 file=SPIDER_XML,
-                pos=[0.0, 0.0, 0.14],
+                pos=[0.0, 0.0, 0.118],
                 quat=[1.0, 0.0, 0.0, 0.0],
             ),
         )
@@ -202,7 +202,6 @@ class SpiderRobotEnv(ManagedEnvironment):
                 gyro_random_walk=(0.001, 0.001, 0.001),
                 delay=self.dt,
                 jitter=self.dt,
-                interpolate=True,
             )
         )
 
@@ -240,7 +239,7 @@ class SpiderRobotEnv(ManagedEnvironment):
             if joint.type != gs.JOINT_TYPE.REVOLUTE:
                 continue
             name = joint.name
-            match = re.match(r"^(R|L)[1-4]_(Hip|Femur|Knee)$", name)
+            match = re.match(r"^[R|L][1-4]_(Hip|Femur|Knee)$", name)
             if match:
                 group = match.group(1).lower()
                 if group == "knee":
@@ -267,7 +266,7 @@ class SpiderRobotEnv(ManagedEnvironment):
                     "fn": reset.randomize_terrain_position,
                     "params": {
                         "terrain_manager": self.terrain_manager,
-                        "height_offset": 0.15,
+                        "height_offset": 0.118,
                         "subterrain": self.curriculum_terrain,
                     },
                 },
@@ -396,7 +395,7 @@ class SpiderRobotEnv(ManagedEnvironment):
                     "weight": -30.0,
                     "fn": rewards.base_height,
                     "params": {
-                        "target_height": 0.135,
+                        "target_height": 0.13,
                         "terrain_manager": self.terrain_manager,
                     },
                 },
