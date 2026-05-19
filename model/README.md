@@ -4,6 +4,6 @@ The functional 3D model of the robot, converted from Fusion360, and processed fo
 
 To generate these files:
 
-1. Using this [Fusion360 model](https://a360.co/4ePgZ3j)
-2. The model is exported to MuJoCo format from Fusion360 via [this fork](https://github.com/bionicdl-sustech/ACDC4Robot/pull/9) of the [ACDC4Robot plugin](https://github.com/bionicdl-sustech/ACDC4Robot) to simulate/robot/export/SpiderBody.
-3. Finally run `process_export.sh` to make additional changes that are necessary for training.
+1. Using this [Fusion360 model](https://a360.co/4dRpD23)
+2. The model is exported to MuJoCo format from Fusion360 via the [Fusion2Mujoco add-in](https://github.com/jgillick/Fusion2Mujoco) to a sub directory (v1, v2, etc).
+3. Finally, update the `<include>` reference to the exported model in [./SpiderBot.xml](./SpiderBot.xml)

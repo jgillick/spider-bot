@@ -4,6 +4,7 @@ from genesis_forge import GenesisEnv
 from genesis.utils.geom import transform_by_quat, inv_quat
 from genesis_forge.utils import links_by_name_pattern
 
+
 class FootAngleMdp:
     """
     A class that tracks the angle of the tibia, and provides penalties and termination conditions
@@ -14,13 +15,15 @@ class FootAngleMdp:
         env: The environment to penalize.
         target_angle: The target foot angle. Anything less than this will be penalized.
     """
-    def __init__(self, env: GenesisEnv):
+
+    def __init__(self, env: GenesisEnv, foot_name_pattern: str):
         self.env = env
-    
+        self.foot_name_pattern = foot_name_pattern
+
     def build(self):
         # Get foot link indices
         self._foot_links_idx = []
-        for link in links_by_name_pattern(self.env.robot, "Leg[1-8]_Tibia_Foot"):
+        for link in links_by_name_pattern(self.env.robot, self.foot_name_pattern):
             self._foot_links_idx.append(link.idx_local)
 
         # Buffers
@@ -28,8 +31,10 @@ class FootAngleMdp:
         self._foot_link_gravity = self._foot_link_gravity.unsqueeze(0).expand(
             self.env.num_envs, len(self._foot_links_idx), 3
         )
-        self.step_leg_angle = torch.zeros(self.env.num_envs, len(self._foot_links_idx), device=gs.device)
-    
+        self.step_leg_angle = torch.zeros(
+            self.env.num_envs, len(self._foot_links_idx), device=gs.device
+        )
+
     def calculate_leg_angle(self):
         quats = self.env.robot.get_links_quat(links_idx_local=self._foot_links_idx)
 
@@ -37,7 +42,7 @@ class FootAngleMdp:
         inv_quats = inv_quat(quats)
         gravity_in_links = transform_by_quat(self._foot_link_gravity, inv_quats)
         self.step_leg_angle = -gravity_in_links[..., 2]
-    
+
     def terminate(self, env: GenesisEnv, angle_threshold: float = -0.75):
         """
         Terminate if any leg is angled under the body by more than the threshold.
