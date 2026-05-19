@@ -231,7 +231,7 @@ class SpiderRobotEnv(ManagedEnvironment):
         self.camera.follow_entity(self.robot, smoothing=0.05)
 
         return self.scene
-    
+
     def get_joint_groups(self):
         """
         Get the link groups.
@@ -289,11 +289,12 @@ class SpiderRobotEnv(ManagedEnvironment):
                 "[RL][1-4]_Femur": -0.4,
                 "[RL][1-4]_Knee": 0.5,
             },
-            kp=NoisyValue(40, 5),
-            kv=NoisyValue(1.2, 0.1),
-            max_force=NoisyValue(8.0, 1.0),
+            kp=NoisyValue(30.0, 5),
+            kv=NoisyValue(7.5, 1.5),
+            max_force=NoisyValue(15.0, 1.0),
             frictionloss=NoisyValue(0.1, 0.05),
-            damping=NoisyValue(0.4, 0.1),
+            armature=NoisyValue(0.0020, 0.0001),
+            damping=NoisyValue(0.0381, 0.0001),
         )
         # self.action_manager = PositionWithinLimitsActionManager(
         #     self,
@@ -520,8 +521,8 @@ class SpiderRobotEnv(ManagedEnvironment):
                     "fn": self.vel_command_manager.observation,
                 },
                 "imu_lin_acc_ang_vel": {
-                   "fn": self.imu_observation,
-                 },
+                    "fn": self.imu_observation,
+                },
                 "dof_position": {
                     "fn": lambda env: self.action_manager.get_dofs_position(),
                     "noise": 0.01,
@@ -560,7 +561,7 @@ class SpiderRobotEnv(ManagedEnvironment):
                 "force": {
                     "fn": lambda env: self.robot.get_dofs_force(),
                     "scale": 0.1,
-                }
+                },
             },
         )
 
@@ -585,12 +586,14 @@ class SpiderRobotEnv(ManagedEnvironment):
 
     def reset(self, envs_idx: list[int] | None = None):
         if envs_idx is not None:
-            self._last_reset_mean_ep_length = self.episode_length[envs_idx].float().mean().item()
+            self._last_reset_mean_ep_length = (
+                self.episode_length[envs_idx].float().mean().item()
+            )
         result = super().reset(envs_idx)
         if envs_idx is not None:
             self.update_curriculum()
         return result
-    
+
     def log_metrics(self, extras: dict):
         # Log metrics
         extras["episode"]["Metrics / curriculum_level"] = self.curriculum_level
@@ -602,20 +605,25 @@ class SpiderRobotEnv(ManagedEnvironment):
         #     "similar_to_default"
         # ].weight
 
-        extras["episode"]["Metrics / torque_avg"] = self.robot.get_dofs_force().abs().mean()
-        extras["episode"]["Metrics / torque_ctl_avg"] = self.robot.get_dofs_control_force().abs().mean()
-
+        extras["episode"]["Metrics / torque_avg"] = (
+            self.robot.get_dofs_force().abs().mean()
+        )
+        extras["episode"]["Metrics / torque_ctl_avg"] = (
+            self.robot.get_dofs_control_force().abs().mean()
+        )
 
         action_rate = torch.abs(self.last_actions - self.actions)
         extras["episode"]["Metrics / action_rate_avg"] = action_rate.mean()
         extras["episode"]["Metrics / action_rate_max"] = action_rate.max()
 
-        action_rate = torch.abs(self.action_manager.last_actions - self.action_manager.actions)
+        action_rate = torch.abs(
+            self.action_manager.last_actions - self.action_manager.actions
+        )
         extras["episode"]["Metrics / position_delta_avg"] = action_rate.mean()
         extras["episode"]["Metrics / position_delta_max"] = action_rate.max()
 
         return extras
-    
+
     def log_actuator_metrics(self, extras: dict):
         percentiles = [50, 90, 95, 99]
         q_tensors = torch.tensor([p / 100.0 for p in percentiles], device=gs.device)
@@ -629,10 +637,12 @@ class SpiderRobotEnv(ManagedEnvironment):
                 # group_velocity = self.robot.get_dofs_velocity(idx).abs()
                 # extras["episode"][f"Actuators / {group}_velocity_avg"] = group_velocity.mean()
                 # extras["episode"][f"Actuators / {group}_velocity_max"] = group_velocity.max()
-                
+
                 torque_pcts = torch.quantile(group_torque.float().flatten(), q_tensors)
                 for i, p in enumerate(percentiles):
-                    extras["episode"][f"Actuators / {group}_torque_p{p}"] = torque_pcts[i]
+                    extras["episode"][f"Actuators / {group}_torque_p{p}"] = torque_pcts[
+                        i
+                    ]
 
         return extras
 
@@ -644,11 +654,11 @@ class SpiderRobotEnv(ManagedEnvironment):
                 base_pos[:, 0], base_pos[:, 1]
             )
             height = base_pos[:, 2] - height_offset
-            return height.unsqueeze(-1) # (n_envs, 1)
-        
+            return height.unsqueeze(-1)  # (n_envs, 1)
+
         # Get the height grid from lidar sensor
         heights = self.height_sensor.read().distances
-        return heights.flatten(start_dim=-2) # (n_envs, 5, 5) -> (n_envs, 25)
+        return heights.flatten(start_dim=-2)  # (n_envs, 5, 5) -> (n_envs, 25)
 
     def air_time_observation(self, env: GenesisEnv) -> float:
         """Return the mid point of the current foot air time target range"""
@@ -657,7 +667,7 @@ class SpiderRobotEnv(ManagedEnvironment):
         obs = torch.zeros(env.num_envs, 1, device=gs.device)
         obs[:] = mid_point
         return obs
-    
+
     def feet_max_air_time_reward(
         self,
         env: GenesisEnv,
@@ -685,7 +695,9 @@ class SpiderRobotEnv(ManagedEnvironment):
             Per-environment sum of excess air time across all feet,
             shape ``(n_envs,)``.
         """
-        excess = (self.foot_contact_manager.current_air_time - max_air_time).clamp(min=0.0)
+        excess = (self.foot_contact_manager.current_air_time - max_air_time).clamp(
+            min=0.0
+        )
         return excess.sum(dim=-1)
 
     def imu_observation(self, env: GenesisEnv) -> torch.Tensor:
@@ -720,8 +732,12 @@ class SpiderRobotEnv(ManagedEnvironment):
                 return
 
         cmd_linear_avg = sum(self.curriculum_samples) / len(self.curriculum_samples)
-        ep_length_avg = sum(self.curriculum_ep_length_samples) / len(self.curriculum_ep_length_samples)
-        min_ep_length = self.max_episode_length_steps * CURRICULUM_MIN_EPISODE_LENGTH_RATIO
+        ep_length_avg = sum(self.curriculum_ep_length_samples) / len(
+            self.curriculum_ep_length_samples
+        )
+        min_ep_length = (
+            self.max_episode_length_steps * CURRICULUM_MIN_EPISODE_LENGTH_RATIO
+        )
 
         # Level up when the policy both tracks commands well and survives long enough
         if cmd_linear_avg > 0.8 and ep_length_avg >= min_ep_length:
@@ -745,9 +761,13 @@ class SpiderRobotEnv(ManagedEnvironment):
             self.reward_manager["gait"].increment_weight(0.05, limit=0.5)
 
             # Cooldown: wait longer before the next level-up can be considered
-            self.next_curriculum_check_step = self.step_count + CURRICULUM_COOLDOWN_STEPS
+            self.next_curriculum_check_step = (
+                self.step_count + CURRICULUM_COOLDOWN_STEPS
+            )
         else:
-            self.next_curriculum_check_step = self.step_count + CURRICULUM_CHECK_EVERY_STEPS
+            self.next_curriculum_check_step = (
+                self.step_count + CURRICULUM_CHECK_EVERY_STEPS
+            )
 
         self.curriculum_samples = []
         self.curriculum_ep_length_samples = []
