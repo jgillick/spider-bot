@@ -83,15 +83,15 @@ class SpiderRobotEnv(ManagedEnvironment):
             "tibia": [],
         }
 
-        self.max_velocity_x = 1.2
-        self.max_velocity_y = 1.0
+        self.max_velocity_x = 1.0
+        self.max_velocity_y = 0.7
         self.max_velocity_z = 1.0
-        self.velocity_inc = 0.025
-        if terrain != "flat":
-            self.max_velocity_x = 1.0
+        self.velocity_inc = 0.0125
+        if terrain == "flat":
+            self.max_velocity_x = 1.2
             self.max_velocity_y = 1.0
             self.max_velocity_z = 1.0
-            self.velocity_inc = 0.01
+            self.velocity_inc = 0.025
 
         self.construct_scene(terrain)
 
@@ -575,8 +575,9 @@ class SpiderRobotEnv(ManagedEnvironment):
         """
         obs, reward, terminated, truncated, extras = super().step(actions)
 
-        extras = self.log_metrics(extras)
-        extras = self.log_actuator_metrics(extras)
+        extras = self.log_curriculum(extras)
+        # extras = self.log_metrics(extras)
+        # extras = self.log_actuator_metrics(extras)
 
         if self.mode == "play":
             self.camera.render()
@@ -594,17 +595,21 @@ class SpiderRobotEnv(ManagedEnvironment):
             self.update_curriculum()
         return result
 
-    def log_metrics(self, extras: dict):
-        # Log metrics
-        extras["episode"]["Metrics / curriculum_level"] = self.curriculum_level
-        extras["episode"]["Metrics / max_velocity"] = self.vel_command_manager.range[
-            "lin_vel_x"
-        ][1]
-        extras["episode"]["Metrics / gait_weight"] = self.reward_manager["gait"].weight
-        # extras["episode"]["Metrics / similar_to_default_weight"] = self.reward_manager[
-        #     "similar_to_default"
-        # ].weight
+    def log_curriculum(self, extras: dict):
+        extras["episode"]["Curriculum / curriculum_level"] = self.curriculum_level
+        extras["episode"]["Curriculum / max_velocity_x"] = (
+            self.vel_command_manager.range["lin_vel_x"][1]
+        )
+        extras["episode"]["Curriculum / max_velocity_y"] = (
+            self.vel_command_manager.range["lin_vel_y"][1]
+        )
+        extras["episode"]["Curriculum / gait_weight"] = self.reward_manager[
+            "gait"
+        ].weight
 
+        return extras
+
+    def log_metrics(self, extras: dict):
         extras["episode"]["Metrics / torque_avg"] = (
             self.robot.get_dofs_force().abs().mean()
         )
@@ -751,11 +756,6 @@ class SpiderRobotEnv(ManagedEnvironment):
             self.vel_command_manager.increment_range(
                 "ang_vel_z", self.velocity_inc, limit=self.max_velocity_z
             )
-
-            # Reduce the similar_to_default reward
-            # self.reward_manager["similar_to_default"].increment_weight(
-            #     0.001, limit=-0.01
-            # )
 
             # Increase the gait reward
             self.reward_manager["gait"].increment_weight(0.05, limit=0.5)
