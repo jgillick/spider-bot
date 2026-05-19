@@ -240,9 +240,11 @@ class SpiderRobotEnv(ManagedEnvironment):
             if joint.type != gs.JOINT_TYPE.REVOLUTE:
                 continue
             name = joint.name
-            match = re.match(r"^Leg[1-8]_(Hip|Femur|Tibia)$", name)
+            match = re.match(r"^(R|L)[1-4]_(Hip|Femur|Knee)$", name)
             if match:
                 group = match.group(1).lower()
+                if group == "knee":
+                    group = "tibia"
                 self.joint_groups[group].append(joint.idx_local)
 
     def config(self):
@@ -250,7 +252,7 @@ class SpiderRobotEnv(ManagedEnvironment):
         Configure the environment managers.
         """
         # Foot angle monitor
-        self.foot_angle_mdp = FootAngleMdp(self)
+        self.foot_angle_mdp = FootAngleMdp(self, foot_name_pattern="(R|L)[1-4]_Foot")
 
         # Terrain
         self.terrain_manager = TerrainManager(self, terrain_attr="terrain")
@@ -317,7 +319,7 @@ class SpiderRobotEnv(ManagedEnvironment):
         # Foot/step contact manager
         self.foot_contact_manager = ContactManager(
             self,
-            link_names=["Leg[1-8]_Tibia_Foot"],
+            link_names=["(R|L)[1-4]_Foot"],
             with_entity_attr="terrain",
             track_air_time=True,
         )
@@ -327,14 +329,17 @@ class SpiderRobotEnv(ManagedEnvironment):
             self,
             entity_attr="robot",
             link_names=[
-                "Leg[1-8]_Femur",
-                "Leg[1-8]_Tibia_Leg",
+                "(R|L)[1-4]_Femur",
+                "(R|L)[1-4]_Tibia",
+                "(R|L)[1-4]_Foot",
                 ".*_Motor",
             ],
             with_entity_attr="robot",
             with_links_names=[
-                "Leg[1-8]_Femur",
-                "Leg[1-8]_Tibia_Leg",
+                "Body",
+                "(R|L)[1-4]_Femur",
+                "(R|L)[1-4]_Tibia",
+                "(R|L)[1-4]_Foot",
                 ".*_Motor",
             ],
         )
@@ -366,10 +371,10 @@ class SpiderRobotEnv(ManagedEnvironment):
                     "params": {
                         "contact_manager": self.foot_contact_manager,
                         "foot_groups": [
-                            ["Leg1_Tibia_Foot", "Leg6_Tibia_Foot"],
-                            ["Leg2_Tibia_Foot", "Leg5_Tibia_Foot"],
-                            ["Leg3_Tibia_Foot", "Leg8_Tibia_Foot"],
-                            ["Leg4_Tibia_Foot", "Leg7_Tibia_Foot"],
+                            ["R1_Foot", "L2_Foot"],
+                            ["R2_Foot", "L1_Foot"],
+                            ["R3_Foot", "L4_Foot"],
+                            ["R4_Foot", "L3_Foot"],
                         ],
                     },
                 },
