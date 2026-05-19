@@ -13,6 +13,7 @@ Enum values match spider-bot/motor/protocol.py for consistency:
 
 from __future__ import annotations
 
+import threading
 import time
 
 try:
@@ -73,14 +74,13 @@ def connect(serial: str | None = None, timeout: float = 10.0):
         The axis0 object (odrv.axis0).
     """
     if odrive is None:
-        raise ImportError("odrive package is not installed. Run: pip install odrive")
-
-    kwargs: dict = {"timeout": timeout}
-    if serial:
-        kwargs["serial_number"] = serial
+        raise ImportError("odrive package is not installed. Run: uv sync")
 
     try:
-        odrv = odrive.find_any(**kwargs)
+        odrv = odrive.find_any(
+            timeout=timeout,
+            **({"serial_number": serial} if serial else {}),
+        )
     except Exception as exc:
         raise ConnectionError(
             f"No ODrive found within {timeout}s. "
@@ -96,11 +96,32 @@ def connect(serial: str | None = None, timeout: float = 10.0):
     return odrv.axis0
 
 
-def initialize(axis, max_torque: float) -> None:
+def _run_with_timeout(fn, timeout_s: float, error_msg: str) -> None:
+    """Run fn() in a daemon thread; raise TimeoutError if it does not finish in time."""
+    exc_holder: list[BaseException | None] = [None]
+
+    def _target() -> None:
+        try:
+            fn()
+        except BaseException as e:  # noqa: BLE001
+            exc_holder[0] = e
+
+    t = threading.Thread(target=_target, daemon=True)
+    t.start()
+    t.join(timeout=timeout_s)
+    if t.is_alive():
+        raise TimeoutError(error_msg)
+    if exc_holder[0] is not None:
+        raise exc_holder[0]  # type: ignore[misc]
+
+
+def initialize(axis, max_torque: float, state_timeout: float = 5.0) -> None:
     """
     Initialize the motor into torque control / closed-loop mode.
 
     Sets control_mode and input_mode, then transitions to CLOSED_LOOP_CONTROL.
+    Raises TimeoutError if the state transition does not complete within
+    state_timeout seconds (default 5 s). Raises RuntimeError on axis fault.
     Prints confirmation on success.
     """
     axis.controller.config.control_mode = ControlMode.TORQUE_CONTROL
@@ -108,7 +129,19 @@ def initialize(axis, max_torque: float) -> None:
     axis.controller.input_torque = 0.0
     time.sleep(0.05)
 
-    axis.requested_state = AxisState.CLOSED_LOOP_CONTROL
+    try:
+        _run_with_timeout(
+            lambda: setattr(axis, "requested_state", AxisState.CLOSED_LOOP_CONTROL),
+            timeout_s=state_timeout,
+            error_msg=(
+                f"Timed out ({state_timeout}s) waiting for motor to enter "
+                "CLOSED_LOOP_CONTROL. Check motor calibration and firmware state."
+            ),
+        )
+    except TimeoutError:
+        cleanup(axis)
+        raise
+
     time.sleep(0.2)
 
     err = poll_errors(axis)
@@ -178,21 +211,35 @@ def verify_encoder_frame(axis, gear_ratio: float) -> None:
     else:
         print(f"→ UNEXPECTED: Δpos={delta:.4f} turns.")
         print(f"  Expected ~1.0 (output-shaft) or ~{gear_ratio:.1f} (rotor-side).")
-        print("  Check that exactly one full output revolution was performed and rerun.")
+        print(
+            "  Check that exactly one full output revolution was performed and rerun."
+        )
 
     print()
 
 
 def poll_errors(axis) -> str | None:
     """
-    Read axis.error.
+    Read axis.error and motor/encoder/controller sub-error registers.
 
-    Returns a human-readable error name string, or None if no error.
+    Checks all four ODrive error registers so that faults in sub-systems
+    (e.g. ENCODER_FAILED) are detected even before they propagate to axis.error.
+
+    Returns a human-readable string if any error is found, or None if clean.
     """
-    try:
-        code = int(axis.error)
-    except Exception:
-        return "COMMUNICATION_ERROR"
-    if code == 0:
-        return None
-    return decode_axis_error(code)
+    checks = [
+        ("axis", lambda: axis.error),
+        ("motor", lambda: axis.motor.error),
+        ("encoder", lambda: axis.encoder.error),
+        ("controller", lambda: axis.controller.error),
+    ]
+    parts: list[str] = []
+    for name, getter in checks:
+        try:
+            code = int(getter())
+        except Exception:
+            parts.append(f"{name}:COMMUNICATION_ERROR")
+            continue
+        if code != 0:
+            parts.append(f"{name}:{decode_axis_error(code)}")
+    return " | ".join(parts) if parts else None

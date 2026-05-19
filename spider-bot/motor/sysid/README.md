@@ -8,10 +8,10 @@ The sim-to-real pipeline uses guessed values for Coulomb friction, viscous dampi
 
 ## Prerequisites
 
-Install `odrive` and `scipy` (added to `pyproject.toml`):
+Dependencies are already declared in `pyproject.toml`. From the repo root:
 
 ```
-pip install odrive scipy
+uv sync
 ```
 
 Connect the motor controller over USB. The motor must be free to rotate through at least ±1 revolution during experiments.
@@ -24,11 +24,13 @@ Connect the motor controller over USB. The motor must be free to rotate through 
 
 Run this once per motor/controller combination to confirm the encoder reads rotor-side turns (not output-shaft turns). This affects all velocity-dependent parameters.
 
+Start the sysid CLI and select menu option 1:
+
 ```
-python hardware/verify_encoder.py --gear-ratio 8
+python -m hardware.sysid --gear-ratio 8
 ```
 
-Follow the prompt: rotate the output shaft exactly one full revolution, press Enter. Expected result for GIM8108-8:
+Then choose option 1 from the menu. Follow the prompt: rotate the output shaft exactly one full revolution, press Enter. Expected result for GIM8108-8:
 
 ```
 → ROTOR-SIDE position: encoder reads 8.00 turns per output shaft revolution.
@@ -47,14 +49,14 @@ The script connects over USB, initializes torque control mode autonomously, then
 
 ```
 Sysid Menu:
-  1. Rotor inertia (J) + Viscous damping (b)
-  2. Coulomb friction (τ_c)
-  3. Static friction (τ_static)
-  4. kp/kd step response
+  1. Verify encoder frame of reference  ← run first
+  2. Rotor inertia (J) + Viscous damping (b)
+  3. Coulomb friction (τ_c)
+  4. Static friction (τ_static)
   5. Quit
 ```
 
-**Run in order 1 → 2 → 3 → 4.** Experiment 4 uses J and b from experiment 1 as fixed inputs to the fitting model.
+**Run in order 1 → 2 → 3 → 4.** Run the encoder check once per motor/controller combination; it is not needed on every session thereafter.
 
 ### Options
 
@@ -63,8 +65,6 @@ Sysid Menu:
 | `--gear-ratio` | required | Rotor turns per output shaft turn (8 for GIM8108-8) |
 | `--max-torque` | 1.0 N·m | Cap on all torque commands (motor-side). Raise if the motor stalls before motion onset during Coulomb/static experiments |
 | `--trials` | 5 | Trials per experiment per direction. More trials → tighter DR ranges |
-| `--kp-test` | 20.0 | Initial kp guess for the kp/kd experiment. Start low to avoid large velocity transients |
-| `--kd-test` | 0.5 | Initial kd guess for the kp/kd experiment |
 | `--kt` | from firmware | Override the torque constant Kt (N·m/A) read from firmware |
 | `--serial` | first found | Target a specific controller when multiple are connected |
 | `--timeout` | 10 s | USB connection timeout |
@@ -102,18 +102,14 @@ Coulomb Friction (τ_c)
 
 | Experiment | Measured | genesis-forge param | URDF attribute |
 |---|---|---|---|
-| 1 | Rotor inertia J | `armature` | `armature=` |
-| 1 | Viscous damping b | `damping` | `damping=` |
-| 2 | Coulomb friction τ_c | `frictionloss` | `friction=` |
-| 3 | Static friction τ_static | (reference only) | — |
-| 4 | Impedance gain kp | `kp` | — |
-| 4 | Impedance gain kd | `kv` | — |
+| 2 | Rotor inertia J | `armature` | `armature=` |
+| 2 | Viscous damping b | `damping` | `damping=` |
+| 3 | Coulomb friction τ_c | `frictionloss` | `friction=` |
+| 4 | Static friction τ_static | (reference only) | — |
 
 Paste the genesis-forge snippets into `spider-bot/environment.py` and the URDF snippets into `model/SpiderBot.urdf`.
 
 ## Notes
-
-**kp/kd experiment uses a soft MIT loop.** The script implements `τ = kp*(p_des − p) + kd*(0 − v)` in Python, sending torque via `input_torque`. This directly measures genesis-forge-compatible impedance gains. It does not use ODrive's built-in position controller (which has different units and structure).
 
 **CAN latency (`delay_steps`) cannot be measured over USB.** This parameter must be measured separately with a CAN adapter, or estimated: at 500 kbps with a 10 ms encoder broadcast period, `delay_steps = 1` at 50 Hz sim is a reasonable starting point.
 

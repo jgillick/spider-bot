@@ -56,9 +56,7 @@ uv run python train_rsl.py
 Identify real motor parameters (friction, inertia, gains) from a connected ODrive-compatible controller and generate copy-paste values for the sim environment. See [hardware/README.md](hardware/README.md) for full instructions.
 
 ```bash
-# Verify encoder frame of reference (run once per motor)
-uv run python hardware/verify_encoder.py --gear-ratio 8
-
-# Run identification experiments
 uv run python -m hardware.sysid --gear-ratio 8
 ```
+
+The interactive menu includes encoder-frame verification (option 1) and all identification experiments.
