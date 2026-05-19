@@ -14,3 +14,6 @@ dependencies = [
     "tensorboardx>=2.6.4",
     "torch>=2.10.0",
 ]
+
+[tool.uv.sources]
+genesis-forge = { path = "../genesis-forge" }

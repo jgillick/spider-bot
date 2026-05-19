@@ -11,7 +11,7 @@ try:
 except ImportError:
     list_ports = None
 
-from odrive_can import ODriveController
+from simple_can import SimpleCanController
 
 # Configuration
 BITRATE = 500000
@@ -67,7 +67,7 @@ def main():
         f"Scanning SDO endpoints {ENDPOINT_MIN}–{ENDPOINT_MAX} (timeout={READ_TIMEOUT_S}s each).\n"
     )
 
-    with ODriveController(NODE_ID, port=port, bitrate=BITRATE) as motor:
+    with SimpleCanController(NODE_ID, port=port, bitrate=BITRATE) as motor:
         for endpoint_id in range(ENDPOINT_MIN, ENDPOINT_MAX + 1):
             try:
                 value = motor.rxsdo_read_float(endpoint_id, timeout_s=READ_TIMEOUT_S)
