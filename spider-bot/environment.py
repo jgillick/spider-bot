@@ -4,6 +4,7 @@ Focuses on core objectives with progressive difficulty
 """
 
 import os
+import re
 import torch
 import numpy as np
 from PIL import Image
@@ -12,6 +13,7 @@ import genesis as gs
 
 from genesis_forge import ManagedEnvironment, GenesisEnv
 from genesis_forge.managers import (
+    PositionActionManager,
     RewardManager,
     TerminationManager,
     PositionWithinLimitsActionManager,
@@ -25,13 +27,17 @@ from genesis_forge.managers.actuator import ActuatorManager, NoisyValue
 from genesis_forge.mdp import reset, rewards, terminations, observations
 
 from foot_angle_mdp import FootAngleMdp
+from foot_clearance_mdp import FootClearanceMdp
 from gait_reward import GaitReward
 
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 SPIDER_XML = os.path.abspath(os.path.join(THIS_DIR, "../model/SpiderBot.xml"))
-CURRICULUM_CHECK_EVERY_STEPS = 800
-CURRICULUM_AVG_SAMPLES = 5
+CURRICULUM_CHECK_EVERY_STEPS = 2400
+CURRICULUM_AVG_SAMPLES = 10
+CURRICULUM_MAX_LEVEL = 50
+CURRICULUM_MIN_EPISODE_LENGTH_RATIO = 0.6
+CURRICULUM_COOLDOWN_STEPS = 4800
 
 Terrain = Literal["flat", "rough", "mixed"]
 EnvMode = Literal["train", "eval", "play"]
@@ -50,7 +56,7 @@ class SpiderRobotEnv(ManagedEnvironment):
     def __init__(
         self,
         num_envs: int = 1,
-        dt: float = 1 / 100,
+        dt: float = 1 / 50,
         max_episode_length_s: int | None = 6,
         headless: bool = True,
         mode: EnvMode = "train",
@@ -68,15 +74,24 @@ class SpiderRobotEnv(ManagedEnvironment):
         self.use_height_sensor = height_sensor
         self.curriculum_level = 1
         self.curriculum_samples = []
+        self.curriculum_ep_length_samples = []
         self.next_curriculum_check_step = CURRICULUM_CHECK_EVERY_STEPS
         self.terrain_type = terrain
+        self.joint_groups = {
+            "hip": [],
+            "femur": [],
+            "tibia": [],
+        }
 
         self.max_velocity_x = 1.2
-        self.max_velocity_y = 0.8
+        self.max_velocity_y = 1.0
         self.max_velocity_z = 1.0
-        self.velocity_inc = 0.05
+        self.velocity_inc = 0.025
         if terrain != "flat":
-            self.velocity_inc = 0.025
+            self.max_velocity_x = 1.0
+            self.max_velocity_y = 1.0
+            self.max_velocity_z = 1.0
+            self.velocity_inc = 0.01
 
         self.construct_scene(terrain)
 
@@ -90,7 +105,7 @@ class SpiderRobotEnv(ManagedEnvironment):
         """
         self.scene = gs.Scene(
             show_viewer=not self.headless,
-            sim_options=gs.options.SimOptions(dt=self.dt),
+            sim_options=gs.options.SimOptions(dt=self.dt, substeps=4),
             viewer_options=gs.options.ViewerOptions(
                 camera_pos=(-2.5, -1.5, 2.0),
                 camera_lookat=(0.0, 0.0, 0.0),
@@ -103,6 +118,7 @@ class SpiderRobotEnv(ManagedEnvironment):
                 enable_collision=True,
                 enable_joint_limit=True,
                 enable_self_collision=True,
+                enable_neutral_collision=True,
                 max_collision_pairs=35,
             ),
         )
@@ -172,6 +188,23 @@ class SpiderRobotEnv(ManagedEnvironment):
                 quat=[1.0, 0.0, 0.0, 0.0],
             ),
         )
+        self.get_joint_groups()
+
+        # IMU Sensor
+        self.imu = self.scene.add_sensor(
+            gs.sensors.IMU(
+                entity_idx=self.robot.idx,
+                pos_offset=(0.24, 0.0, 0.0),
+                euler_offset=(0.0, 0.0, 0.0),
+                acc_noise=(0.01, 0.01, 0.01),
+                gyro_noise=(0.01, 0.01, 0.01),
+                acc_random_walk=(0.001, 0.001, 0.001),
+                gyro_random_walk=(0.001, 0.001, 0.001),
+                delay=self.dt,
+                jitter=self.dt,
+                interpolate=True,
+            )
+        )
 
         # Height sensor
         self.height_sensor = None
@@ -198,6 +231,19 @@ class SpiderRobotEnv(ManagedEnvironment):
         self.camera.follow_entity(self.robot, smoothing=0.05)
 
         return self.scene
+    
+    def get_joint_groups(self):
+        """
+        Get the link groups.
+        """
+        for joint in self.robot.joints:
+            if joint.type != gs.JOINT_TYPE.REVOLUTE:
+                continue
+            name = joint.name
+            match = re.match(r"^Leg[1-8]_(Hip|Femur|Tibia)$", name)
+            if match:
+                group = match.group(1).lower()
+                self.joint_groups[group].append(joint.idx_local)
 
     def config(self):
         """
@@ -243,18 +289,25 @@ class SpiderRobotEnv(ManagedEnvironment):
                 "[RL][1-4]_Femur": -0.4,
                 "[RL][1-4]_Knee": 0.5,
             },
-            kp=NoisyValue(52, 5),
+            kp=NoisyValue(40, 5),
             kv=NoisyValue(1.2, 0.1),
             max_force=NoisyValue(8.0, 1.0),
             frictionloss=NoisyValue(0.1, 0.05),
-            # armature=1.68e-4,
             damping=NoisyValue(0.4, 0.1),
         )
-        self.action_manager = PositionWithinLimitsActionManager(
+        # self.action_manager = PositionWithinLimitsActionManager(
+        #     self,
+        #     delay_step=1,
+        #     soft_limit_scale_factor=0.95,
+        #     actuator_manager=self.actuator_manager,
+        # )
+        self.action_manager = PositionActionManager(
             self,
             delay_step=1,
+            scale=0.25,
+            use_default_offset=True,
+            soft_limit_scale_factor=0.95,
             actuator_manager=self.actuator_manager,
-            soft_limit_scale_factor=0.9,
         )
 
         ##
@@ -283,12 +336,6 @@ class SpiderRobotEnv(ManagedEnvironment):
                 "Leg[1-8]_Tibia_Leg",
                 ".*_Motor",
             ],
-            debug_visualizer=True,
-            debug_visualizer_cfg={
-                "envs_idx": [0],
-                "size": 0.05,
-                "fps": 10,
-            },
         )
 
         ##
@@ -296,7 +343,7 @@ class SpiderRobotEnv(ManagedEnvironment):
         self.vel_command_manager = VelocityCommandManager(
             self,
             range={
-                "lin_vel_x": [-1.0, 1.0],
+                "lin_vel_x": [-0.6, 0.6],
                 "lin_vel_y": [-0.5, 0.5],
                 "ang_vel_z": [-1.0, 1.0],
             },
@@ -340,7 +387,7 @@ class SpiderRobotEnv(ManagedEnvironment):
                     },
                 },
                 "height": {
-                    "weight": -100.0,
+                    "weight": -30.0,
                     "fn": rewards.base_height,
                     "params": {
                         "target_height": 0.135,
@@ -348,16 +395,12 @@ class SpiderRobotEnv(ManagedEnvironment):
                     },
                 },
                 "similar_to_default": {
-                    "weight": -0.05,
+                    "weight": -0.01,
                     "fn": rewards.dof_similar_to_default,
                     "params": {
                         "action_manager": self.action_manager,
                     },
                 },
-                # "action_rate": {
-                #     "weight": -5e-05,
-                #     "fn": rewards.action_rate_l2,
-                # },
                 "flat_orientation": {
                     "weight": -1.5,
                     "fn": rewards.flat_orientation_l2,
@@ -373,9 +416,40 @@ class SpiderRobotEnv(ManagedEnvironment):
                         "contact_manager": self.foot_contact_manager,
                         "vel_cmd_manager": self.vel_command_manager,
                         "time_threshold": 0.2,
-                        "time_threshold_max": 0.5,
+                        "time_threshold_max": 0.8,
                     },
                 },
+                "feet_ground_time": {
+                    "weight": -1.0,
+                    "fn": rewards.feet_ground_time,
+                    "params": {
+                        "contact_manager": self.foot_contact_manager,
+                        "time_threshold": 0.3,
+                    },
+                },
+                "feet_max_air_time": {
+                    "weight": -1.0,
+                    "fn": self.feet_max_air_time_reward,
+                    "params": {
+                        "max_air_time": 1.0,
+                    },
+                },
+                # "feet_slide": {
+                #     "weight": -0.1,
+                #     "fn": rewards.feet_slide,
+                #     "params": {
+                #         "contact_manager": self.foot_contact_manager,
+                #     },
+                # },
+                # "foot_clearance": {
+                #     "weight": -15,
+                #     "fn": FootClearanceMdp,
+                #     "params": {
+                #         "target_clearance": 0.1,
+                #         "contact_manager": self.foot_contact_manager,
+                #         "terrain_manager": self.terrain_manager,
+                #     },
+                # },
                 "leg_angle": {
                     "weight": -0.02,
                     "fn": self.foot_angle_mdp.reward,
@@ -386,6 +460,14 @@ class SpiderRobotEnv(ManagedEnvironment):
                     "params": {
                         "contact_manager": self.self_contact,
                     },
+                },
+                "action_rate": {
+                    "weight": -0.04,
+                    "fn": rewards.action_rate_l2,
+                },
+                "action_acceleration": {
+                    "weight": -1e-04,
+                    "fn": rewards.action_acceleration_l2,
                 },
             },
         )
@@ -432,23 +514,14 @@ class SpiderRobotEnv(ManagedEnvironment):
         # Observations
         ObservationManager(
             self,
-            history_len=5,
+            history_len=2,
             cfg={
                 "command": {
                     "fn": self.vel_command_manager.observation,
                 },
-                "angle_velocity": {
-                    "fn": lambda env: self.robot_manager.get_angular_velocity(),
-                    "noise": 0.01,
-                },
-                "linear_velocity": {
-                    "fn": lambda env: self.robot_manager.get_linear_velocity(),
-                    "noise": 0.01,
-                },
-                "projected_gravity": {
-                    "fn": lambda env: self.robot_manager.get_projected_gravity(),
-                    "noise": 0.01,
-                },
+                "imu_lin_acc_ang_vel": {
+                   "fn": self.imu_observation,
+                 },
                 "dof_position": {
                     "fn": lambda env: self.action_manager.get_dofs_position(),
                     "noise": 0.01,
@@ -465,14 +538,14 @@ class SpiderRobotEnv(ManagedEnvironment):
         )
         ObservationManager(
             self,
-            history_len=5,
+            history_len=2,
             name="privileged",
             cfg={
-                "air_time_target": {
-                    "fn": self.air_time_observation,
-                },
                 "height_sensor": {
                     "fn": self.height_sensor_observation,
+                },
+                "linear_velocity": {
+                    "fn": lambda env: self.robot_manager.get_linear_velocity(),
                 },
                 "foot_contacts": {
                     "fn": observations.contact_force,
@@ -480,6 +553,14 @@ class SpiderRobotEnv(ManagedEnvironment):
                         "contact_manager": self.foot_contact_manager,
                     },
                 },
+                "control_force": {
+                    "fn": lambda env: self.robot.get_dofs_control_force(),
+                    "scale": 0.1,
+                },
+                "force": {
+                    "fn": lambda env: self.robot.get_dofs_force(),
+                    "scale": 0.1,
+                }
             },
         )
 
@@ -493,22 +574,8 @@ class SpiderRobotEnv(ManagedEnvironment):
         """
         obs, reward, terminated, truncated, extras = super().step(actions)
 
-        # Log metrics
-        extras["episode"]["Metrics / curriculum_level"] = self.curriculum_level
-        extras["episode"]["Metrics / max_velocity"] = self.vel_command_manager.range[
-            "lin_vel_x"
-        ][1]
-        extras["episode"]["Metrics / foot_air_time_midpoint"] = (
-            self.reward_manager["foot_air_time"].params["time_threshold"]
-            + self.reward_manager["foot_air_time"].params["time_threshold_max"]
-        ) / 2.0
-        extras["episode"]["Metrics / foot_air_time_weight"] = self.reward_manager[
-            "foot_air_time"
-        ].weight
-        extras["episode"]["Metrics / gait_weight"] = self.reward_manager["gait"].weight
-        extras["episode"]["Metrics / similar_to_default_weight"] = self.reward_manager[
-            "similar_to_default"
-        ].weight
+        extras = self.log_metrics(extras)
+        extras = self.log_actuator_metrics(extras)
 
         if self.mode == "play":
             self.camera.render()
@@ -517,17 +584,71 @@ class SpiderRobotEnv(ManagedEnvironment):
         return obs, reward, terminated, truncated, extras
 
     def reset(self, envs_idx: list[int] | None = None):
-        reset = super().reset(envs_idx)
+        if envs_idx is not None:
+            self._last_reset_mean_ep_length = self.episode_length[envs_idx].float().mean().item()
+        result = super().reset(envs_idx)
         if envs_idx is not None:
             self.update_curriculum()
-        return reset
+        return result
+    
+    def log_metrics(self, extras: dict):
+        # Log metrics
+        extras["episode"]["Metrics / curriculum_level"] = self.curriculum_level
+        extras["episode"]["Metrics / max_velocity"] = self.vel_command_manager.range[
+            "lin_vel_x"
+        ][1]
+        extras["episode"]["Metrics / gait_weight"] = self.reward_manager["gait"].weight
+        # extras["episode"]["Metrics / similar_to_default_weight"] = self.reward_manager[
+        #     "similar_to_default"
+        # ].weight
+
+        extras["episode"]["Metrics / torque_avg"] = self.robot.get_dofs_force().abs().mean()
+        extras["episode"]["Metrics / torque_ctl_avg"] = self.robot.get_dofs_control_force().abs().mean()
+
+
+        action_rate = torch.abs(self.last_actions - self.actions)
+        extras["episode"]["Metrics / action_rate_avg"] = action_rate.mean()
+        extras["episode"]["Metrics / action_rate_max"] = action_rate.max()
+
+        action_rate = torch.abs(self.action_manager.last_actions - self.action_manager.actions)
+        extras["episode"]["Metrics / position_delta_avg"] = action_rate.mean()
+        extras["episode"]["Metrics / position_delta_max"] = action_rate.max()
+
+        return extras
+    
+    def log_actuator_metrics(self, extras: dict):
+        percentiles = [50, 90, 95, 99]
+        q_tensors = torch.tensor([p / 100.0 for p in percentiles], device=gs.device)
+
+        for group in self.joint_groups:
+            for idx in self.joint_groups[group]:
+                group_torque = self.robot.get_dofs_control_force(idx).abs()
+                # extras["episode"][f"Actuators / {group}_torque_avg"] = group_torque.mean()
+                # extras["episode"][f"Actuators / {group}_torque_max"] = group_torque.max()
+
+                # group_velocity = self.robot.get_dofs_velocity(idx).abs()
+                # extras["episode"][f"Actuators / {group}_velocity_avg"] = group_velocity.mean()
+                # extras["episode"][f"Actuators / {group}_velocity_max"] = group_velocity.max()
+                
+                torque_pcts = torch.quantile(group_torque.float().flatten(), q_tensors)
+                for i, p in enumerate(percentiles):
+                    extras["episode"][f"Actuators / {group}_torque_p{p}"] = torque_pcts[i]
+
+        return extras
 
     def height_sensor_observation(self, env: GenesisEnv) -> torch.Tensor:
+        # Get height above terrain from simulator
         if self.height_sensor is None:
-            return torch.tensor([])
+            base_pos = self.robot.get_pos()
+            height_offset = self.terrain_manager.get_terrain_height(
+                base_pos[:, 0], base_pos[:, 1]
+            )
+            height = base_pos[:, 2] - height_offset
+            return height.unsqueeze(-1) # (n_envs, 1)
+        
+        # Get the height grid from lidar sensor
         heights = self.height_sensor.read().distances
-        # Convert heights tensor shape: (n_envs, 5, 5) -> (n_envs, 25)
-        return heights.flatten(start_dim=-2)
+        return heights.flatten(start_dim=-2) # (n_envs, 5, 5) -> (n_envs, 25)
 
     def air_time_observation(self, env: GenesisEnv) -> float:
         """Return the mid point of the current foot air time target range"""
@@ -536,28 +657,74 @@ class SpiderRobotEnv(ManagedEnvironment):
         obs = torch.zeros(env.num_envs, 1, device=gs.device)
         obs[:] = mid_point
         return obs
+    
+    def feet_max_air_time_reward(
+        self,
+        env: GenesisEnv,
+        max_air_time: float,
+    ) -> torch.Tensor:
+        """Penalise any foot that stays airborne longer than ``max_air_time``.
+
+        Unlike ``feet_air_time`` (which fires once at touchdown), this is a
+        continuous per-step penalty that grows linearly with every additional
+        second the foot remains in the air beyond the threshold.  This gives
+        the policy an ongoing gradient to bring a retracted leg back down,
+        which ``feet_air_time`` alone cannot provide.
+
+        Should be registered with a negative weight.  Set ``max_air_time``
+        comfortably above the expected swing duration (e.g. 1.5× the
+        ``time_threshold_max`` used in ``feet_air_time``) so that normal
+        stepping is unaffected.
+
+        Args:
+            env: The Genesis Forge environment.
+            max_air_time: Seconds a foot may be airborne before the penalty
+                          starts accumulating.
+
+        Returns:
+            Per-environment sum of excess air time across all feet,
+            shape ``(n_envs,)``.
+        """
+        excess = (self.foot_contact_manager.current_air_time - max_air_time).clamp(min=0.0)
+        return excess.sum(dim=-1)
+
+    def imu_observation(self, env: GenesisEnv) -> torch.Tensor:
+        """
+        Makes an IMU reading and returns the concatenated linear acceleration and angular velocity readings.
+
+        Returns:
+            torch.Tensor: Shape (n_envs, 6): [lin_acc_xyz, ang_vel_xyz] per env.
+                        Shape: (num_envs, 6)
+        """
+        value = self.imu.read()
+        return torch.cat([value.lin_acc, value.ang_vel], dim=-1)
 
     def update_curriculum(self):
         """
         Check the curriculum
         """
+        if self.curriculum_level >= CURRICULUM_MAX_LEVEL:
+            return
         # Limit how often we check/update the curriculum
         if self.step_count < self.next_curriculum_check_step:
             return
 
-        # Calculate the average linear velocity reward, over the last few episodes
-        # This prevents a momentary spike causing a level up
+        # Collect samples over multiple resets to prevent momentary spikes causing a level up
         if len(self.curriculum_samples) < CURRICULUM_AVG_SAMPLES:
             cmd_linear_vel = self.reward_manager.last_episode_mean_reward(
                 "cmd_linear_vel", before_weight=True
             )
             self.curriculum_samples.append(cmd_linear_vel)
+            self.curriculum_ep_length_samples.append(self._last_reset_mean_ep_length)
             if len(self.curriculum_samples) < CURRICULUM_AVG_SAMPLES:
                 return
-        cmd_linear_avg = sum(self.curriculum_samples) / len(self.curriculum_samples)
 
-        # Level up
-        if cmd_linear_avg > 0.8:
+        cmd_linear_avg = sum(self.curriculum_samples) / len(self.curriculum_samples)
+        ep_length_avg = sum(self.curriculum_ep_length_samples) / len(self.curriculum_ep_length_samples)
+        min_ep_length = self.max_episode_length_steps * CURRICULUM_MIN_EPISODE_LENGTH_RATIO
+
+        # Level up when the policy both tracks commands well and survives long enough
+        if cmd_linear_avg > 0.8 and ep_length_avg >= min_ep_length:
             self.curriculum_level += 1
             self.vel_command_manager.increment_range(
                 "lin_vel_x", self.velocity_inc, limit=self.max_velocity_x
@@ -570,25 +737,20 @@ class SpiderRobotEnv(ManagedEnvironment):
             )
 
             # Reduce the similar_to_default reward
-            self.reward_manager["similar_to_default"].increment_weight(
-                0.001, limit=-0.01
-            )
+            # self.reward_manager["similar_to_default"].increment_weight(
+            #     0.001, limit=-0.01
+            # )
 
             # Increase the gait reward
             self.reward_manager["gait"].increment_weight(0.05, limit=0.5)
 
-            # Increase the foot_air_time target range
-            self.reward_manager["foot_air_time"].increment_weight(0.05, limit=1.0)
-            self.reward_manager["foot_air_time"].increment_param(
-                "time_threshold", 0.05, limit=0.3
-            )
-            self.reward_manager["foot_air_time"].increment_param(
-                "time_threshold_max", 0.05, limit=1.0
-            )
+            # Cooldown: wait longer before the next level-up can be considered
+            self.next_curriculum_check_step = self.step_count + CURRICULUM_COOLDOWN_STEPS
+        else:
+            self.next_curriculum_check_step = self.step_count + CURRICULUM_CHECK_EVERY_STEPS
 
-        # Reset the curriculum checks
-        self.next_curriculum_check_step = self.step_count + CURRICULUM_CHECK_EVERY_STEPS
         self.curriculum_samples = []
+        self.curriculum_ep_length_samples = []
 
     def curriculum_terrain(self) -> Terrain:
         """

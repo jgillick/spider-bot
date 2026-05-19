@@ -5,7 +5,6 @@ from os import path
 import xml.etree.ElementTree as ET
 
 from constants import (
-    ACTUATOR_TORQUE_RANGE,
     HIP_RANGES,
 )
 
@@ -60,9 +59,6 @@ def add_defaults(tree):
         "motor",
         {
             "gear": "1",
-            "ctrlrange": " ".join(ACTUATOR_TORQUE_RANGE),
-            "forcelimited": "true",
-            "forcerange": " ".join(ACTUATOR_TORQUE_RANGE),
         },
     )
 
