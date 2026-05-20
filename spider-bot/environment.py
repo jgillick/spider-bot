@@ -230,6 +230,19 @@ class SpiderRobotEnv(ManagedEnvironment):
         self.camera.follow_entity(self.robot, smoothing=0.05)
 
         return self.scene
+    
+    def get_joint_groups(self):
+        """
+        Get the link groups.
+        """
+        for joint in self.robot.joints:
+            if joint.type != gs.JOINT_TYPE.REVOLUTE:
+                continue
+            name = joint.name
+            match = re.match(r"^Leg[1-8]_(Hip|Femur|Tibia)$", name)
+            if match:
+                group = match.group(1).lower()
+                self.joint_groups[group].append(joint.idx_local)
 
     def get_joint_groups(self):
         """
@@ -632,7 +645,7 @@ class SpiderRobotEnv(ManagedEnvironment):
         extras["episode"]["Metrics / position_delta_max"] = action_rate.max()
 
         return extras
-
+        
     def log_actuator_metrics(self, extras: dict):
         percentiles = [50, 90, 95, 99]
         q_tensors = torch.tensor([p / 100.0 for p in percentiles], device=gs.device)
@@ -676,6 +689,47 @@ class SpiderRobotEnv(ManagedEnvironment):
         obs = torch.zeros(env.num_envs, 1, device=gs.device)
         obs[:] = mid_point
         return obs
+    
+    def feet_max_air_time_reward(
+        self,
+        env: GenesisEnv,
+        max_air_time: float,
+    ) -> torch.Tensor:
+        """Penalise any foot that stays airborne longer than ``max_air_time``.
+
+        Unlike ``feet_air_time`` (which fires once at touchdown), this is a
+        continuous per-step penalty that grows linearly with every additional
+        second the foot remains in the air beyond the threshold.  This gives
+        the policy an ongoing gradient to bring a retracted leg back down,
+        which ``feet_air_time`` alone cannot provide.
+
+        Should be registered with a negative weight.  Set ``max_air_time``
+        comfortably above the expected swing duration (e.g. 1.5× the
+        ``time_threshold_max`` used in ``feet_air_time``) so that normal
+        stepping is unaffected.
+
+        Args:
+            env: The Genesis Forge environment.
+            max_air_time: Seconds a foot may be airborne before the penalty
+                          starts accumulating.
+
+        Returns:
+            Per-environment sum of excess air time across all feet,
+            shape ``(n_envs,)``.
+        """
+        excess = (self.foot_contact_manager.current_air_time - max_air_time).clamp(min=0.0)
+        return excess.sum(dim=-1)
+
+    def imu_observation(self, env: GenesisEnv) -> torch.Tensor:
+        """
+        Makes an IMU reading and returns the concatenated linear acceleration and angular velocity readings.
+
+        Returns:
+            torch.Tensor: Shape (n_envs, 6): [lin_acc_xyz, ang_vel_xyz] per env.
+                        Shape: (num_envs, 6)
+        """
+        value = self.imu.read()
+        return torch.cat([value.lin_acc, value.ang_vel], dim=-1)
 
     def feet_max_air_time_reward(
         self,
