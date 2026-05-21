@@ -1,19 +1,40 @@
-import re
 import signal
 import sys
 from os import path
 import xml.etree.ElementTree as ET
 
 SOURCE_PATH = "./SpiderBot.xml"
-COLLISION_GEOM_PREFIXES = ["Body", "Femur", "Tibia", "Foot", "Motor"]
+COLLISION_GEOM_PREFIXES = ["Femur", "Tibia", "Foot", "Motor"]
+LIMITS = {
+    "R1_Hip": (-0.3, 1.4),
+    "R2_Hip": (-0.4, 0.9),
+    "R3_Hip": (-0.9, 0.4),
+    "R4_Hip": (-1.4, 0.3),
+    "L1_Hip": (-1.4, 0.3),
+    "L2_Hip": (-0.9, 0.4),
+    "L3_Hip": (-0.4, 0.9),
+    "L4_Hip": (-0.3, 1.4),
+}
 
 
 def main(tree):
     tree = remove_collision_meshes(tree)
+    tree = joint_limits(tree)
     tree = add_foot_friction(tree)
     tree = add_free_joint(tree)
     ET.indent(tree, space="  ")
     tree.write(SOURCE_PATH, encoding="utf-8")
+
+
+def joint_limits(tree):
+    """
+    Add joint limits to the tree
+    """
+    for name, limits in LIMITS.items():
+        joint = tree.find(f".//joint[@name='{name}']")
+        if joint is not None:
+            joint.set("range", f"{limits[0]} {limits[1]}")
+    return tree
 
 
 def remove_collision_meshes(tree):
@@ -28,8 +49,8 @@ def remove_collision_meshes(tree):
             name.startswith(f"{prefix}_collision") for prefix in COLLISION_GEOM_PREFIXES
         ):
             parents[mesh].remove(mesh)
-            body_meshes = tree.findall(f".//asset/geom[@name='{name}']")
-            for body_mesh in body_meshes:
+            body_mesh = tree.find(f".//asset/mesh[@name='{name}']")
+            if body_mesh is not None:
                 parents[body_mesh].remove(body_mesh)
 
     return tree
