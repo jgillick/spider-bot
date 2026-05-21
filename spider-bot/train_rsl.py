@@ -26,7 +26,7 @@ except (metadata.PackageNotFoundError, ImportError) as e:
     raise ImportError("Please install install 'rsl-rl-lib>=2.2.4'.") from e
 from rsl_rl.runners import OnPolicyRunner
 
-DEFAULT_RSL_CONFIG = "./rsl_rl/ppo.yaml"
+DEFAULT_RSL_CONFIG = "./rsl_rl/ppo-v5.yaml"
 
 # Training parameters
 TOTAL_BATCH = 196_608
@@ -35,7 +35,7 @@ TARGET_MINI_BATCH = 24_576
 
 
 parser = argparse.ArgumentParser(add_help=True)
-parser.add_argument("-n", "--num_envs", type=int, default=4096)
+parser.add_argument("-n", "--num_envs", type=int, default=2096)
 parser.add_argument("-i", "--max_iterations", type=int, default=8_000)
 parser.add_argument("-d", "--device", type=str, default="gpu")
 parser.add_argument("-c", "--config", type=str, default=DEFAULT_RSL_CONFIG)
@@ -87,7 +87,7 @@ def main():
         torch.set_default_device("cpu")
 
     # Logging directory
-    log_base_dir = "./logs/rsl"
+    log_base_dir = "./logs/v2"
     experiment_name = datetime.now().strftime("%Y%m%d_%H%M%S")
     if args.experiment_name:
         experiment_name = args.experiment_name
