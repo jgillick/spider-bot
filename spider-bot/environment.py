@@ -8,7 +8,7 @@ import re
 import torch
 import numpy as np
 from PIL import Image
-from typing import Literal, TypedDict
+from typing import Literal
 import genesis as gs
 
 from genesis_forge import ManagedEnvironment, GenesisEnv
@@ -41,11 +41,6 @@ CURRICULUM_COOLDOWN_STEPS = 4800
 
 Terrain = Literal["flat", "rough", "mixed"]
 EnvMode = Literal["train", "eval", "play"]
-
-
-class IncConfig(TypedDict):
-    inc: float
-    limit: float | None
 
 
 class SpiderRobotEnv(ManagedEnvironment):
@@ -83,10 +78,10 @@ class SpiderRobotEnv(ManagedEnvironment):
             "tibia": [],
         }
 
-        self.max_velocity_x = 1.0
-        self.max_velocity_y = 0.7
+        self.max_velocity_x = 1.5
+        self.max_velocity_y = 1.0
         self.max_velocity_z = 1.0
-        self.velocity_inc = 0.0125
+        self.velocity_inc = 0.025
         if terrain == "flat":
             self.max_velocity_x = 1.2
             self.max_velocity_y = 1.0
@@ -119,7 +114,8 @@ class SpiderRobotEnv(ManagedEnvironment):
                 enable_joint_limit=True,
                 enable_self_collision=True,
                 enable_neutral_collision=True,
-                max_collision_pairs=35,
+                multiplier_collision_broad_phase=32,
+                max_collision_pairs=20,
             ),
         )
 
@@ -230,41 +226,13 @@ class SpiderRobotEnv(ManagedEnvironment):
         self.camera.follow_entity(self.robot, smoothing=0.05)
 
         return self.scene
-    
-    def get_joint_groups(self):
-        """
-        Get the link groups.
-        """
-        for joint in self.robot.joints:
-            if joint.type != gs.JOINT_TYPE.REVOLUTE:
-                continue
-            name = joint.name
-            match = re.match(r"^Leg[1-8]_(Hip|Femur|Tibia)$", name)
-            if match:
-                group = match.group(1).lower()
-                self.joint_groups[group].append(joint.idx_local)
-
-    def get_joint_groups(self):
-        """
-        Get the link groups.
-        """
-        for joint in self.robot.joints:
-            if joint.type != gs.JOINT_TYPE.REVOLUTE:
-                continue
-            name = joint.name
-            match = re.match(r"^[R|L][1-4]_(Hip|Femur|Knee)$", name)
-            if match:
-                group = match.group(1).lower()
-                if group == "knee":
-                    group = "tibia"
-                self.joint_groups[group].append(joint.idx_local)
 
     def config(self):
         """
         Configure the environment managers.
         """
         # Foot angle monitor
-        self.foot_angle_mdp = FootAngleMdp(self, foot_name_pattern="(R|L)[1-4]_Foot")
+        self.foot_angle_mdp = FootAngleMdp(self, foot_name_pattern="[RL][1-4]_Foot")
 
         # Terrain
         self.terrain_manager = TerrainManager(self, terrain_attr="terrain")
@@ -292,23 +260,23 @@ class SpiderRobotEnv(ManagedEnvironment):
             self,
             joint_names=".*",
             default_pos={
-                "R1_Hip": 1.5,
-                "R2_Hip": 0.9,
-                "R3_Hip": -0.9,
-                "R4_Hip": -1.5,
-                "L1_Hip": -1.5,
-                "L2_Hip": -0.9,
-                "L3_Hip": 0.9,
-                "L4_Hip": 1.5,
+                "R1_Hip": 0.9,
+                "R2_Hip": 0.2,
+                "R3_Hip": -0.2,
+                "R4_Hip": -0.9,
+                "L1_Hip": -0.9,
+                "L2_Hip": -0.2,
+                "L3_Hip": 0.2,
+                "L4_Hip": 0.0,
                 "[RL][1-4]_Femur": -0.4,
                 "[RL][1-4]_Knee": 0.5,
             },
-            kp=NoisyValue(30.0, 5),
-            kv=NoisyValue(7.5, 1.5),
-            max_force=NoisyValue(15.0, 1.0),
+            kp=NoisyValue(30, 5),
+            kv=NoisyValue(2.0, 0.5),
+            max_force=NoisyValue(10.0, 1.0),
             frictionloss=NoisyValue(0.1, 0.05),
-            armature=NoisyValue(0.0020, 0.0001),
             damping=NoisyValue(0.0381, 0.0001),
+            armature=0.0020,
         )
         # self.action_manager = PositionWithinLimitsActionManager(
         #     self,
@@ -331,7 +299,7 @@ class SpiderRobotEnv(ManagedEnvironment):
         # Foot/step contact manager
         self.foot_contact_manager = ContactManager(
             self,
-            link_names=["(R|L)[1-4]_Foot"],
+            link_names=["[RL][1-4]_Foot"],
             with_entity_attr="terrain",
             track_air_time=True,
         )
@@ -341,17 +309,16 @@ class SpiderRobotEnv(ManagedEnvironment):
             self,
             entity_attr="robot",
             link_names=[
-                "(R|L)[1-4]_Femur",
-                "(R|L)[1-4]_Tibia",
-                "(R|L)[1-4]_Foot",
+                "[RL][1-4]_Femur",
+                "[RL][1-4]_Tibia",
+                "[RL][1-4]_Foot",
                 ".*_Motor",
             ],
             with_entity_attr="robot",
             with_links_names=[
-                "Body",
-                "(R|L)[1-4]_Femur",
-                "(R|L)[1-4]_Tibia",
-                "(R|L)[1-4]_Foot",
+                "[RL][1-4]_Femur",
+                "[RL][1-4]_Tibia",
+                "[RL][1-4]_Foot",
                 ".*_Motor",
             ],
         )
@@ -408,7 +375,7 @@ class SpiderRobotEnv(ManagedEnvironment):
                     "weight": -30.0,
                     "fn": rewards.base_height,
                     "params": {
-                        "target_height": 0.13,
+                        "target_height": 0.12,
                         "terrain_manager": self.terrain_manager,
                     },
                 },
@@ -594,7 +561,7 @@ class SpiderRobotEnv(ManagedEnvironment):
 
         extras = self.log_curriculum(extras)
         # extras = self.log_metrics(extras)
-        # extras = self.log_actuator_metrics(extras)
+        extras = self.log_actuator_metrics(extras)
 
         if self.mode == "play":
             self.camera.render()
@@ -611,6 +578,34 @@ class SpiderRobotEnv(ManagedEnvironment):
         if envs_idx is not None:
             self.update_curriculum()
         return result
+
+    def get_joint_groups(self):
+        """
+        Get the link groups.
+        """
+        for joint in self.robot.joints:
+            if joint.type != gs.JOINT_TYPE.REVOLUTE:
+                continue
+            name = joint.name
+            match = re.match(r"^Leg[1-8]_(Hip|Femur|Tibia)$", name)
+            if match:
+                group = match.group(1).lower()
+                self.joint_groups[group].append(joint.idx_local)
+
+    def get_joint_groups(self):
+        """
+        Get the link groups.
+        """
+        for joint in self.robot.joints:
+            if joint.type != gs.JOINT_TYPE.REVOLUTE:
+                continue
+            name = joint.name
+            match = re.match(r"^[R|L][1-4]_(Hip|Femur|Knee)$", name)
+            if match:
+                group = match.group(1).lower()
+                if group == "knee":
+                    group = "tibia"
+                self.joint_groups[group].append(joint.idx_local)
 
     def log_curriculum(self, extras: dict):
         extras["episode"]["Curriculum / curriculum_level"] = self.curriculum_level
@@ -762,17 +757,6 @@ class SpiderRobotEnv(ManagedEnvironment):
             min=0.0
         )
         return excess.sum(dim=-1)
-
-    def imu_observation(self, env: GenesisEnv) -> torch.Tensor:
-        """
-        Makes an IMU reading and returns the concatenated linear acceleration and angular velocity readings.
-
-        Returns:
-            torch.Tensor: Shape (n_envs, 6): [lin_acc_xyz, ang_vel_xyz] per env.
-                        Shape: (num_envs, 6)
-        """
-        value = self.imu.read()
-        return torch.cat([value.lin_acc, value.ang_vel], dim=-1)
 
     def update_curriculum(self):
         """

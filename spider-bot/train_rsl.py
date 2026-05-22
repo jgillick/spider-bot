@@ -36,7 +36,7 @@ TARGET_MINI_BATCH = 24_576
 
 parser = argparse.ArgumentParser(add_help=True)
 parser.add_argument("-n", "--num_envs", type=int, default=2096)
-parser.add_argument("-i", "--max_iterations", type=int, default=8_000)
+parser.add_argument("-i", "--max_iterations", type=int, default=6_000)
 parser.add_argument("-d", "--device", type=str, default="gpu")
 parser.add_argument("-c", "--config", type=str, default=DEFAULT_RSL_CONFIG)
 parser.add_argument(
@@ -107,7 +107,7 @@ def main():
 
     # Save snapshot
     pickle.dump(
-        {"args": args, "rsl_rl": cfg},
+        {"args": args, "seed": seed, "rsl_rl": cfg},
         open(os.path.join(log_path, "cfgs.pkl"), "wb"),
     )
     os.makedirs(os.path.join(log_path, "code"), exist_ok=True)
