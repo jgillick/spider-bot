@@ -1,0 +1,652 @@
+import re
+import torch
+import genesis as gs
+
+from genesis_forge import GenesisEnv
+from genesis_forge.managers import (
+    PositionActionManager,
+    RewardManager,
+    TerminationManager,
+    PositionWithinLimitsActionManager,
+    ContactManager,
+    TerrainManager,
+    EntityManager,
+    ObservationManager,
+    VelocityCommandManager,
+)
+from genesis_forge.managers.actuator import ActuatorManager, NoisyValue
+from genesis_forge.mdp import reset, rewards, terminations, observations
+
+
+
+from spiderbot.environment import BaseSpiderRobotEnv, Terrain, EnvMode
+from spiderbot.mdp.foot_angle import FootAngleMdp
+from spiderbot.mdp.foot_clearance import FootClearanceMdp
+from spiderbot.mdp.gait_reward import GaitReward
+
+CURRICULUM_CHECK_EVERY_STEPS = 2400
+CURRICULUM_AVG_SAMPLES = 10
+CURRICULUM_MAX_LEVEL = 50
+CURRICULUM_MIN_EPISODE_LENGTH_RATIO = 0.6
+CURRICULUM_COOLDOWN_STEPS = 4800
+
+class SpiderRobotEnv(BaseSpiderRobotEnv):
+    """
+    SpiderBot locomotion environment
+    """
+
+    def __init__(
+        self,
+        num_envs: int = 1,
+        dt: float = 1 / 50,
+        max_episode_length_sec: int | None = 6,
+        headless: bool = True,
+        mode: EnvMode = "train",
+        terrain: Terrain = "flat",
+        height_sensor: bool = False,
+    ):
+        self.joint_groups = {
+            "hip": [],
+            "femur": [],
+            "tibia": [],
+        }
+        self.curriculum_level = 1
+        self.curriculum_samples = []
+        self.curriculum_ep_length_samples = []
+        self.next_curriculum_check_step = CURRICULUM_CHECK_EVERY_STEPS
+
+        self.max_velocity_x = 1.5
+        self.max_velocity_y = 1.0
+        self.max_velocity_z = 1.0
+        self.velocity_inc = 0.0125
+        if terrain == "flat":
+            self.max_velocity_x = 1.2
+            self.max_velocity_y = 1.0
+            self.max_velocity_z = 1.0
+            self.velocity_inc = 0.025
+        
+        super().__init__(
+            num_envs=num_envs,
+            dt=dt,
+            max_episode_length_sec=max_episode_length_sec,
+        )
+
+    """
+    Operations
+    """
+
+    def construct_scene(self, terrain_type: Terrain) -> gs.Scene:
+        """
+        Construct the environment scene.
+        """
+        super().construct_scene(terrain_type)
+        self.get_joint_groups()
+        return self.scene
+
+    def config(self):
+        """
+        Configure the environment managers.
+        """
+        super().config()
+
+        # Foot angle monitor
+        self.foot_angle_mdp = FootAngleMdp(self, foot_name_pattern="[RL][1-4]_Foot")
+
+        ##
+        # Robot manager
+        self.robot_manager = EntityManager(
+            self,
+            entity_attr="robot",
+            on_reset={
+                "position": {
+                    "fn": reset.randomize_terrain_position,
+                    "params": {
+                        "terrain_manager": self.terrain_manager,
+                        "height_offset": 0.118,
+                        "subterrain": self.curriculum_terrain,
+                    },
+                },
+            },
+        )
+
+        ##
+        # Actuators and Actions
+        self.actuator_manager = ActuatorManager(
+            self,
+            joint_names=".*",
+            default_pos={
+                "R1_Hip": 0.9,
+                "R2_Hip": 0.2,
+                "R3_Hip": -0.2,
+                "R4_Hip": -0.9,
+                "L1_Hip": -0.9,
+                "L2_Hip": -0.2,
+                "L3_Hip": 0.2,
+                "L4_Hip": 0.0,
+                "[RL][1-4]_Femur": -0.4,
+                "[RL][1-4]_Knee": 0.5,
+            },
+            kp=NoisyValue(30, 5),
+            kv=NoisyValue(2.0, 0.5),
+            max_force=NoisyValue(10.0, 1.0),
+            frictionloss=NoisyValue(0.1, 0.05),
+            damping=NoisyValue(0.0381, 0.0001),
+            armature=0.0020,
+        )
+        # self.action_manager = PositionWithinLimitsActionManager(
+        #     self,
+        #     delay_step=1,
+        #     soft_limit_scale_factor=0.95,
+        #     actuator_manager=self.actuator_manager,
+        # )
+        self.action_manager = PositionActionManager(
+            self,
+            delay_step=1,
+            scale=0.25,
+            use_default_offset=True,
+            soft_limit_scale_factor=0.95,
+            actuator_manager=self.actuator_manager,
+        )
+
+        ##
+        # Contact managers
+
+        # Foot/step contact manager
+        self.foot_contact_manager = ContactManager(
+            self,
+            link_names=["[RL][1-4]_Foot"],
+            with_entity_attr="terrain",
+            track_air_time=True,
+        )
+
+        # Detect self contacts
+        self.self_contact = ContactManager(
+            self,
+            entity_attr="robot",
+            link_names=[
+                "[RL][1-4]_Femur",
+                "[RL][1-4]_Tibia",
+                "[RL][1-4]_Foot",
+                ".*_Motor",
+            ],
+            with_entity_attr="robot",
+            with_links_names=[
+                "[RL][1-4]_Femur",
+                "[RL][1-4]_Tibia",
+                "[RL][1-4]_Foot",
+                ".*_Motor",
+            ],
+        )
+
+        ##
+        # Command manager
+        self.vel_command_manager = VelocityCommandManager(
+            self,
+            range={
+                "lin_vel_x": [-0.6, 0.6],
+                "lin_vel_y": [-0.5, 0.5],
+                "ang_vel_z": [-1.0, 1.0],
+            },
+            resample_time_sec=4.0,
+            debug_visualizer=True,
+            debug_visualizer_cfg={
+                "envs_idx": [0],
+            },
+        )
+
+        ##
+        # Rewards
+        self.reward_manager = RewardManager(
+            self,
+            cfg={
+                # "gait_diagonal": {
+                #     "weight": 0.18,
+                #     "fn": GaitReward,
+                #     "params": {
+                #         "contact_manager": self.foot_contact_manager,
+                #         "foot_groups": [
+                #             ["R1_Foot", "L2_Foot"],
+                #             ["R2_Foot", "L1_Foot"],
+                #             ["R3_Foot", "L4_Foot"],
+                #             ["R4_Foot", "L3_Foot"],
+                #         ],
+                #     },
+                # },
+                # "gait_lateral": {
+                #     "weight": 0.07,
+                #     "fn": GaitReward,
+                #     "params": {
+                #         "contact_manager": self.foot_contact_manager,
+                #         "foot_groups": [
+                #             ["R1_Foot", "R2_Foot"],
+                #             ["R3_Foot", "R4_Foot"],
+                #             ["L1_Foot", "L2_Foot"],
+                #             ["L3_Foot", "L4_Foot"],
+                #         ],
+                #     },
+                # },
+                "cmd_linear_vel": {
+                    "weight": 1.0,
+                    "fn": rewards.command_tracking_lin_vel,
+                    "params": {
+                        "vel_cmd_manager": self.vel_command_manager,
+                    },
+                },
+                "cmd_angular_vel": {
+                    "weight": 0.5,
+                    "fn": rewards.command_tracking_ang_vel,
+                    "params": {
+                        "vel_cmd_manager": self.vel_command_manager,
+                    },
+                },
+                "height": {
+                    "weight": -30.0,
+                    "fn": rewards.base_height,
+                    "params": {
+                        "target_height": 0.12,
+                        "terrain_manager": self.terrain_manager,
+                    },
+                },
+                "similar_to_default": {
+                    "weight": -0.01,
+                    "fn": rewards.dof_similar_to_default,
+                    "params": {
+                        "action_manager": self.action_manager,
+                    },
+                },
+                "flat_orientation": {
+                    "weight": -1.5,
+                    "fn": rewards.flat_orientation_l2,
+                },
+                "ang_vel_xy_l2": {
+                    "weight": -0.05,
+                    "fn": rewards.ang_vel_xy_l2,
+                },
+                "foot_air_time": {
+                    "weight": 0.5,
+                    "fn": rewards.feet_air_time,
+                    "params": {
+                        "contact_manager": self.foot_contact_manager,
+                        "vel_cmd_manager": self.vel_command_manager,
+                        "time_threshold": 0.2,
+                        "time_threshold_max": 0.8,
+                    },
+                },
+                "feet_ground_time": {
+                    "weight": -1.0,
+                    "fn": rewards.feet_ground_time,
+                    "params": {
+                        "contact_manager": self.foot_contact_manager,
+                        "time_threshold": 0.3,
+                    },
+                },
+                "feet_max_air_time": {
+                    "weight": -1.0,
+                    "fn": self.feet_max_air_time_reward,
+                    "params": {
+                        "max_air_time": 1.0,
+                    },
+                },
+                # "feet_slide": {
+                #     "weight": -0.1,
+                #     "fn": rewards.feet_slide,
+                #     "params": {
+                #         "contact_manager": self.foot_contact_manager,
+                #     },
+                # },
+                # "foot_clearance": {
+                #     "weight": -15,
+                #     "fn": FootClearanceMdp,
+                #     "params": {
+                #         "target_clearance": 0.1,
+                #         "contact_manager": self.foot_contact_manager,
+                #         "terrain_manager": self.terrain_manager,
+                #     },
+                # },
+                "leg_angle": {
+                    "weight": -0.02,
+                    "fn": self.foot_angle_mdp.reward,
+                },
+                "self_contact": {
+                    "weight": -0.05,
+                    "fn": rewards.contact_force,
+                    "params": {
+                        "contact_manager": self.self_contact,
+                    },
+                },
+                "action_rate": {
+                    "weight": -0.04,
+                    "fn": rewards.action_rate_l2,
+                },
+                "action_acceleration": {
+                    "weight": -1e-04,
+                    "fn": rewards.action_acceleration_l2,
+                },
+            },
+        )
+
+        ##
+        # Terminations
+        self.termination_manager = TerminationManager(
+            self,
+            term_cfg={
+                "timeout": {
+                    "time_out": True,
+                    "fn": terminations.timeout,
+                },
+                "out_of_bounds": {
+                    "time_out": True,
+                    "fn": terminations.out_of_bounds,
+                    "params": {
+                        "terrain_manager": self.terrain_manager,
+                    },
+                },
+                "bad_orientation": {
+                    "fn": terminations.bad_orientation,
+                    "params": {
+                        "limit_angle": 70,
+                    },
+                },
+                "self_contact": {
+                    "fn": terminations.contact_force,
+                    "params": {
+                        "contact_manager": self.self_contact,
+                        "threshold": 2.0,
+                    },
+                },
+                "foot_angle": {
+                    "fn": self.foot_angle_mdp.terminate,
+                    "params": {
+                        "angle_threshold": -0.75,
+                    },
+                },
+            },
+        )
+
+        ##
+        # Observations
+        ObservationManager(
+            self,
+            history_len=2,
+            cfg={
+                "command": {
+                    "fn": self.vel_command_manager.observation,
+                },
+                "imu_lin_acc_ang_vel": {
+                    "fn": self.imu_observation,
+                },
+                "dof_position": {
+                    "fn": lambda env: self.action_manager.get_dofs_position(),
+                    "noise": 0.01,
+                },
+                "dof_velocity": {
+                    "fn": lambda env: self.action_manager.get_dofs_velocity(),
+                    "scale": 0.1,
+                    "noise": 0.1,
+                },
+                "actions": {
+                    "fn": lambda env: self.action_manager.raw_actions,
+                },
+            },
+        )
+        ObservationManager(
+            self,
+            history_len=2,
+            name="privileged",
+            cfg={
+                "height_sensor": {
+                    "fn": self.height_sensor_observation,
+                },
+                "linear_velocity": {
+                    "fn": lambda env: self.robot_manager.get_linear_velocity(),
+                },
+                "foot_contacts": {
+                    "fn": observations.contact_force,
+                    "params": {
+                        "contact_manager": self.foot_contact_manager,
+                    },
+                },
+                "control_force": {
+                    "fn": lambda env: self.robot.get_dofs_control_force(),
+                    "scale": 0.1,
+                },
+                "force": {
+                    "fn": lambda env: self.robot.get_dofs_force(),
+                    "scale": 0.1,
+                },
+            },
+        )
+
+    def build(self):
+        super().build()
+        self.foot_angle_mdp.build()
+
+    def step(self, actions: torch.Tensor):
+        """
+        Perform a step in the environment.
+        """
+        obs, reward, terminated, truncated, extras = super().step(actions)
+
+        # Logging
+        extras = self.log_curriculum(extras)
+        # extras = self.log_metrics(extras)
+        extras = self.log_actuator_metrics(extras)
+
+        # Finish up
+        return obs, reward, terminated, truncated, extras
+
+    def reset(self, envs_idx: list[int] | None = None):
+        if envs_idx is not None:
+            self._last_reset_mean_ep_length = (
+                self.episode_length[envs_idx].float().mean().item()
+            )
+        result = super().reset(envs_idx)
+        if envs_idx is not None:
+            self.update_curriculum()
+        return result
+
+    def get_joint_groups(self):
+        """
+        Get the link groups.
+        """
+        for joint in self.robot.joints:
+            if joint.type != gs.JOINT_TYPE.REVOLUTE:
+                continue
+            name = joint.name
+            match = re.match(r"^[R|L][1-4]_(Hip|Femur|Knee)$", name)
+            if match:
+                group = match.group(1).lower()
+                if group == "knee":
+                    group = "tibia"
+                self.joint_groups[group].append(joint.idx_local)
+
+    def log_curriculum(self, extras: dict):
+        extras["episode"]["Curriculum / curriculum_level"] = self.curriculum_level
+        extras["episode"]["Curriculum / max_velocity_x"] = (
+            self.vel_command_manager.range["lin_vel_x"][1]
+        )
+        extras["episode"]["Curriculum / max_velocity_y"] = (
+            self.vel_command_manager.range["lin_vel_y"][1]
+        )
+        # extras["episode"]["Curriculum / gait_weight"] = self.reward_manager[
+        #     "gait_diagonal"
+        # ].weight
+
+        return extras
+
+    def log_metrics(self, extras: dict):
+        extras["episode"]["Metrics / torque_avg"] = (
+            self.robot.get_dofs_force().abs().mean()
+        )
+        extras["episode"]["Metrics / torque_ctl_avg"] = (
+            self.robot.get_dofs_control_force().abs().mean()
+        )
+
+        action_rate = torch.abs(self.last_actions - self.actions)
+        extras["episode"]["Metrics / action_rate_avg"] = action_rate.mean()
+        extras["episode"]["Metrics / action_rate_max"] = action_rate.max()
+
+        action_rate = torch.abs(
+            self.action_manager.last_actions - self.action_manager.actions
+        )
+        extras["episode"]["Metrics / position_delta_avg"] = action_rate.mean()
+        extras["episode"]["Metrics / position_delta_max"] = action_rate.max()
+
+        return extras
+        
+    def log_actuator_metrics(self, extras: dict):
+        percentiles = [50, 90, 95, 99]
+        q_tensors = torch.tensor([p / 100.0 for p in percentiles], device=gs.device)
+
+        for group in self.joint_groups:
+            for idx in self.joint_groups[group]:
+                group_torque = self.robot.get_dofs_control_force(idx).abs()
+                # extras["episode"][f"Actuators / {group}_torque_avg"] = group_torque.mean()
+                # extras["episode"][f"Actuators / {group}_torque_max"] = group_torque.max()
+
+                # group_velocity = self.robot.get_dofs_velocity(idx).abs()
+                # extras["episode"][f"Actuators / {group}_velocity_avg"] = group_velocity.mean()
+                # extras["episode"][f"Actuators / {group}_velocity_max"] = group_velocity.max()
+
+                torque_pcts = torch.quantile(group_torque.float().flatten(), q_tensors)
+                for i, p in enumerate(percentiles):
+                    extras["episode"][f"Actuators / {group}_torque_p{p}"] = torque_pcts[
+                        i
+                    ]
+
+        return extras
+
+    def air_time_observation(self, env: GenesisEnv) -> float:
+        """Return the mid point of the current foot air time target range"""
+        params = self.reward_manager["foot_air_time"].params
+        mid_point = (params["time_threshold"] + params["time_threshold_max"]) / 2.0
+        obs = torch.zeros(env.num_envs, 1, device=gs.device)
+        obs[:] = mid_point
+        return obs
+    
+    def feet_max_air_time_reward(
+        self,
+        env: GenesisEnv,
+        max_air_time: float,
+    ) -> torch.Tensor:
+        """Penalise any foot that stays airborne longer than ``max_air_time``.
+
+        Unlike ``feet_air_time`` (which fires once at touchdown), this is a
+        continuous per-step penalty that grows linearly with every additional
+        second the foot remains in the air beyond the threshold.  This gives
+        the policy an ongoing gradient to bring a retracted leg back down,
+        which ``feet_air_time`` alone cannot provide.
+
+        Should be registered with a negative weight.  Set ``max_air_time``
+        comfortably above the expected swing duration (e.g. 1.5× the
+        ``time_threshold_max`` used in ``feet_air_time``) so that normal
+        stepping is unaffected.
+
+        Args:
+            env: The Genesis Forge environment.
+            max_air_time: Seconds a foot may be airborne before the penalty
+                          starts accumulating.
+
+        Returns:
+            Per-environment sum of excess air time across all feet,
+            shape ``(n_envs,)``.
+        """
+        excess = (self.foot_contact_manager.current_air_time - max_air_time).clamp(min=0.0)
+        return excess.sum(dim=-1)
+
+    def feet_max_air_time_reward(
+        self,
+        env: GenesisEnv,
+        max_air_time: float,
+    ) -> torch.Tensor:
+        """Penalise any foot that stays airborne longer than ``max_air_time``.
+
+        Unlike ``feet_air_time`` (which fires once at touchdown), this is a
+        continuous per-step penalty that grows linearly with every additional
+        second the foot remains in the air beyond the threshold.  This gives
+        the policy an ongoing gradient to bring a retracted leg back down,
+        which ``feet_air_time`` alone cannot provide.
+
+        Should be registered with a negative weight.  Set ``max_air_time``
+        comfortably above the expected swing duration (e.g. 1.5× the
+        ``time_threshold_max`` used in ``feet_air_time``) so that normal
+        stepping is unaffected.
+
+        Args:
+            env: The Genesis Forge environment.
+            max_air_time: Seconds a foot may be airborne before the penalty
+                          starts accumulating.
+
+        Returns:
+            Per-environment sum of excess air time across all feet,
+            shape ``(n_envs,)``.
+        """
+        excess = (self.foot_contact_manager.current_air_time - max_air_time).clamp(
+            min=0.0
+        )
+        return excess.sum(dim=-1)
+
+    def update_curriculum(self):
+        """
+        Check the curriculum
+        """
+        if self.curriculum_level >= CURRICULUM_MAX_LEVEL:
+            return
+        # Limit how often we check/update the curriculum
+        if self.step_count < self.next_curriculum_check_step:
+            return
+
+        # Collect samples over multiple resets to prevent momentary spikes causing a level up
+        if len(self.curriculum_samples) < CURRICULUM_AVG_SAMPLES:
+            cmd_linear_vel = self.reward_manager.last_episode_mean_reward(
+                "cmd_linear_vel", before_weight=True
+            )
+            self.curriculum_samples.append(cmd_linear_vel)
+            self.curriculum_ep_length_samples.append(self._last_reset_mean_ep_length)
+            if len(self.curriculum_samples) < CURRICULUM_AVG_SAMPLES:
+                return
+
+        cmd_linear_avg = sum(self.curriculum_samples) / len(self.curriculum_samples)
+        ep_length_avg = sum(self.curriculum_ep_length_samples) / len(
+            self.curriculum_ep_length_samples
+        )
+        min_ep_length = (
+            self.max_episode_length_steps * CURRICULUM_MIN_EPISODE_LENGTH_RATIO
+        )
+
+        # Level up when the policy both tracks commands well and survives long enough
+        if cmd_linear_avg > 0.8 and ep_length_avg >= min_ep_length:
+            self.curriculum_level += 1
+            self.vel_command_manager.increment_range(
+                "lin_vel_x", self.velocity_inc, limit=self.max_velocity_x
+            )
+            self.vel_command_manager.increment_range(
+                "lin_vel_y", self.velocity_inc, limit=self.max_velocity_y
+            )
+            self.vel_command_manager.increment_range(
+                "ang_vel_z", self.velocity_inc, limit=self.max_velocity_z
+            )
+
+            # Increase the gait reward
+            # self.reward_manager["gait_diagonal"].increment_weight(0.05, limit=0.30)
+            # self.reward_manager["gait_lateral"].increment_weight(0.05, limit=0.2)
+
+            # Cooldown: wait longer before the next level-up can be considered
+            self.next_curriculum_check_step = (
+                self.step_count + CURRICULUM_COOLDOWN_STEPS
+            )
+        else:
+            self.next_curriculum_check_step = (
+                self.step_count + CURRICULUM_CHECK_EVERY_STEPS
+            )
+
+        self.curriculum_samples = []
+        self.curriculum_ep_length_samples = []
+
+    def curriculum_terrain(self) -> Terrain:
+        """
+        Select the terrain type for the environment.
+        """
+        if self.terrain_type == "mixed" and self.curriculum_level <= 3:
+            return "flat_terrain"
+        return None
