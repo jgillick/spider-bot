@@ -4,57 +4,50 @@ This directory contains the Genesis implementation for training an 8-legged spid
 
 ## Installation
 
-### Local requirements
-
-Create a Python 3.11 virtual environment.
+This project uses [uv](https://docs.astral.sh/uv/) to manage dependencies
 
 ```bash
-pyenv virtualenv 3.11 spider-genesis
-pyenv activate spider-genesis
-```
-
-Install dependencies
-
-```bash
-pip install --upgrade pip
-pip install -r requirements.txt
+uv sync
 ```
 
 ## Run training
 
 ```bash
-python ./train.py
+uv run python -m spiderbot.locomotion.train
+```
+
+To run more parallel training environments on mixed terrain:
+
+```bash
+uv run python -m spiderbot.locomotion.train -t mixed -n 4048
 ```
 
 ## Play 
 
 You can play the trained agent with a Logitech gamepad.
 
-First, you need to make sure that HIDAPI is installed on your machine.
-https://github.com/libusb/hidapi?tab=readme-ov-file#installing-hidapi
+```bash
+uv run python -m spiderbot.locomotion.play ./logs/<TRAINING DIR>
+```
 
-Then:
+## Without uv (pip/python)
+
+Install dependencies
 
 ```bash
-python ./play_joystick.py ./logs/<TRAINING DIR>
+pip install -r requirements.txt
 ```
 
-### Troubleshooting
-
-If you have trouble connecting to the gamepad on linux, you might need to update the udev rules:
-
-Create the file: `/etc/udev/rules.d/100-hidapi.rules`
-
-```
-SUBSYSTEM=="usb", ATTR{idVendor}=="046d", ATTR{idProduct}=="c216", MODE="0660", GROUP="plugdev", TAG+="uaccess", TAG+="udev-acl", SYMLINK+="logitech_f310%n"
-KERNEL=="hidraw*", ATTRS{idVendor}=="046d", ATTRS{idProduct}=="c216", MODE="0660", GROUP="plugdev", TAG+="uaccess", TAG+="udev-acl"
-SUBSYSTEM=="usb", ATTR{idVendor}=="046d", ATTR{idProduct}=="c219", MODE="0660", GROUP="plugdev", TAG+="uaccess", TAG+="udev-acl", SYMLINK+="logitech_f710%n"
-KERNEL=="hidraw*", ATTRS{idVendor}=="046d", ATTRS{idProduct}=="c219", MODE="0660", GROUP="plugdev", TAG+="uaccess", TAG+="udev-acl"
-```
-
-Then
+## Run training
 
 ```bash
-sudo chmod 644 /etc/udev/rules.d/00-hidapi.rules
-sudo udevadm control --reload-rules
+python -m spiderbot.locomotion.train
+```
+
+## Play 
+
+You can play the trained agent with a Logitech gamepad.
+
+```bash
+python -m spiderbot.locomotion.play ./logs/<TRAINING DIR>
 ```

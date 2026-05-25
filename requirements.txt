@@ -1,10 +1,7 @@
-genesis-world>=0.3.14
+genesis-world>=0.4
 genesis-forge>=0.3.0
 torch
-# skrl[torch]
-# skrl @ https://github.com/jgillick/skrl
-git+https://github.com/Toni-SM/skrl.git@develop
 pyyaml
 hidapi
 tensorboardX
-rsl-rl-lib>=3.0
+rsl-rl-lib>=5.0
