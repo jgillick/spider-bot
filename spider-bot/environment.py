@@ -81,7 +81,7 @@ class SpiderRobotEnv(ManagedEnvironment):
         self.max_velocity_x = 1.5
         self.max_velocity_y = 1.0
         self.max_velocity_z = 1.0
-        self.velocity_inc = 0.025
+        self.velocity_inc = 0.0125
         if terrain == "flat":
             self.max_velocity_x = 1.2
             self.max_velocity_y = 1.0
@@ -115,7 +115,7 @@ class SpiderRobotEnv(ManagedEnvironment):
                 enable_self_collision=True,
                 enable_neutral_collision=True,
                 multiplier_collision_broad_phase=32,
-                max_collision_pairs=20,
+                max_collision_pairs=35,
             ),
         )
 
@@ -344,19 +344,32 @@ class SpiderRobotEnv(ManagedEnvironment):
         self.reward_manager = RewardManager(
             self,
             cfg={
-                "gait": {
-                    "weight": 0.25,
-                    "fn": GaitReward,
-                    "params": {
-                        "contact_manager": self.foot_contact_manager,
-                        "foot_groups": [
-                            ["R1_Foot", "L2_Foot"],
-                            ["R2_Foot", "L1_Foot"],
-                            ["R3_Foot", "L4_Foot"],
-                            ["R4_Foot", "L3_Foot"],
-                        ],
-                    },
-                },
+                # "gait_diagonal": {
+                #     "weight": 0.18,
+                #     "fn": GaitReward,
+                #     "params": {
+                #         "contact_manager": self.foot_contact_manager,
+                #         "foot_groups": [
+                #             ["R1_Foot", "L2_Foot"],
+                #             ["R2_Foot", "L1_Foot"],
+                #             ["R3_Foot", "L4_Foot"],
+                #             ["R4_Foot", "L3_Foot"],
+                #         ],
+                #     },
+                # },
+                # "gait_lateral": {
+                #     "weight": 0.07,
+                #     "fn": GaitReward,
+                #     "params": {
+                #         "contact_manager": self.foot_contact_manager,
+                #         "foot_groups": [
+                #             ["R1_Foot", "R2_Foot"],
+                #             ["R3_Foot", "R4_Foot"],
+                #             ["L1_Foot", "L2_Foot"],
+                #             ["L3_Foot", "L4_Foot"],
+                #         ],
+                #     },
+                # },
                 "cmd_linear_vel": {
                     "weight": 1.0,
                     "fn": rewards.command_tracking_lin_vel,
@@ -615,9 +628,9 @@ class SpiderRobotEnv(ManagedEnvironment):
         extras["episode"]["Curriculum / max_velocity_y"] = (
             self.vel_command_manager.range["lin_vel_y"][1]
         )
-        extras["episode"]["Curriculum / gait_weight"] = self.reward_manager[
-            "gait"
-        ].weight
+        # extras["episode"]["Curriculum / gait_weight"] = self.reward_manager[
+        #     "gait_diagonal"
+        # ].weight
 
         return extras
 
@@ -800,7 +813,8 @@ class SpiderRobotEnv(ManagedEnvironment):
             )
 
             # Increase the gait reward
-            self.reward_manager["gait"].increment_weight(0.05, limit=0.5)
+            # self.reward_manager["gait_diagonal"].increment_weight(0.05, limit=0.30)
+            # self.reward_manager["gait_lateral"].increment_weight(0.05, limit=0.2)
 
             # Cooldown: wait longer before the next level-up can be considered
             self.next_curriculum_check_step = (
