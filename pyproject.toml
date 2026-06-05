@@ -25,5 +25,8 @@ genesis-forge = { path = "../genesis-forge" }
 [tool.uv]
 package = true
 
+[tool.setuptools.packages.find]
+exclude = ["model*", "archive*", "hardware*"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]

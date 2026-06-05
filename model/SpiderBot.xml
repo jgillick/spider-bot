@@ -12,29 +12,29 @@
     <!-- Right leg joints-->
     <motor name="R1_Hip" joint="R1_Hip" />
     <motor name="R1_Femur" joint="R1_Femur" />
-    <motor name="R1_Knee" joint="R1_Knee" />
+    <motor name="R1_Tibia" joint="R1_Tibia" />
     <motor name="R2_Hip" joint="R2_Hip" />
     <motor name="R2_Femur" joint="R2_Femur" />
-    <motor name="R2_Knee" joint="R2_Knee" />
+    <motor name="R2_Tibia" joint="R2_Tibia" />
     <motor name="R3_Hip" joint="R3_Hip" />
     <motor name="R3_Femur" joint="R3_Femur" />
-    <motor name="R3_Knee" joint="R3_Knee" />
+    <motor name="R3_Tibia" joint="R3_Tibia" />
     <motor name="R4_Hip" joint="R4_Hip" />
     <motor name="R4_Femur" joint="R4_Femur" />
-    <motor name="R4_Knee" joint="R4_Knee" />
+    <motor name="R4_Tibia" joint="R4_Tibia" />
 
     <!-- Left leg joints -->
     <motor name="L1_Hip" joint="L1_Hip" />
     <motor name="L1_Femur" joint="L1_Femur" />
-    <motor name="L1_Knee" joint="L1_Knee" />
+    <motor name="L1_Tibia" joint="L1_Tibia" />
     <motor name="L2_Hip" joint="L2_Hip" />
     <motor name="L2_Femur" joint="L2_Femur" />
-    <motor name="L2_Knee" joint="L2_Knee" />
+    <motor name="L2_Tibia" joint="L2_Tibia" />
     <motor name="L3_Hip" joint="L3_Hip" />
     <motor name="L3_Femur" joint="L3_Femur" />
-    <motor name="L3_Knee" joint="L3_Knee" />
+    <motor name="L3_Tibia" joint="L3_Tibia" />
     <motor name="L4_Hip" joint="L4_Hip" />
     <motor name="L4_Femur" joint="L4_Femur" />
-    <motor name="L4_Knee" joint="L4_Knee" />
+    <motor name="L4_Tibia" joint="L4_Tibia" />
   </actuator>
 </mujoco>
