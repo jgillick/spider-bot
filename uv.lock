@@ -181,11 +181,11 @@ wheels = [
 
 [[package]]
 name = "certifi"
-version = "2026.4.22"
+version = "2026.5.20"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/25/ee/6caf7a40c36a1220410afe15a1cc64993a1f864871f698c0f93acb72842a/certifi-2026.4.22.tar.gz", hash = "sha256:8d455352a37b71bf76a79caa83a3d6c25afee4a385d632127b6afb3963f1c580", size = 137077, upload-time = "2026-04-22T11:26:11.191Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f3/ce/ee2ecad540810a79593028e88299baeae54d346cc7a0d94b6199988b89b1/certifi-2026.5.20.tar.gz", hash = "sha256:69dea482ab64caa7b9f6aba1c6bf48bb6a5448d1c0f1b17ab42ad8c763a5344d", size = 135422, upload-time = "2026-05-20T11:46:50.073Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/22/30/7cd8fdcdfbc5b869528b079bfb76dcdf6056b1a2097a662e5e8c04f42965/certifi-2026.4.22-py3-none-any.whl", hash = "sha256:3cb2210c8f88ba2318d29b0388d1023c8492ff72ecdde4ebdaddbb13a31b1c4a", size = 135707, upload-time = "2026-04-22T11:26:09.372Z" },
+    { url = "https://files.pythonhosted.org/packages/59/8c/57e832b7af6d7c5abe66eb3fbe3a3a32f4d11ea23a1aa7131371035be991/certifi-2026.5.20-py3-none-any.whl", hash = "sha256:3c52e209ba0a4ad7aebe60436a4ab349c39e1e602e8c134221e546902ad25897", size = 134134, upload-time = "2026-05-20T11:46:48.578Z" },
 ]
 
 [[package]]
@@ -625,11 +625,11 @@ wheels = [
 
 [[package]]
 name = "docutils"
-version = "0.22.4"
+version = "0.23"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/ae/b6/03bb70946330e88ffec97aefd3ea75ba575cb2e762061e0e62a213befee8/docutils-0.22.4.tar.gz", hash = "sha256:4db53b1fde9abecbb74d91230d32ab626d94f6badfc575d6db9194a49df29968", size = 2291750, upload-time = "2025-12-18T19:00:26.443Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/39/a4/5180d9afc57e8fca05601dd652bdff19604c218814037fe90ffc7625a50a/docutils-0.23.tar.gz", hash = "sha256:746f5060322511280a1e50eb76846ed6bf2342984b2ac04dc42caa1a8d78799e", size = 2303823, upload-time = "2026-05-27T17:41:06.934Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/02/10/5da547df7a391dcde17f59520a231527b8571e6f46fc8efb02ccb370ab12/docutils-0.22.4-py3-none-any.whl", hash = "sha256:d0013f540772d1420576855455d050a2180186c91c15779301ac2ccb3eeb68de", size = 633196, upload-time = "2025-12-18T19:00:18.077Z" },
+    { url = "https://files.pythonhosted.org/packages/32/91/30151a39f7570f448ed84529390628a651d7f27c87d73c9b887f8189695e/docutils-0.23-py3-none-any.whl", hash = "sha256:25d013af9bf23bc1c7b2b093dff4208166c53a94786c9e447808335ef1185fea", size = 634701, upload-time = "2026-05-27T17:40:58.442Z" },
 ]
 
 [[package]]
@@ -915,8 +915,8 @@ wheels = [
 
 [[package]]
 name = "genesis-forge"
-version = "0.5.0"
-source = { directory = "../genesis-forge" }
+version = "0.4.0"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "deprecated" },
     { name = "genesis-world" },
@@ -928,23 +928,14 @@ dependencies = [
     { name = "torch" },
     { name = "twine" },
 ]
-
-[package.metadata]
-requires-dist = [
-    { name = "deprecated" },
-    { name = "genesis-world", specifier = "~=1.0.0" },
-    { name = "gymnasium" },
-    { name = "pysdl2" },
-    { name = "pysdl2-dll" },
-    { name = "skrl", extras = ["torch"] },
-    { name = "tensordict" },
-    { name = "torch", specifier = ">=2.10.0" },
-    { name = "twine", specifier = ">=6.2.0" },
+sdist = { url = "https://files.pythonhosted.org/packages/fc/25/fd1992c36f0c6965f7d40c69a65eae697564c2d4749f52b9cb8d2717b0c5/genesis_forge-0.4.0.tar.gz", hash = "sha256:54352dd35daabb79dfcb47d6df97f1ccd83eb7e38607f00a2cf0b9bab97102d2", size = 30581348, upload-time = "2026-04-28T06:19:34.889Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/28/6a/cec16cdbc48e7d1ee8f393b1d932f4bd2a245ed3fbe31c8d1bb423ea7dea/genesis_forge-0.4.0-py3-none-any.whl", hash = "sha256:b38d077ab806bc8ce7581751c396ff358f522b190720aab8ab4b41bf8af0b044", size = 81279, upload-time = "2026-04-28T06:19:08.709Z" },
 ]
 
 [[package]]
 name = "genesis-world"
-version = "1.0.0"
+version = "0.4.7"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "coacd" },
@@ -981,7 +972,7 @@ dependencies = [
     { name = "z3-solver" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/2a/59/1d9257f7e5687c448f7fa251193e17e487ed859018350c14331785af1717/genesis_world-1.0.0-py3-none-any.whl", hash = "sha256:202273df5f8b26b24f6abeaf0f1efeef77c195b10d2104513414f0cb853d34a5", size = 82957659, upload-time = "2026-05-27T15:40:19.688Z" },
+    { url = "https://files.pythonhosted.org/packages/2e/be/509899be5536b340a436e7bacbe130c72b01b59f040451e8424df5c0b0f2/genesis_world-0.4.7-py3-none-any.whl", hash = "sha256:0cbfab329272a6275fd6c21e2d9ee0052392b4f1c995f02ee2d3362e10732cf2", size = 82635227, upload-time = "2026-05-16T21:32:23.606Z" },
 ]
 
 [[package]]
@@ -1758,11 +1749,11 @@ wheels = [
 
 [[package]]
 name = "more-itertools"
-version = "11.0.2"
+version = "11.1.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/a2/f7/139d22fef48ac78127d18e01d80cf1be40236ae489769d17f35c3d425293/more_itertools-11.0.2.tar.gz", hash = "sha256:392a9e1e362cbc106a2457d37cabf9b36e5e12efd4ebff1654630e76597df804", size = 144659, upload-time = "2026-04-09T15:01:33.297Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/de/1d/f4da6f02cdffe04d6362210b807146a26044c88d839208aec273bb0d9184/more_itertools-11.1.0.tar.gz", hash = "sha256:48e8f4d9e7e5878571ecf6f2b4e57634f93cd474cc8cfbd2376f2d11b396e30d", size = 145772, upload-time = "2026-05-22T14:14:29.909Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/cb/98/6af411189d9413534c3eb691182bff1f5c6d44ed2f93f2edfe52a1bbceb8/more_itertools-11.0.2-py3-none-any.whl", hash = "sha256:6e35b35f818b01f691643c6c611bc0902f2e92b46c18fffa77ae1e7c46e912e4", size = 71939, upload-time = "2026-04-09T15:01:32.21Z" },
+    { url = "https://files.pythonhosted.org/packages/e8/3d/1087453384dbde46a8c7f9356eead2c58be8a7bf156bca40243377c85715/more_itertools-11.1.0-py3-none-any.whl", hash = "sha256:4b65538ae22f6fed0ce4874efd317463a7489796a0939fa66824dd542125a192", size = 72226, upload-time = "2026-05-22T14:14:28.824Z" },
 ]
 
 [[package]]
@@ -3522,7 +3513,7 @@ wheels = [
 [[package]]
 name = "spiderbot"
 version = "0.1.0"
-source = { editable = "." }
+source = { virtual = "." }
 dependencies = [
     { name = "genesis-forge" },
     { name = "genesis-world" },
@@ -3540,14 +3531,14 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "genesis-forge", directory = "../genesis-forge" },
+    { name = "genesis-forge", specifier = ">=0.3.0" },
     { name = "genesis-world", specifier = ">=0.4.0" },
     { name = "hidapi", specifier = ">=0.15.0" },
     { name = "numpy", specifier = ">=1.24.0" },
     { name = "odrive", specifier = ">=0.6.7,<0.7.0" },
     { name = "python-can", extras = ["serial"], specifier = ">=4.6.1" },
     { name = "pyyaml", specifier = ">=6.0.3" },
-    { name = "rsl-rl-lib", specifier = ">=4.0.1" },
+    { name = "rsl-rl-lib", specifier = "~=5.0" },
     { name = "scipy", specifier = ">=1.11.0" },
     { name = "setuptools", specifier = "<81" },
     { name = "tensorboard", specifier = ">=2.20.0" },

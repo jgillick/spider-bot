@@ -1,17 +1,8 @@
-"""
-Simplified Spider Robot Environment with Curriculum Learning
-Focuses on core objectives with progressive difficulty
-"""
-
-import os
 import re
 import torch
-import numpy as np
-from PIL import Image
-from typing import Literal, TypedDict
 import genesis as gs
 
-from genesis_forge import ManagedEnvironment, GenesisEnv
+from genesis_forge import GenesisEnv
 from genesis_forge.managers import (
     PositionActionManager,
     RewardManager,
@@ -26,65 +17,46 @@ from genesis_forge.managers import (
 from genesis_forge.managers.actuator import ActuatorManager, NoisyValue
 from genesis_forge.mdp import reset, rewards, terminations, observations
 
-from foot_angle_mdp import FootAngleMdp
-from foot_clearance_mdp import FootClearanceMdp
-from gait_reward import GaitReward
 
 
-THIS_DIR = os.path.dirname(os.path.abspath(__file__))
-SPIDER_XML = os.path.abspath(os.path.join(THIS_DIR, "../model/v2/SpiderBot.xml"))
+from spiderbot.environment import BaseSpiderRobotEnv, Terrain, EnvMode
+from spiderbot.mdp.foot_angle import FootAngleMdp
+from spiderbot.mdp.foot_clearance import FootClearanceMdp
+from spiderbot.mdp.gait_reward import GaitReward
+
 CURRICULUM_CHECK_EVERY_STEPS = 2400
 CURRICULUM_AVG_SAMPLES = 10
 CURRICULUM_MAX_LEVEL = 50
 CURRICULUM_MIN_EPISODE_LENGTH_RATIO = 0.6
 CURRICULUM_COOLDOWN_STEPS = 4800
 
-Terrain = Literal["flat", "rough", "mixed"]
-EnvMode = Literal["train", "eval", "play"]
-
-
-class IncConfig(TypedDict):
-    inc: float
-    limit: float | None
-
-
-class SpiderRobotEnv(ManagedEnvironment):
+class SpiderRobotEnv(BaseSpiderRobotEnv):
     """
-    SpiderBot environment for Genesis
+    SpiderBot locomotion environment
     """
 
     def __init__(
         self,
         num_envs: int = 1,
         dt: float = 1 / 50,
-        max_episode_length_s: int | None = 6,
+        max_episode_length_sec: int | None = 6,
         headless: bool = True,
         mode: EnvMode = "train",
         terrain: Terrain = "flat",
         height_sensor: bool = False,
     ):
-        super().__init__(
-            num_envs=num_envs,
-            dt=dt,
-            max_episode_length_sec=max_episode_length_s,
-            # max_episode_random_scaling=0.1,
-        )
-        self.headless = headless
-        self.mode = mode
-        self.use_height_sensor = height_sensor
-        self.curriculum_level = 1
-        self.curriculum_samples = []
-        self.curriculum_ep_length_samples = []
-        self.next_curriculum_check_step = CURRICULUM_CHECK_EVERY_STEPS
-        self.terrain_type = terrain
         self.joint_groups = {
             "hip": [],
             "femur": [],
             "tibia": [],
         }
+        self.curriculum_level = 1
+        self.curriculum_samples = []
+        self.curriculum_ep_length_samples = []
+        self.next_curriculum_check_step = CURRICULUM_CHECK_EVERY_STEPS
 
-        self.max_velocity_x = 1.0
-        self.max_velocity_y = 0.7
+        self.max_velocity_x = 1.5
+        self.max_velocity_y = 1.0
         self.max_velocity_z = 1.0
         self.velocity_inc = 0.0125
         if terrain == "flat":
@@ -92,8 +64,12 @@ class SpiderRobotEnv(ManagedEnvironment):
             self.max_velocity_y = 1.0
             self.max_velocity_z = 1.0
             self.velocity_inc = 0.025
-
-        self.construct_scene(terrain)
+        
+        super().__init__(
+            num_envs=num_envs,
+            dt=dt,
+            max_episode_length_sec=max_episode_length_sec,
+        )
 
     """
     Operations
@@ -103,171 +79,18 @@ class SpiderRobotEnv(ManagedEnvironment):
         """
         Construct the environment scene.
         """
-        self.scene = gs.Scene(
-            show_viewer=not self.headless,
-            sim_options=gs.options.SimOptions(dt=self.dt, substeps=4),
-            viewer_options=gs.options.ViewerOptions(
-                camera_pos=(-2.5, -1.5, 2.0),
-                camera_lookat=(0.0, 0.0, 0.0),
-                camera_fov=40,
-                max_FPS=60,
-            ),
-            vis_options=gs.options.VisOptions(rendered_envs_idx=[0]),
-            rigid_options=gs.options.RigidOptions(
-                constraint_solver=gs.constraint_solver.Newton,
-                enable_collision=True,
-                enable_joint_limit=True,
-                enable_self_collision=True,
-                enable_neutral_collision=True,
-                max_collision_pairs=35,
-            ),
-        )
-
-        # Create terrain
-        checker_image = np.array(Image.open("./assets/checker.png"))
-        tiled_image = np.tile(checker_image, (24, 24, 1))
-        if terrain_type == "flat":
-            self.terrain = self.scene.add_entity(gs.morphs.Plane())
-        elif terrain_type == "rough":
-            self.terrain = self.scene.add_entity(
-                surface=gs.surfaces.Default(
-                    diffuse_texture=gs.textures.ImageTexture(
-                        image_array=tiled_image,
-                    )
-                ),
-                morph=gs.morphs.Terrain(
-                    pos=(-12, -12, 0),
-                    n_subterrains=(1, 1),
-                    subterrain_size=(24, 24),
-                    vertical_scale=0.001,
-                    subterrain_types=[["random_uniform_terrain"]],
-                    subterrain_parameters={
-                        "random_uniform_terrain": {
-                            "min_height": 0.0,
-                            "max_height": 0.08,
-                            "step": 0.04,
-                            "downsampled_scale": 0.25,
-                        },
-                    },
-                ),
-            )
-        elif terrain_type == "mixed":
-            self.terrain = self.scene.add_entity(
-                surface=gs.surfaces.Default(
-                    diffuse_texture=gs.textures.ImageTexture(
-                        image_array=tiled_image,
-                    )
-                ),
-                morph=gs.morphs.Terrain(
-                    n_subterrains=(1, 2),
-                    subterrain_size=(24, 12),
-                    subterrain_types=[
-                        [
-                            "flat_terrain",
-                            # "discrete_obstacles_terrain",
-                            # "pyramid_stairs_terrain",
-                            "random_uniform_terrain",
-                        ],
-                    ],
-                    subterrain_parameters={
-                        "random_uniform_terrain": {
-                            "min_height": 0.0,
-                            "max_height": 0.08,
-                            "step": 0.04,
-                            "downsampled_scale": 0.25,
-                        },
-                    },
-                ),
-            )
-
-        # Robot
-        self.robot = self.scene.add_entity(
-            gs.morphs.MJCF(
-                file=SPIDER_XML,
-                pos=[0.0, 0.0, 0.118],
-                quat=[1.0, 0.0, 0.0, 0.0],
-            ),
-        )
+        super().construct_scene(terrain_type)
         self.get_joint_groups()
-
-        # IMU Sensor
-        self.imu = self.scene.add_sensor(
-            gs.sensors.IMU(
-                entity_idx=self.robot.idx,
-                pos_offset=(0.24, 0.0, 0.0),
-                euler_offset=(0.0, 0.0, 0.0),
-                acc_noise=(0.01, 0.01, 0.01),
-                gyro_noise=(0.01, 0.01, 0.01),
-                acc_random_walk=(0.001, 0.001, 0.001),
-                gyro_random_walk=(0.001, 0.001, 0.001),
-                delay=self.dt,
-                jitter=self.dt,
-            )
-        )
-
-        # Height sensor
-        self.height_sensor = None
-        if self.use_height_sensor:
-            self.height_sensor = self.scene.add_sensor(
-                gs.sensors.Lidar(
-                    pattern=gs.sensors.GridPattern(resolution=0.2, size=(0.8, 0.8)),
-                    entity_idx=self.robot.idx,
-                    pos_offset=(0.24, 0.0, 0.0),
-                    euler_offset=(0.0, 0.0, 0.0),
-                )
-            )
-
-        # Add camera
-        self.camera = self.scene.add_camera(
-            pos=(-2.5, -1.5, 1.0),
-            lookat=(0.0, 0.0, 0.0),
-            res=(1280, 720),
-            fov=40,
-            env_idx=0,
-            debug=True,
-            GUI=self.mode == "play",
-        )
-        self.camera.follow_entity(self.robot, smoothing=0.05)
-
         return self.scene
-    
-    def get_joint_groups(self):
-        """
-        Get the link groups.
-        """
-        for joint in self.robot.joints:
-            if joint.type != gs.JOINT_TYPE.REVOLUTE:
-                continue
-            name = joint.name
-            match = re.match(r"^Leg[1-8]_(Hip|Femur|Tibia)$", name)
-            if match:
-                group = match.group(1).lower()
-                self.joint_groups[group].append(joint.idx_local)
-
-    def get_joint_groups(self):
-        """
-        Get the link groups.
-        """
-        for joint in self.robot.joints:
-            if joint.type != gs.JOINT_TYPE.REVOLUTE:
-                continue
-            name = joint.name
-            match = re.match(r"^[R|L][1-4]_(Hip|Femur|Knee)$", name)
-            if match:
-                group = match.group(1).lower()
-                if group == "knee":
-                    group = "tibia"
-                self.joint_groups[group].append(joint.idx_local)
 
     def config(self):
         """
         Configure the environment managers.
         """
-        # Foot angle monitor
-        self.foot_angle_mdp = FootAngleMdp(self, foot_name_pattern="(R|L)[1-4]_Foot")
+        super().config()
 
-        # Terrain
-        self.terrain_manager = TerrainManager(self, terrain_attr="terrain")
+        # Foot angle monitor
+        self.foot_angle_mdp = FootAngleMdp(self, foot_name_pattern="[RL][1-4]_Foot")
 
         ##
         # Robot manager
@@ -292,23 +115,23 @@ class SpiderRobotEnv(ManagedEnvironment):
             self,
             joint_names=".*",
             default_pos={
-                "R1_Hip": 1.5,
-                "R2_Hip": 0.9,
-                "R3_Hip": -0.9,
-                "R4_Hip": -1.5,
-                "L1_Hip": -1.5,
-                "L2_Hip": -0.9,
-                "L3_Hip": 0.9,
-                "L4_Hip": 1.5,
+                "R1_Hip": 0.9,
+                "R2_Hip": 0.2,
+                "R3_Hip": -0.2,
+                "R4_Hip": -0.9,
+                "L1_Hip": -0.9,
+                "L2_Hip": -0.2,
+                "L3_Hip": 0.2,
+                "L4_Hip": 0.0,
                 "[RL][1-4]_Femur": -0.4,
                 "[RL][1-4]_Knee": 0.5,
             },
-            kp=NoisyValue(30.0, 5),
-            kv=NoisyValue(7.5, 1.5),
-            max_force=NoisyValue(15.0, 1.0),
+            kp=NoisyValue(30, 5),
+            kv=NoisyValue(2.0, 0.5),
+            max_force=NoisyValue(10.0, 1.0),
             frictionloss=NoisyValue(0.1, 0.05),
-            armature=NoisyValue(0.0020, 0.0001),
             damping=NoisyValue(0.0381, 0.0001),
+            armature=0.0020,
         )
         # self.action_manager = PositionWithinLimitsActionManager(
         #     self,
@@ -331,7 +154,7 @@ class SpiderRobotEnv(ManagedEnvironment):
         # Foot/step contact manager
         self.foot_contact_manager = ContactManager(
             self,
-            link_names=["(R|L)[1-4]_Foot"],
+            link_names=["[RL][1-4]_Foot"],
             with_entity_attr="terrain",
             track_air_time=True,
         )
@@ -341,17 +164,16 @@ class SpiderRobotEnv(ManagedEnvironment):
             self,
             entity_attr="robot",
             link_names=[
-                "(R|L)[1-4]_Femur",
-                "(R|L)[1-4]_Tibia",
-                "(R|L)[1-4]_Foot",
+                "[RL][1-4]_Femur",
+                "[RL][1-4]_Tibia",
+                "[RL][1-4]_Foot",
                 ".*_Motor",
             ],
             with_entity_attr="robot",
             with_links_names=[
-                "Body",
-                "(R|L)[1-4]_Femur",
-                "(R|L)[1-4]_Tibia",
-                "(R|L)[1-4]_Foot",
+                "[RL][1-4]_Femur",
+                "[RL][1-4]_Tibia",
+                "[RL][1-4]_Foot",
                 ".*_Motor",
             ],
         )
@@ -377,19 +199,32 @@ class SpiderRobotEnv(ManagedEnvironment):
         self.reward_manager = RewardManager(
             self,
             cfg={
-                "gait": {
-                    "weight": 0.25,
-                    "fn": GaitReward,
-                    "params": {
-                        "contact_manager": self.foot_contact_manager,
-                        "foot_groups": [
-                            ["R1_Foot", "L2_Foot"],
-                            ["R2_Foot", "L1_Foot"],
-                            ["R3_Foot", "L4_Foot"],
-                            ["R4_Foot", "L3_Foot"],
-                        ],
-                    },
-                },
+                # "gait_diagonal": {
+                #     "weight": 0.18,
+                #     "fn": GaitReward,
+                #     "params": {
+                #         "contact_manager": self.foot_contact_manager,
+                #         "foot_groups": [
+                #             ["R1_Foot", "L2_Foot"],
+                #             ["R2_Foot", "L1_Foot"],
+                #             ["R3_Foot", "L4_Foot"],
+                #             ["R4_Foot", "L3_Foot"],
+                #         ],
+                #     },
+                # },
+                # "gait_lateral": {
+                #     "weight": 0.07,
+                #     "fn": GaitReward,
+                #     "params": {
+                #         "contact_manager": self.foot_contact_manager,
+                #         "foot_groups": [
+                #             ["R1_Foot", "R2_Foot"],
+                #             ["R3_Foot", "R4_Foot"],
+                #             ["L1_Foot", "L2_Foot"],
+                #             ["L3_Foot", "L4_Foot"],
+                #         ],
+                #     },
+                # },
                 "cmd_linear_vel": {
                     "weight": 1.0,
                     "fn": rewards.command_tracking_lin_vel,
@@ -408,7 +243,7 @@ class SpiderRobotEnv(ManagedEnvironment):
                     "weight": -30.0,
                     "fn": rewards.base_height,
                     "params": {
-                        "target_height": 0.13,
+                        "target_height": 0.12,
                         "terrain_manager": self.terrain_manager,
                     },
                 },
@@ -592,12 +427,10 @@ class SpiderRobotEnv(ManagedEnvironment):
         """
         obs, reward, terminated, truncated, extras = super().step(actions)
 
+        # Logging
         extras = self.log_curriculum(extras)
         # extras = self.log_metrics(extras)
-        # extras = self.log_actuator_metrics(extras)
-
-        if self.mode == "play":
-            self.camera.render()
+        extras = self.log_actuator_metrics(extras)
 
         # Finish up
         return obs, reward, terminated, truncated, extras
@@ -612,6 +445,21 @@ class SpiderRobotEnv(ManagedEnvironment):
             self.update_curriculum()
         return result
 
+    def get_joint_groups(self):
+        """
+        Get the link groups.
+        """
+        for joint in self.robot.joints:
+            if joint.type != gs.JOINT_TYPE.REVOLUTE:
+                continue
+            name = joint.name
+            match = re.match(r"^[R|L][1-4]_(Hip|Femur|Knee)$", name)
+            if match:
+                group = match.group(1).lower()
+                if group == "knee":
+                    group = "tibia"
+                self.joint_groups[group].append(joint.idx_local)
+
     def log_curriculum(self, extras: dict):
         extras["episode"]["Curriculum / curriculum_level"] = self.curriculum_level
         extras["episode"]["Curriculum / max_velocity_x"] = (
@@ -620,9 +468,9 @@ class SpiderRobotEnv(ManagedEnvironment):
         extras["episode"]["Curriculum / max_velocity_y"] = (
             self.vel_command_manager.range["lin_vel_y"][1]
         )
-        extras["episode"]["Curriculum / gait_weight"] = self.reward_manager[
-            "gait"
-        ].weight
+        # extras["episode"]["Curriculum / gait_weight"] = self.reward_manager[
+        #     "gait_diagonal"
+        # ].weight
 
         return extras
 
@@ -668,20 +516,6 @@ class SpiderRobotEnv(ManagedEnvironment):
 
         return extras
 
-    def height_sensor_observation(self, env: GenesisEnv) -> torch.Tensor:
-        # Get height above terrain from simulator
-        if self.height_sensor is None:
-            base_pos = self.robot.get_pos()
-            height_offset = self.terrain_manager.get_terrain_height(
-                base_pos[:, 0], base_pos[:, 1]
-            )
-            height = base_pos[:, 2] - height_offset
-            return height.unsqueeze(-1)  # (n_envs, 1)
-
-        # Get the height grid from lidar sensor
-        heights = self.height_sensor.read().distances
-        return heights.flatten(start_dim=-2)  # (n_envs, 5, 5) -> (n_envs, 25)
-
     def air_time_observation(self, env: GenesisEnv) -> float:
         """Return the mid point of the current foot air time target range"""
         params = self.reward_manager["foot_air_time"].params
@@ -720,17 +554,6 @@ class SpiderRobotEnv(ManagedEnvironment):
         excess = (self.foot_contact_manager.current_air_time - max_air_time).clamp(min=0.0)
         return excess.sum(dim=-1)
 
-    def imu_observation(self, env: GenesisEnv) -> torch.Tensor:
-        """
-        Makes an IMU reading and returns the concatenated linear acceleration and angular velocity readings.
-
-        Returns:
-            torch.Tensor: Shape (n_envs, 6): [lin_acc_xyz, ang_vel_xyz] per env.
-                        Shape: (num_envs, 6)
-        """
-        value = self.imu.read()
-        return torch.cat([value.lin_acc, value.ang_vel], dim=-1)
-
     def feet_max_air_time_reward(
         self,
         env: GenesisEnv,
@@ -762,17 +585,6 @@ class SpiderRobotEnv(ManagedEnvironment):
             min=0.0
         )
         return excess.sum(dim=-1)
-
-    def imu_observation(self, env: GenesisEnv) -> torch.Tensor:
-        """
-        Makes an IMU reading and returns the concatenated linear acceleration and angular velocity readings.
-
-        Returns:
-            torch.Tensor: Shape (n_envs, 6): [lin_acc_xyz, ang_vel_xyz] per env.
-                        Shape: (num_envs, 6)
-        """
-        value = self.imu.read()
-        return torch.cat([value.lin_acc, value.ang_vel], dim=-1)
 
     def update_curriculum(self):
         """
@@ -816,7 +628,8 @@ class SpiderRobotEnv(ManagedEnvironment):
             )
 
             # Increase the gait reward
-            self.reward_manager["gait"].increment_weight(0.05, limit=0.5)
+            # self.reward_manager["gait_diagonal"].increment_weight(0.05, limit=0.30)
+            # self.reward_manager["gait_lateral"].increment_weight(0.05, limit=0.2)
 
             # Cooldown: wait longer before the next level-up can be considered
             self.next_curriculum_check_step = (

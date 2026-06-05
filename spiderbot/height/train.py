@@ -13,7 +13,7 @@ from genesis_forge.wrappers import (
     VideoWrapper,
     RslRlWrapper,
 )
-from environment import SpiderRobotEnv
+from environment import SpiderRobotHeightEnv
 
 try:
     try:
@@ -26,7 +26,7 @@ except (metadata.PackageNotFoundError, ImportError) as e:
     raise ImportError("Please install install 'rsl-rl-lib>=2.2.4'.") from e
 from rsl_rl.runners import OnPolicyRunner
 
-DEFAULT_RSL_CONFIG = "./rsl_rl/ppo.yaml"
+DEFAULT_RSL_CONFIG = "./ppo.yaml"
 
 # Training parameters
 TOTAL_BATCH = 196_608
@@ -35,13 +35,10 @@ TARGET_MINI_BATCH = 24_576
 
 
 parser = argparse.ArgumentParser(add_help=True)
-parser.add_argument("-n", "--num_envs", type=int, default=4096)
-parser.add_argument("-i", "--max_iterations", type=int, default=8_000)
+parser.add_argument("-n", "--num_envs", type=int, default=2096)
+parser.add_argument("-i", "--max_iterations", type=int, default=2_000)
 parser.add_argument("-d", "--device", type=str, default="gpu")
 parser.add_argument("-c", "--config", type=str, default=DEFAULT_RSL_CONFIG)
-parser.add_argument(
-    "-t", "--terrain", type=str, default="flat", help="Set terrain: flat, rough, mixed"
-)
 parser.add_argument(
     "--lidar",
     action="store_true",
@@ -87,14 +84,12 @@ def main():
         torch.set_default_device("cpu")
 
     # Logging directory
-    log_base_dir = "./logs/rsl"
+    log_base_dir = "./logs"
     experiment_name = datetime.now().strftime("%Y%m%d_%H%M%S")
     if args.experiment_name:
         experiment_name = args.experiment_name
-    else:
-        experiment_name += f"_{args.terrain}"
-        if args.lidar:
-            experiment_name += "_lidar"
+    elif args.lidar:
+        experiment_name += "_lidar"
     log_path = os.path.join(log_base_dir, experiment_name)
     if os.path.exists(log_path):
         shutil.rmtree(log_path)
@@ -107,19 +102,18 @@ def main():
 
     # Save snapshot
     pickle.dump(
-        {"args": args, "rsl_rl": cfg},
+        {"args": args, "seed": seed, "rsl_rl": cfg},
         open(os.path.join(log_path, "cfgs.pkl"), "wb"),
     )
     os.makedirs(os.path.join(log_path, "code"), exist_ok=True)
-    shutil.copy("train_rsl.py", os.path.join(log_path, "code", "train_rsl.py"))
+    shutil.copy("train.py", os.path.join(log_path, "code", "train_rsl.py"))
     shutil.copy("environment.py", os.path.join(log_path, "code", "environment.py"))
 
     # Create environment
     gs.init(logging_level="warning", backend=backend, performance_mode=True, seed=seed)
-    env = SpiderRobotEnv(
+    env = SpiderRobotHeightEnv(
         num_envs=args.num_envs,
         headless=True,
-        terrain=args.terrain,
         height_sensor=args.lidar,
     )
 

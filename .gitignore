@@ -213,6 +213,5 @@ __marimo__/
 ._*
 archive/issac/cloud.cfg
 archive/issac/env.cfg
-archive/*/logs
-spider-bot/logs
+logs/
 secrets.cfg
