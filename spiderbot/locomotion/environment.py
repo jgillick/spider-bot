@@ -18,7 +18,6 @@ from genesis_forge.managers.actuator import ActuatorManager, NoisyValue
 from genesis_forge.mdp import reset, rewards, terminations, observations
 
 
-
 from spiderbot.environment import BaseSpiderRobotEnv, Terrain, EnvMode
 from spiderbot.mdp.foot_angle import FootAngleMdp
 from spiderbot.mdp.foot_clearance import FootClearanceMdp
@@ -29,6 +28,7 @@ CURRICULUM_AVG_SAMPLES = 10
 CURRICULUM_MAX_LEVEL = 50
 CURRICULUM_MIN_EPISODE_LENGTH_RATIO = 0.6
 CURRICULUM_COOLDOWN_STEPS = 4800
+
 
 class SpiderRobotEnv(BaseSpiderRobotEnv):
     """
@@ -64,7 +64,7 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
             self.max_velocity_y = 1.0
             self.max_velocity_z = 1.0
             self.velocity_inc = 0.025
-        
+
         super().__init__(
             num_envs=num_envs,
             dt=dt,
@@ -124,7 +124,7 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
                 "L3_Hip": 0.2,
                 "L4_Hip": 0.0,
                 "[RL][1-4]_Femur": -0.4,
-                "[RL][1-4]_Knee": 0.5,
+                "[RL][1-4]_Tibia": 0.5,
             },
             kp=NoisyValue(30, 5),
             kv=NoisyValue(2.0, 0.5),
@@ -453,11 +453,9 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
             if joint.type != gs.JOINT_TYPE.REVOLUTE:
                 continue
             name = joint.name
-            match = re.match(r"^[R|L][1-4]_(Hip|Femur|Knee)$", name)
+            match = re.match(r"^[R|L][1-4]_(Hip|Femur|Tibia)$", name)
             if match:
                 group = match.group(1).lower()
-                if group == "knee":
-                    group = "tibia"
                 self.joint_groups[group].append(joint.idx_local)
 
     def log_curriculum(self, extras: dict):
@@ -493,7 +491,7 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
         extras["episode"]["Metrics / position_delta_max"] = action_rate.max()
 
         return extras
-        
+
     def log_actuator_metrics(self, extras: dict):
         percentiles = [50, 90, 95, 99]
         q_tensors = torch.tensor([p / 100.0 for p in percentiles], device=gs.device)
@@ -523,7 +521,7 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
         obs = torch.zeros(env.num_envs, 1, device=gs.device)
         obs[:] = mid_point
         return obs
-    
+
     def feet_max_air_time_reward(
         self,
         env: GenesisEnv,
@@ -551,7 +549,9 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
             Per-environment sum of excess air time across all feet,
             shape ``(n_envs,)``.
         """
-        excess = (self.foot_contact_manager.current_air_time - max_air_time).clamp(min=0.0)
+        excess = (self.foot_contact_manager.current_air_time - max_air_time).clamp(
+            min=0.0
+        )
         return excess.sum(dim=-1)
 
     def feet_max_air_time_reward(
