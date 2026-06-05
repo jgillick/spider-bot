@@ -76,12 +76,11 @@ class SpiderRobotHeightEnv(BaseSpiderRobotEnv):
                 "L3_Hip": 0.2,
                 "L4_Hip": 0.0,
                 "[RL][1-4]_Femur": -0.4,
-                "[RL][1-4]_Knee": 0.5,
+                "[RL][1-4]_Tibia": 0.5,
             },
             kp=NoisyValue(30, 5),
-            kv=NoisyValue(2.0, 0.5),
+            kv=NoisyValue(1.5, 0.5),
             max_force=NoisyValue(10.0, 1.0),
-
             frictionloss=NoisyValue(0.1, 0.05),
             damping=NoisyValue(0.0381, 0.0001),
             armature=0.0020,
@@ -127,7 +126,9 @@ class SpiderRobotHeightEnv(BaseSpiderRobotEnv):
 
         ##
         # Command manager
-        self.height_command_manager = CommandManager(self, range=(0.1, 0.14), resample_time_sec=2.0)
+        self.height_command_manager = CommandManager(
+            self, range=(0.09, 0.15), resample_time_sec=2.0
+        )
 
         ##
         # Rewards

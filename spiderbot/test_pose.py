@@ -11,7 +11,7 @@ THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 SPIDER_XML = os.path.abspath(os.path.join(THIS_DIR, "../model/v2/SpiderBot.xml"))
 
 PD_KP = 30.0
-PD_KV = 2.0
+PD_KV = 0.5
 DAMPING = 0.04
 ARMATURE = 0.0020
 FRICTION_LOSS = 0.1
@@ -19,90 +19,91 @@ MAX_TORQUE = 22.0
 
 INITIAL_BODY_POSITION = [0.0, 0.0, 0.118]
 INITIAL_QUAT = [1.0, 0.0, 0.0, 0.0]
-STABLE_FEMUR = -0.6
-STABLE_KNEE = 0.5
+
+GROUND_FEMUR = 0.01
+GROUND_TIBIA = 2.6
+STABLE_FEMUR = -0.8
+STABLE_TIBIA = 0.6
 
 STABLE_POS = {
     "R1_Hip": 0.9,
     "R1_Femur": STABLE_FEMUR,
-    "R1_Knee": STABLE_KNEE,
+    "R1_Tibia": STABLE_TIBIA,
     "R2_Hip": 0.2,
     "R2_Femur": STABLE_FEMUR,
-    "R2_Knee": STABLE_KNEE,
+    "R2_Tibia": STABLE_TIBIA,
     "R3_Hip": -0.2,
     "R3_Femur": STABLE_FEMUR,
-    "R3_Knee": STABLE_KNEE,
+    "R3_Tibia": STABLE_TIBIA,
     "R4_Hip": -0.9,
     "R4_Femur": STABLE_FEMUR,
-    "R4_Knee": STABLE_KNEE,
+    "R4_Tibia": STABLE_TIBIA,
     "L1_Hip": -0.9,
     "L1_Femur": STABLE_FEMUR,
-    "L1_Knee": STABLE_KNEE,
+    "L1_Tibia": STABLE_TIBIA,
     "L2_Hip": -0.2,
     "L2_Femur": STABLE_FEMUR,
-    "L2_Knee": STABLE_KNEE,
+    "L2_Tibia": STABLE_TIBIA,
     "L3_Hip": 0.2,
     "L3_Femur": STABLE_FEMUR,
-    "L3_Knee": STABLE_KNEE,
+    "L3_Tibia": STABLE_TIBIA,
     "L4_Hip": 0.9,
     "L4_Femur": STABLE_FEMUR,
-    "L4_Knee": STABLE_KNEE,
+    "L4_Tibia": STABLE_TIBIA,
 }
 
-GROUND_FEMUR = 0.01
-GROUND_KNEE = 2.6
 GROUND_POSE = {
     "R1_Hip": 0.9,
     "R1_Femur": GROUND_FEMUR,
-    "R1_Knee": GROUND_KNEE,
+    "R1_Tibia": GROUND_TIBIA,
     "R2_Hip": 0.2,
     "R2_Femur": GROUND_FEMUR,
-    "R2_Knee": GROUND_KNEE,
+    "R2_Tibia": GROUND_TIBIA,
     "R3_Hip": -0.2,
     "R3_Femur": GROUND_FEMUR,
-    "R3_Knee": GROUND_KNEE,
+    "R3_Tibia": GROUND_TIBIA,
     "R4_Hip": -0.9,
     "R4_Femur": GROUND_FEMUR,
-    "R4_Knee": GROUND_KNEE,
+    "R4_Tibia": GROUND_TIBIA,
     "L1_Hip": -0.9,
     "L1_Femur": GROUND_FEMUR,
-    "L1_Knee": GROUND_KNEE,
+    "L1_Tibia": GROUND_TIBIA,
     "L2_Hip": -0.2,
     "L2_Femur": GROUND_FEMUR,
-    "L2_Knee": GROUND_KNEE,
+    "L2_Tibia": GROUND_TIBIA,
     "L3_Hip": 0.2,
     "L3_Femur": GROUND_FEMUR,
-    "L3_Knee": GROUND_KNEE,
+    "L3_Tibia": GROUND_TIBIA,
     "L4_Hip": 0.9,
     "L4_Femur": GROUND_FEMUR,
-    "L4_Knee": GROUND_KNEE,
+    "L4_Tibia": GROUND_TIBIA,
 }
 
 ZERO_POSE = {
     "R1_Hip": 0.0,
     "R1_Femur": 0.0,
-    "R1_Knee": 0.0,
+    "R1_Tibia": 0.0,
     "R2_Hip": 0.0,
     "R2_Femur": 0.0,
-    "R2_Knee": 0.0,
+    "R2_Tibia": 0.0,
     "R3_Hip": 0.0,
     "R3_Femur": 0.0,
-    "R3_Knee": 0.0,
+    "R3_Tibia": 0.0,
     "R4_Hip": 0.0,
     "R4_Femur": 0.0,
-    "R4_Knee": 0.0,
+    "R4_Tibia": 0.0,
     "L1_Hip": 0.0,
     "L1_Femur": 0.0,
-    "L1_Knee": 0.0,
+    "L1_Tibia": 0.0,
     "L2_Hip": 0.0,
     "L2_Femur": 0.0,
-    "L2_Knee": 0.0,
+    "L2_Tibia": 0.0,
     "L3_Hip": 0.0,
     "L3_Femur": 0.0,
-    "L3_Knee": 0.0,
+    "L3_Tibia": 0.0,
     "L4_Hip": 0.0,
     "L4_Femur": 0.0,
-    "L4_Knee": 0.0,
+    "L4_Tibia": 0.0,
 }
 
 
@@ -178,20 +179,27 @@ def main():
             dofs_idx_local=dof_idx,
         )
         scene.step()
-    
+
+    mode = 0
     while True:
         for i in range(300):
+            if mode == 0:
+                pose = ground_pos
+            else:
+                pose = target_pos
+
             robot.control_dofs_position(
-                position=target_pos,
+                position=pose,
                 dofs_idx_local=dof_idx,
             )
             scene.step()
-        for i in range(300):
-            robot.control_dofs_position(
-                position=ground_pos,
-                dofs_idx_local=dof_idx,
-            )
-            scene.step()
+
+            if i % 2 == 0:
+                base_pos = robot.get_pos()
+                height = base_pos[:, 2].item()
+                print(f"[{i}] Height: {height}")
+
+        mode = 1 if mode == 0 else 0
 
 
 if __name__ == "__main__":
