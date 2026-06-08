@@ -26,12 +26,12 @@ TARGET_MINI_BATCH = 24_576
 
 
 parser = argparse.ArgumentParser(add_help=True)
-parser.add_argument("-n", "--num_envs", type=int, default=2096)
+parser.add_argument("-n", "--num_envs", type=int, default=4048)
 parser.add_argument("-i", "--max_iterations", type=int, default=8_000)
 parser.add_argument("-d", "--device", type=str, default="gpu")
 parser.add_argument("-c", "--config", type=str, default=DEFAULT_RSL_CONFIG)
 parser.add_argument(
-    "-t", "--terrain", type=str, default="flat", help="Set terrain: flat, rough, mixed"
+    "-t", "--terrain", type=str, default="mixed", help="Set terrain: flat, rough, mixed"
 )
 parser.add_argument(
     "--lidar",
