@@ -26,12 +26,16 @@ class SpiderRobotHeightEnv(BaseSpiderRobotEnv):
         max_episode_length_sec: int | None = 6,
         headless: bool = True,
         mode: EnvMode = "train",
+        height_sensor: bool = False,
     ):
         super().__init__(
             num_envs=num_envs,
             dt=dt,
             max_episode_length_sec=max_episode_length_sec,
             terrain="flat",
+            headless=headless,
+            mode=mode,
+            height_sensor=height_sensor,
         )
 
     """
@@ -42,6 +46,8 @@ class SpiderRobotHeightEnv(BaseSpiderRobotEnv):
         """
         Configure the environment managers.
         """
+        super().config()
+
         # Foot angle monitor
         self.foot_angle_mdp = FootAngleMdp(self, foot_name_pattern="[RL][1-4]_Foot")
 
@@ -195,13 +201,13 @@ class SpiderRobotHeightEnv(BaseSpiderRobotEnv):
                     "time_out": True,
                     "fn": terminations.timeout,
                 },
-                "self_contact": {
-                    "fn": terminations.contact_force,
-                    "params": {
-                        "contact_manager": self.self_contact,
-                        "threshold": 2.0,
-                    },
-                },
+                # "self_contact": {
+                #     "fn": terminations.contact_force,
+                #     "params": {
+                #         "contact_manager": self.self_contact,
+                #         "threshold": 2.0,
+                #     },
+                # },
                 "foot_angle": {
                     "fn": self.foot_angle_mdp.terminate,
                     "params": {

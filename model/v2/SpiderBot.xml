@@ -31,11 +31,6 @@
         <mesh name="TibiaBearingTrack_visual" file="meshes/TibiaBearingTrack/visual.stl" />
         <mesh name="TibiaMotorSpacer_visual" file="meshes/TibiaMotorSpacer/visual.stl" />
         <mesh name="Hip_visual" file="meshes/Hip/visual.stl" />
-        <mesh name="Hip_collision00" file="meshes/Hip/collision00.stl" />
-        <mesh name="Hip_collision01" file="meshes/Hip/collision01.stl" />
-        <mesh name="Hip_collision02" file="meshes/Hip/collision02.stl" />
-        <mesh name="Hip_collision03" file="meshes/Hip/collision03.stl" />
-        <mesh name="Hip_collision04" file="meshes/Hip/collision04.stl" />
         <mesh name="HipBearingTrack_visual" file="meshes/HipBearingTrack/visual.stl" />
         <mesh name="MainClamp_visual" file="meshes/MainClamp/visual.stl" />
         <mesh name="CrossClamp_visual" file="meshes/CrossClamp/visual.stl" />
@@ -76,11 +71,6 @@
                     <body name="R1_Hip" pos="0.014620638666750283 0.1072497856676494 -0.010329361333291907" quat="1.269974271615229e-15 -0.7071067811865472 1.1023373026774868e-15 0.7071067811865478">
                         <joint type="hinge" name="R1_Hip" axis="2.04862431470163e-15 2.5916768731093498e-15 1.0" pos="-0.010329026541572441 0.10725002467289509 0.035250000000043864" range="-1.396263 1.396263" limited="true" />
                         <geom mesh="Hip_visual" name="R1_Hip_Hip_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Hip_mat" />
-                        <geom mesh="Hip_collision00" name="R1_Hip_Hip_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-                        <geom mesh="Hip_collision01" name="R1_Hip_Hip_collision01_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-                        <geom mesh="Hip_collision02" name="R1_Hip_Hip_collision02_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-                        <geom mesh="Hip_collision03" name="R1_Hip_Hip_collision03_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-                        <geom mesh="Hip_collision04" name="R1_Hip_Hip_collision04_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
                         <inertial mass="0.05147716268131095" pos="-0.012440514153362177 0.04641593719115884 0.028839071087162924" fullinertia="0.00010836979882393105 3.638569500873875e-05 8.716939400280418e-05 -2.872480946096444e-06 3.971226369733437e-06 -1.40764156506885e-05" />
                         <body name="R1_HipBearingTrack" pos="0.0007470250301832238 -0.0024779294382145166 4.017181553184202e-07" quat="0.9999979914074321 -0.0020042906728373207 7.502708268926203e-18 6.130652355437454e-17">
                             <geom mesh="HipBearingTrack_visual" name="R1_HipBearingTrack_HipBearingTrack_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="HipBearingTrack_mat" />
@@ -164,11 +154,6 @@
                     <body name="L1_Hip" pos="0.014620638666750221 0.1072497856676494 -0.010329361333291872" quat="1.2604678524317923e-15 -0.7071067811865474 1.1026439613608192e-15 0.7071067811865477">
                         <joint type="hinge" name="L1_Hip" axis="3.3127437857693405e-15 2.5925442348473382e-15 0.9999999999999998" pos="-0.010329696125011792 0.10725002467289564 0.03525000000004361" range="-1.396263 1.396263" limited="true" />
                         <geom mesh="Hip_visual" name="L1_Hip_Hip_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Hip_mat" />
-                        <geom mesh="Hip_collision00" name="L1_Hip_Hip_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-                        <geom mesh="Hip_collision01" name="L1_Hip_Hip_collision01_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-                        <geom mesh="Hip_collision02" name="L1_Hip_Hip_collision02_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-                        <geom mesh="Hip_collision03" name="L1_Hip_Hip_collision03_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-                        <geom mesh="Hip_collision04" name="L1_Hip_Hip_collision04_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
                         <inertial mass="0.05147716268131095" pos="-0.012440514153362255 0.04641593719115915 0.02883907108716291" fullinertia="0.00010836979882393322 3.6385695008739414e-05 8.71693940028037e-05 -2.8724809460964827e-06 3.971226369733532e-06 -1.4076415650688591e-05" />
                         <body name="L1_HipBearingTrack" pos="0.0007470250301832948 -0.0024779294382145166 4.0171815524736586e-07" quat="0.9999979914074321 -0.002004290672837315 7.530523389587777e-18 4.7428763621381587e-17">
                             <geom mesh="HipBearingTrack_visual" name="L1_HipBearingTrack_HipBearingTrack_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="HipBearingTrack_mat" />
@@ -252,11 +237,6 @@
                     <body name="R2_Hip" pos="0.014620638666750275 0.10724978566764942 -0.010329361333291907" quat="1.269974271615229e-15 -0.7071067811865472 1.1023373026774868e-15 0.7071067811865478">
                         <joint type="hinge" name="R2_Hip" axis="2.04862431470163e-15 2.5916768731093498e-15 1.0" pos="-0.010329026541572441 0.10725002467289509 0.035250000000043864" range="-1.396263 1.396263" limited="true" />
                         <geom mesh="Hip_visual" name="R2_Hip_Hip_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Hip_mat" />
-                        <geom mesh="Hip_collision00" name="R2_Hip_Hip_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-                        <geom mesh="Hip_collision01" name="R2_Hip_Hip_collision01_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-                        <geom mesh="Hip_collision02" name="R2_Hip_Hip_collision02_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-                        <geom mesh="Hip_collision03" name="R2_Hip_Hip_collision03_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-                        <geom mesh="Hip_collision04" name="R2_Hip_Hip_collision04_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
                         <inertial mass="0.05147716268131095" pos="-0.012440514153362177 0.04641593719115886 0.028839071087162924" fullinertia="0.00010836979882393116 3.638569500873897e-05 8.716939400280505e-05 -2.8724809460960105e-06 3.97122636973341e-06 -1.4076415650688608e-05" />
                         <body name="R2_HipBearingTrack" pos="0.0007470250301832416 -0.0024779294382145166 4.017181553184202e-07" quat="0.9999979914074321 -0.0020042906728373207 7.502708268926203e-18 6.130652355437454e-17">
                             <geom mesh="HipBearingTrack_visual" name="R2_HipBearingTrack_HipBearingTrack_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="HipBearingTrack_mat" />
@@ -340,11 +320,6 @@
                     <body name="L2_Hip" pos="0.014620638666750212 0.10724978566764941 -0.010329361333291898" quat="1.3288527388158705e-15 -0.7071067811865474 1.041005566010151e-15 0.7071067811865477">
                         <joint type="hinge" name="L2_Hip" axis="3.3127437857693405e-15 2.5916768731093498e-15 0.9999999999999998" pos="-0.010329696125011674 0.10725002467289516 0.03525000000004361" range="-1.396263 1.396263" limited="true" />
                         <geom mesh="Hip_visual" name="L2_Hip_Hip_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Hip_mat" />
-                        <geom mesh="Hip_collision00" name="L2_Hip_Hip_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-                        <geom mesh="Hip_collision01" name="L2_Hip_Hip_collision01_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-                        <geom mesh="Hip_collision02" name="L2_Hip_Hip_collision02_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-                        <geom mesh="Hip_collision03" name="L2_Hip_Hip_collision03_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-                        <geom mesh="Hip_collision04" name="L2_Hip_Hip_collision04_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
                         <inertial mass="0.05147716268131095" pos="-0.012440514153362203 0.04641593719115887 0.02883907108716291" fullinertia="0.00010836979882393179 3.63856950087391e-05 8.7169394002805e-05 -2.872480946096345e-06 3.971226369733388e-06 -1.4076415650688444e-05" />
                         <body name="L2_HipBearingTrack" pos="0.0007470250301832593 -0.002477929438214552 4.0171815525624764e-07" quat="0.9999979914074321 -0.0020042906728373194 7.335817544948917e-18 1.4457308315233256e-16">
                             <geom mesh="HipBearingTrack_visual" name="L2_HipBearingTrack_HipBearingTrack_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="HipBearingTrack_mat" />
@@ -428,11 +403,6 @@
                     <body name="R3_Hip" pos="0.014620638666750275 0.10724978566764942 -0.010329361333291907" quat="1.269974271615229e-15 -0.7071067811865472 1.1023373026774868e-15 0.7071067811865478">
                         <joint type="hinge" name="R3_Hip" axis="2.04862431470163e-15 2.5916768731093498e-15 1.0" pos="-0.010329026541572407 0.10725002467289509 0.035250000000043864" range="-1.396263 1.396263" limited="true" />
                         <geom mesh="Hip_visual" name="R3_Hip_Hip_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Hip_mat" />
-                        <geom mesh="Hip_collision00" name="R3_Hip_Hip_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-                        <geom mesh="Hip_collision01" name="R3_Hip_Hip_collision01_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-                        <geom mesh="Hip_collision02" name="R3_Hip_Hip_collision02_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-                        <geom mesh="Hip_collision03" name="R3_Hip_Hip_collision03_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-                        <geom mesh="Hip_collision04" name="R3_Hip_Hip_collision04_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
                         <inertial mass="0.05147716268131095" pos="-0.012440514153362177 0.04641593719115886 0.028839071087162924" fullinertia="0.00010836979882393116 3.638569500873886e-05 8.716939400280548e-05 -2.872480946096119e-06 3.97122636973341e-06 -1.4076415650688608e-05" />
                         <body name="R3_HipBearingTrack" pos="0.0007470250301832416 -0.0024779294382145166 4.0171815530953835e-07" quat="0.9999979914074321 -0.0020042906728373207 7.502708268926203e-18 6.130652355437454e-17">
                             <geom mesh="HipBearingTrack_visual" name="R3_HipBearingTrack_HipBearingTrack_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="HipBearingTrack_mat" />
@@ -516,11 +486,6 @@
                     <body name="L3_Hip" pos="0.014620638666750212 0.10724978566764934 -0.010329361333291969" quat="1.0761659837464513e-15 -0.7071067811865474 1.290012416879529e-15 0.7071067811865477">
                         <joint type="hinge" name="L3_Hip" axis="3.3127437857693405e-15 2.5916768731093498e-15 0.9999999999999998" pos="-0.010329696125011764 0.10725002467289536 0.03525000000004361" range="-1.396263 1.396263" limited="true" />
                         <geom mesh="Hip_visual" name="L3_Hip_Hip_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Hip_mat" />
-                        <geom mesh="Hip_collision00" name="L3_Hip_Hip_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-                        <geom mesh="Hip_collision01" name="L3_Hip_Hip_collision01_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-                        <geom mesh="Hip_collision02" name="L3_Hip_Hip_collision02_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-                        <geom mesh="Hip_collision03" name="L3_Hip_Hip_collision03_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-                        <geom mesh="Hip_collision04" name="L3_Hip_Hip_collision04_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
                         <inertial mass="0.05147716268131095" pos="-0.012440514153362232 0.046415937191159024 0.02883907108716291" fullinertia="0.00010836979882393273 3.638569500873932e-05 8.716939400280456e-05 -2.872480946096187e-06 3.971226369733437e-06 -1.4076415650688575e-05" />
                         <body name="L3_HipBearingTrack" pos="0.0007470250301831616 -0.0024779294382145877 4.0171815525624764e-07" quat="0.9999979914074321 -0.002004290672837317 8.052056902020935e-18 -2.1277923512223695e-16">
                             <geom mesh="HipBearingTrack_visual" name="L3_HipBearingTrack_HipBearingTrack_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="HipBearingTrack_mat" />
@@ -604,11 +569,6 @@
                     <body name="R4_Hip" pos="0.014620638666750275 0.1072497856676494 -0.010329361333291907" quat="1.269974271615229e-15 -0.7071067811865472 1.1023373026774868e-15 0.7071067811865478">
                         <joint type="hinge" name="R4_Hip" axis="2.04862431470163e-15 2.5916768731093498e-15 1.0" pos="-0.010329026541572386 0.10725002467289509 0.035250000000043864" range="-1.396263 1.396263" limited="true" />
                         <geom mesh="Hip_visual" name="R4_Hip_Hip_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Hip_mat" />
-                        <geom mesh="Hip_collision00" name="R4_Hip_Hip_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-                        <geom mesh="Hip_collision01" name="R4_Hip_Hip_collision01_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-                        <geom mesh="Hip_collision02" name="R4_Hip_Hip_collision02_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-                        <geom mesh="Hip_collision03" name="R4_Hip_Hip_collision03_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-                        <geom mesh="Hip_collision04" name="R4_Hip_Hip_collision04_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
                         <inertial mass="0.05147716268131095" pos="-0.012440514153362177 0.04641593719115884 0.028839071087162924" fullinertia="0.00010836979882393105 3.638569500873875e-05 8.716939400280418e-05 -2.8724809460957936e-06 3.971226369733491e-06 -1.40764156506885e-05" />
                         <body name="R4_HipBearingTrack" pos="0.0007470250301832238 -0.0024779294382145166 4.0171815530953835e-07" quat="0.9999979914074321 -0.0020042906728373207 7.502708268926203e-18 6.130652355437454e-17">
                             <geom mesh="HipBearingTrack_visual" name="R4_HipBearingTrack_HipBearingTrack_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="HipBearingTrack_mat" />
@@ -692,11 +652,6 @@
                     <body name="L4_Hip" pos="0.014620638666750221 0.10724978566764934 -0.010329361333291907" quat="1.1522173372139463e-15 -0.7071067811865474 1.2151876981453809e-15 0.7071067811865477">
                         <joint type="hinge" name="L4_Hip" axis="3.3127437857693405e-15 2.5916768731093498e-15 0.9999999999999998" pos="-0.010329696125011714 0.10725002467289531 0.03525000000004361" range="-1.396263 1.396263" limited="true" />
                         <geom mesh="Hip_visual" name="L4_Hip_Hip_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Hip_mat" />
-                        <geom mesh="Hip_collision00" name="L4_Hip_Hip_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-                        <geom mesh="Hip_collision01" name="L4_Hip_Hip_collision01_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-                        <geom mesh="Hip_collision02" name="L4_Hip_Hip_collision02_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-                        <geom mesh="Hip_collision03" name="L4_Hip_Hip_collision03_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-                        <geom mesh="Hip_collision04" name="L4_Hip_Hip_collision04_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
                         <inertial mass="0.05147716268131095" pos="-0.012440514153362218 0.046415937191158975 0.02883907108716291" fullinertia="0.00010836979882393219 3.638569500873928e-05 8.716939400280413e-05 -2.8724809460964946e-06 3.9712263697334116e-06 -1.407641565068854e-05" />
                         <body name="L4_HipBearingTrack" pos="0.0007470250301832593 -0.0024779294382145877 4.0171815525624764e-07" quat="0.9999979914074321 -0.0020042906728373177 7.83648971687764e-18 -1.0522659564154129e-16">
                             <geom mesh="HipBearingTrack_visual" name="L4_HipBearingTrack_HipBearingTrack_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="HipBearingTrack_mat" />

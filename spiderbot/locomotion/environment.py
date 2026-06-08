@@ -69,6 +69,10 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
             num_envs=num_envs,
             dt=dt,
             max_episode_length_sec=max_episode_length_sec,
+            headless=headless,
+            mode=mode,
+            terrain=terrain,
+            height_sensor=height_sensor,
         )
 
     """
@@ -129,9 +133,9 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
             kp=NoisyValue(30, 5),
             kv=NoisyValue(2.0, 0.5),
             max_force=NoisyValue(10.0, 1.0),
+            armature=0.0020,
             frictionloss=NoisyValue(0.1, 0.05),
             damping=NoisyValue(0.0381, 0.0001),
-            armature=0.0020,
         )
         # self.action_manager = PositionWithinLimitsActionManager(
         #     self,
@@ -239,14 +243,14 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
                         "vel_cmd_manager": self.vel_command_manager,
                     },
                 },
-                "height": {
-                    "weight": -30.0,
-                    "fn": rewards.base_height,
-                    "params": {
-                        "target_height": 0.12,
-                        "terrain_manager": self.terrain_manager,
-                    },
-                },
+                # "height": {
+                #     "weight": -30.0,
+                #     "fn": rewards.base_height,
+                #     "params": {
+                #         "target_height": 0.11, # 0.12
+                #         "terrain_manager": self.terrain_manager,
+                #     },
+                # },
                 "similar_to_default": {
                     "weight": -0.01,
                     "fn": rewards.dof_similar_to_default,
@@ -319,7 +323,7 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
                     "fn": rewards.action_rate_l2,
                 },
                 "action_acceleration": {
-                    "weight": -1e-04,
+                    "weight": -2e-04,
                     "fn": rewards.action_acceleration_l2,
                 },
             },
@@ -358,6 +362,14 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
                     "fn": self.foot_angle_mdp.terminate,
                     "params": {
                         "angle_threshold": -0.75,
+                    },
+                },
+                "dof_velocity_limit": {
+                    "fn": terminations.dof_velocity_limit,
+                    "params": {
+                        "unit": "rpm",
+                        "threshold": 250.0,
+                        "actuator_manager": self.actuator_manager,
                     },
                 },
             },
@@ -429,7 +441,7 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
 
         # Logging
         extras = self.log_curriculum(extras)
-        # extras = self.log_metrics(extras)
+        extras = self.log_metrics(extras)
         extras = self.log_actuator_metrics(extras)
 
         # Finish up
@@ -473,22 +485,27 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
         return extras
 
     def log_metrics(self, extras: dict):
-        extras["episode"]["Metrics / torque_avg"] = (
-            self.robot.get_dofs_force().abs().mean()
-        )
-        extras["episode"]["Metrics / torque_ctl_avg"] = (
-            self.robot.get_dofs_control_force().abs().mean()
-        )
+        # extras["episode"]["Metrics / torque_avg"] = (
+        #     self.robot.get_dofs_force().abs().mean()
+        # )
+        # extras["episode"]["Metrics / torque_ctl_avg"] = (
+        #     self.robot.get_dofs_control_force().abs().mean()
+        # )
 
-        action_rate = torch.abs(self.last_actions - self.actions)
-        extras["episode"]["Metrics / action_rate_avg"] = action_rate.mean()
-        extras["episode"]["Metrics / action_rate_max"] = action_rate.max()
+        # action_rate = torch.abs(self.last_actions - self.actions)
+        # extras["episode"]["Metrics / action_rate_avg"] = action_rate.mean()
+        # extras["episode"]["Metrics / action_rate_max"] = action_rate.max()
 
-        action_rate = torch.abs(
-            self.action_manager.last_actions - self.action_manager.actions
+        # action_rate = torch.abs(
+        #     self.action_manager.last_actions - self.action_manager.actions
+        # )
+        # extras["episode"]["Metrics / position_delta_avg"] = action_rate.mean()
+        # extras["episode"]["Metrics / position_delta_max"] = action_rate.max()
+        base_pos = self.robot_manager.base_pos
+        height_offset = self.terrain_manager.get_terrain_height(
+            base_pos[:, 0], base_pos[:, 1]
         )
-        extras["episode"]["Metrics / position_delta_avg"] = action_rate.mean()
-        extras["episode"]["Metrics / position_delta_max"] = action_rate.max()
+        extras["episode"]["Metrics / height_avg"] = torch.mean(base_pos[:, 2] - height_offset)
 
         return extras
 

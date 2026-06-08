@@ -215,3 +215,4 @@ archive/issac/cloud.cfg
 archive/issac/env.cfg
 logs/
 secrets.cfg
+.claude/
