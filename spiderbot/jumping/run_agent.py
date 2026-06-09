@@ -7,6 +7,8 @@ import argparse
 import os
 import sys
 
+from dotenv import load_dotenv
+
 from .agent import AgentConfig, JumpingAgent
 
 
@@ -64,6 +66,9 @@ def main() -> None:
         help="Resume from existing run_history.json (continue from last iteration)",
     )
     args = parser.parse_args()
+
+    # Load .env file before reading the API key (no-op if already set in env)
+    load_dotenv()
 
     # Validate API key before touching anything else
     api_key = os.environ.get("ANTHROPIC_API_KEY", "")
