@@ -123,6 +123,7 @@ class JumpingAgent:
             "final_mean_reward": probe_result.final_mean_reward,
             "iteration_reached": probe_result.iteration_reached,
             "stop_reason": probe_result.stop_reason,
+            "error_tail": probe_result.error_tail or None,
         }
 
         probe_snapshot = create_snapshot(
@@ -144,6 +145,8 @@ class JumpingAgent:
                 "Probe scrapped: %s (final reward %.3f)",
                 probe_result.stop_reason, probe_result.final_mean_reward,
             )
+            if probe_result.error_tail:
+                logger.warning("Subprocess error:\n%s", probe_result.error_tail)
             prune_snapshot(probe_snapshot)
             self._append_history(
                 run_type="probe",

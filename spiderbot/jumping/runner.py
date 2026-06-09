@@ -1,3 +1,4 @@
+import os
 import re
 import sys
 import subprocess
@@ -26,6 +27,7 @@ class TrainingResult:
     stop_reason: Literal["completed", "flatline", "divergence", "error"] = "completed"
     final_mean_reward: float = 0.0
     iteration_reached: int = 0
+    error_tail: str = ""  # last lines of stdout when exit_code != 0
 
 
 def run_training(
@@ -54,16 +56,19 @@ def run_training(
     if ppo_config:
         cmd += ["-c", ppo_config]
 
+    os.makedirs(path.join(THIS_DIR, "logs"), exist_ok=True)
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
 
     result = TrainingResult(experiment_name=experiment_name, log_dir=log_dir)
     stdout_log_path = path.join(THIS_DIR, "logs", f"{experiment_name}_stdout.log")
+    all_lines: list[str] = []
 
     try:
         with open(stdout_log_path, "w") as log_file:
             for line in proc.stdout:
                 log_file.write(line)
                 log_file.flush()
+                all_lines.append(line)
 
                 m = _REWARD_RE.search(line)
                 if m:
@@ -94,6 +99,11 @@ def run_training(
     if result.stop_reason == "completed":
         if result.exit_code != 0:
             result.stop_reason = "error"
+            # Capture the last 20 lines for error feedback to the LLM
+            tail = "".join(all_lines[-20:]).strip()
+            # Strip ANSI escape codes for readability
+            tail = re.sub(r"\x1b\[[0-9;]*m", "", tail)
+            result.error_tail = tail
 
     return result
 

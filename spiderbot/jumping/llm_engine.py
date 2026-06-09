@@ -26,52 +26,6 @@ class ProposalResult:
 
 
 # ---------------------------------------------------------------------------
-# Reward function inventory (verified at runtime from genesis_forge.mdp.rewards)
-# ---------------------------------------------------------------------------
-
-_PLAIN_FUNCTIONS = [
-    "action_rate_l2",
-    "ang_vel_xy_l2",
-    "base_height",
-    "command_tracking_ang_vel",
-    "command_tracking_lin_vel",
-    "contact_force",
-    "dof_similar_to_default",
-    "dof_torque_l2",
-    "dof_velocity_l2",
-    "entity_ang_vel",
-    "entity_lin_vel",
-    "entity_projected_gravity",
-    "feet_air_time",
-    "feet_ground_time",
-    "feet_slide",
-    "flat_orientation_l2",
-    "has_contact",
-    "is_alive",
-    "lin_vel_xy_l2",
-    "lin_vel_z_l2",
-    "stand_still_joint_deviation_l1",
-    "terminated",
-]
-
-# These are MdpFnClass instances — referenced in the cfg dict as the CLASS,
-# not as a callable.  e.g. "fn": rewards.action_acceleration_l2 (not called).
-_MDPFNCLASS_ENTRIES = [
-    "action_acceleration_l2",
-    "body_acceleration_exp",
-]
-
-_EXCLUDED_TERMS = [
-    "flat_orientation",       # actively opposes jumping — penalises body rotation
-    "flat_orientation_l2",    # same
-    "base_height",            # targeting resting height prevents lifting off
-    "has_contact",            # for stable footing use — penalises all-feet-airborne
-    "command_tracking_lin_vel",  # locomotion gait term irrelevant to jumping
-    "command_tracking_ang_vel",  # same
-    "feet_ground_time",       # rewards keeping feet on ground — opposes jumping
-]
-
-# ---------------------------------------------------------------------------
 # System prompt
 # ---------------------------------------------------------------------------
 
@@ -91,58 +45,117 @@ The robot must:
 - Forward distance (x-axis) must be positive
 - Peak contact force on non-feet body links must stay below 15 N at landing
 
-## Available reward functions (exact API names)
-Plain functions — used as `"fn": rewards.<name>`:
-{plain_fn_list}
+## Available managers in self (ONLY use what is listed here)
+These are the attributes you can reference in params:
+  - self.actuator_manager   — ActuatorManager (joint torques, positions, velocities)
+  - self.action_manager     — PositionActionManager (raw actions, DOF positions/velocities)
+  - self.robot_manager      — EntityManager (CoM position, linear/angular velocity)
+  - self.foot_contact_manager — ContactManager, track_air_time=True (foot-to-terrain contacts)
+  - self.self_contact        — ContactManager (robot-to-robot self contacts)
+  - self.body_terrain_contact — ContactManager (non-foot body-to-terrain contacts; DO NOT REMOVE)
 
-MdpFnClass entries — referenced as the CLASS, not called: use `"fn": rewards.<name>` (no parentheses):
-{mdpfn_list}
+## Reward function reference (genesis_forge.mdp.rewards)
+These are ALL available functions. Use ONLY these exact names with ONLY the listed params.
+DO NOT invent parameters — any unknown keyword argument will crash at runtime.
+
+### No required params (just use `"fn": rewards.<name>`)
+  - is_alive(env)                     → 1.0 if robot alive
+  - terminated(env)                   → 1.0 on termination
+  - action_rate_l2(env)               → L2 penalty on action change rate
+
+### Required: actuator_manager
+  - dof_torque_l2(env, actuator_manager)
+    params: {"actuator_manager": self.actuator_manager}
+
+### Required: action_manager
+  - dof_velocity_l2(env, action_manager)
+    params: {"action_manager": self.action_manager}
+
+### Required: actuator_manager OR action_manager (at least one)
+  - dof_similar_to_default(env, actuator_manager=None, action_manager=None)
+    params: {"actuator_manager": self.actuator_manager}
+
+### Required: contact_manager; optional threshold (default 1.0)
+  - contact_force(env, contact_manager, threshold=1.0)
+    params: {"contact_manager": self.self_contact}
+  - has_contact(env, contact_manager, threshold=1.0, min_contacts=1)
+    EXCLUDED for jumping (see below)
+
+### Required: contact_manager + time_threshold; contact_manager MUST have track_air_time=True
+  - feet_air_time(env, contact_manager, time_threshold, time_threshold_max=None)
+    params: {"contact_manager": self.foot_contact_manager, "time_threshold": 0.2}
+    NOTE: self.foot_contact_manager already has track_air_time=True. Do NOT use other contact managers here.
+
+### Optional: entity_attr (default "robot") OR entity_manager
+  - lin_vel_z_l2(env, entity_attr="robot", entity_manager=None)
+    params: {}   ← works with no params (defaults to robot)
+  - ang_vel_xy_l2(env, entity_attr="robot", entity_manager=None)
+    params: {}   ← works with no params
+  - flat_orientation_l2(env, entity_attr="robot", entity_manager=None)
+    EXCLUDED for jumping (see below)
+
+### Required: entity_manager (not entity_attr — this one has NO default)
+  - lin_vel_xy_l2(env, entity_manager)
+    params: {"entity_manager": self.robot_manager}
+
+### MdpFnClass — reference the CLASS directly as `"fn": rewards.<name>` (no params needed)
+  - action_acceleration_l2   — penalises jittery action oscillations
+    params: {}   ← accepts no params
+  - body_acceleration_exp(env, entity_attr="robot", entity_manager=None, sensitivity=0.10)
+    params: {}   ← works with no params (defaults to robot, sensitivity=0.10)
+    Optional override: {"sensitivity": 0.05}  ← ONLY valid param besides entity_attr/entity_manager
+
+## INTERNAL UTILITIES — NOT reward functions (DO NOT USE in reward config)
+entity_lin_vel, entity_ang_vel, entity_projected_gravity are internal helpers.
+They take a RigidEntity, not an env. Do NOT put them in the RewardManager config.
 
 ## Excluded reward terms (MUST NOT use — they actively oppose jumping)
-{excluded_list}
+  - flat_orientation_l2   — penalises body tilt needed for jump takeoff
+  - base_height           — targeting resting height prevents lifting off
+  - has_contact           — rewards feet staying planted on the ground
+  - command_tracking_lin_vel / command_tracking_ang_vel — locomotion gait terms
+  - feet_ground_time      — penalises feet leaving the ground
 
-Rationale for exclusions:
-- `flat_orientation*` penalises body tilt, which prevents the crouch-and-extend needed to jump
-- `base_height` targeting resting height prevents the robot from lifting the body off the ground
-- `has_contact` for stable footing rewards keeping feet planted
-- locomotion gait terms (command_tracking_*) drive forward walking, not explosive jumping
-- `feet_ground_time` rewards feet staying on the ground
+## Reward config dict format (CRITICAL — KeyError crashes if wrong)
+Every reward entry MUST have a `"fn"` key and a `"weight"` key:
+```python
+self.reward_manager = RewardManager(
+    self,
+    cfg={
+        "my_reward_name": {
+            "weight": -0.01,           # REQUIRED: float (negative = penalty)
+            "fn": rewards.action_rate_l2,  # REQUIRED: the function/class reference
+            "params": {},              # OPTIONAL: omit entirely if no params needed
+        },
+        "another_reward": {
+            "weight": 1.0,
+            "fn": rewards.dof_torque_l2,
+            "params": {"actuator_manager": self.actuator_manager},
+        },
+    },
+)
+```
+DO NOT use any key besides `"weight"`, `"fn"`, and `"params"`.
 
 ## Code constraints
 - Only import from `genesis_forge`, `spiderbot`, and stdlib
 - Maintain the `config()` method signature exactly
-- Do NOT modify files outside `spiderbot/jumping/`
-- Do NOT add `height_command_manager` to ObservationManager — the jumping env has no velocity command manager
-- Preserve the `body_terrain_contact` ContactManager (required for eval — do not remove it)
-- Preserve `self_contact` ContactManager in config (used as a reward penalty source — keep the contact_force reward entry)
-- Do NOT add a `self_contact` entry to TerminationManager
-- The `dof_velocity_limit` termination (250 RPM threshold) must always remain present
-
-## MdpFnClass usage example
-```python
-# WRONG — calling it like a function:
-"fn": rewards.action_acceleration_l2,   # wrong if action_acceleration_l2 is MdpFnClass
-# CORRECT — reference the class directly (no parentheses):
-"fn": rewards.action_acceleration_l2,   # correct — MdpFnClass entries work this way
-```
-The distinction is that MdpFnClass entries are self-contained objects that genesis_forge
-calls with the env as the argument; you reference them as classes, not instances.
+- Do NOT add `height_command_manager` to ObservationManager (jumping env has none)
+- Preserve `body_terrain_contact` ContactManager (required for eval)
+- Preserve `self_contact` ContactManager (monitoring + reward source)
+- Do NOT add `self_contact` to TerminationManager
+- The `dof_velocity_limit` termination (250 RPM) must always remain present
 
 ## Response format
-Return ONLY file content blocks. Use this exact delimiter format:
+Return ONLY file content blocks in this exact format:
 
 --- environment.py ---
 <complete Python file content>
 --- end ---
 
-You may also propose changes to `ppo.yaml` using the same format.
-ALWAYS include a `--- reasoning ---` / `--- end ---` block explaining what you changed and why.
-The reasoning block must come LAST.
-""".format(
-    plain_fn_list="\n".join(f"  - {f}" for f in _PLAIN_FUNCTIONS),
-    mdpfn_list="\n".join(f"  - {f}" for f in _MDPFNCLASS_ENTRIES),
-    excluded_list="\n".join(f"  - {f}" for f in _EXCLUDED_TERMS),
-)
+You may also include `--- ppo.yaml ---` blocks.
+ALWAYS end with a `--- reasoning ---` / `--- end ---` block.
+"""
 
 # ---------------------------------------------------------------------------
 # File block parsing
@@ -277,6 +290,23 @@ def _build_user_message(
     if recent:
         lines.append("\n## Recent run history (last 5 runs)\n")
         lines.append("```json\n" + json.dumps(recent, indent=2) + "\n```\n")
+
+        # Surface any subprocess errors prominently so the LLM can fix them
+        error_entries = [
+            e for e in recent
+            if e.get("stop_reason") == "error" and e.get("metrics", {}).get("error_tail")
+        ]
+        if error_entries:
+            lines.append("\n## Subprocess errors from recent runs\n")
+            lines.append(
+                "The following runs crashed at runtime. Fix these errors in your new proposal:\n"
+            )
+            for entry in error_entries[-3:]:
+                tail = entry["metrics"]["error_tail"]
+                lines.append(
+                    f"Iteration {entry['iteration']} ({entry['run_type']}):\n"
+                    f"```\n{tail}\n```\n"
+                )
     else:
         lines.append("\n## Run history\nNo prior runs yet — this is iteration 1.\n")
 
