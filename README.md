@@ -21,6 +21,17 @@ cd ./spider-bot
 python -m spiderbot.locomotion.train
 ```
 
+## Autonomous Jumping Agent
+
+An AI agent that autonomously iterates on reward functions to teach the robot to jump. Uses Claude to propose modifications, runs probe training sessions, evaluates jump quality, and loops until the robot achieves a clean forward jump.
+
+See [spiderbot/jumping/README.md](spiderbot/jumping/README.md) for full setup and usage instructions.
+
+```bash
+cp .env.example .env   # add your ANTHROPIC_API_KEY
+python -m spiderbot.jumping.run_agent
+```
+
 ## Motor Sysid
 
 Identify real motor parameters (friction, inertia, gains) from a connected ODrive-compatible controller and generate copy-paste values for the sim environment. See [hardware/README.md](hardware/README.md) for full instructions.
