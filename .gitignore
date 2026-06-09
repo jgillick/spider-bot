@@ -217,5 +217,7 @@ docs/
 ._*
 archive/issac/cloud.cfg
 archive/issac/env.cfg
-logs/
 secrets.cfg
+logs/
+experiments/
+run_history.json

@@ -57,10 +57,11 @@ class SpiderRobotJumpingEnv(BaseSpiderRobotEnv):
             entity_attr="robot",
             on_reset={
                 "position": {
-                    "fn": reset.randomize_terrain_position,
+                    "fn": reset.position,
                     "params": {
-                        "terrain_manager": self.terrain_manager,
-                        "height_offset": 0.118,
+                        "position":  [0.0, 0.0, 0.118],
+                        "quat": [1.0, 0.0, 0.0, 0.0],
+                        "zero_velocity": True,
                     },
                 },
             },
@@ -180,14 +181,6 @@ class SpiderRobotJumpingEnv(BaseSpiderRobotEnv):
                 "timeout": {
                     "time_out": True,
                     "fn": terminations.timeout,
-                },
-                "dof_velocity_limit": {
-                    "fn": terminations.dof_velocity_limit,
-                    "params": {
-                        "unit": "rpm",
-                        "threshold": 250.0,
-                        "actuator_manager": self.actuator_manager,
-                    },
                 },
                 "foot_angle": {
                     "fn": self.foot_angle_mdp.terminate,
