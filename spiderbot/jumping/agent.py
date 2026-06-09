@@ -50,6 +50,7 @@ class AgentConfig:
     probe_num_envs: int = 512
     full_num_envs: int = 2096
     device: str = "gpu"
+    resume: bool = False
 
 
 class JumpingAgent:
@@ -65,7 +66,8 @@ class JumpingAgent:
     # ------------------------------------------------------------------
 
     def run(self) -> None:
-        self._load_run_history()
+        if self.config.resume:
+            self._load_run_history()
         self._backup_managed_files()
         self._register_sigint()
 

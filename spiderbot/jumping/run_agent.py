@@ -87,6 +87,7 @@ def main() -> None:
         probe_num_envs=args.probe_envs,
         full_num_envs=args.full_envs,
         device=args.device,
+        resume=args.resume,
     )
 
     # Print resolved config (key is redacted)
