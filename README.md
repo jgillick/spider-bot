@@ -17,8 +17,7 @@ uv sync
 ## Train Model
 
 ```bash
-cd ./spider-bot
-python -m spiderbot.locomotion.train
+uv run python -m spiderbot.locomotion.train
 ```
 
 ## Autonomous Jumping Agent

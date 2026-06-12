@@ -127,9 +127,9 @@ def play():
     print("🔌 Initializing simulator...")
 
     # Processor backend (GPU or CPU)
-    backend = gs.gpu
+    backend = gs.constants.backend.gpu
     if args.device == "cpu":
-        backend = gs.cpu
+        backend = gs.constants.backend.cpu
         torch.set_default_device("cpu")
     gs.init(logging_level="warning", backend=backend, performance_mode=True)
 
@@ -141,11 +141,10 @@ def play():
     base_env.reward_manager.enabled = False
     base_env.termination_manager.enabled = False
     base_env.self_contact.enabled = False
-    base_env.action_manager.noise_scale = 0.0
     base_env.vel_command_manager.range = {
-        "lin_vel_x": [-1.0, 1.0],
-        "lin_vel_y": [-1.0, 1.0],
-        "ang_vel_z": [-0.5, 0.5],
+        "lin_vel_x": (-1.0, 1.0),
+        "lin_vel_y": (-1.0, 1.0),
+        "ang_vel_z": (-0.5, 0.5),
     }
 
     # Connect to gamepad
