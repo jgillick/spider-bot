@@ -42,7 +42,7 @@ def main() -> None:
     parser.add_argument(
         "--probe-envs",
         type=int,
-        default=512,
+        default=1024,
         metavar="N",
         help="Parallel environments during probe runs (default: 512)",
     )
@@ -64,6 +64,16 @@ def main() -> None:
         action="store_true",
         default=False,
         help="Resume from existing run_history.json (continue from last iteration)",
+    )
+    parser.add_argument(
+        "--commentary",
+        default="",
+        metavar="TEXT",
+        help=(
+            "Free-text observations to inject into the LLM prompt "
+            "(e.g. 'robot runs fast but tilted, not jumping; revert to iter 005 approach'). "
+            "Useful when resuming to steer the agent based on eval videos or training charts."
+        ),
     )
     args = parser.parse_args()
 
@@ -88,6 +98,7 @@ def main() -> None:
         full_num_envs=args.full_envs,
         device=args.device,
         resume=args.resume,
+        commentary=args.commentary,
     )
 
     # Print resolved config (key is redacted)
@@ -99,6 +110,8 @@ def main() -> None:
     print(f"  full_num_envs:    {config.full_num_envs}")
     print(f"  device:           {config.device}")
     print(f"  resume:           {args.resume}")
+    if args.commentary:
+        print(f"  commentary:       {args.commentary[:80]}{'...' if len(args.commentary) > 80 else ''}")
     print(f"  ANTHROPIC_API_KEY: [set, {len(api_key)} chars]")
 
     if not args.resume:

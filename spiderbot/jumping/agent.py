@@ -2,30 +2,36 @@
 Orchestrator for the autonomous jumping agent.
 Runs a continuous probe → promote → eval loop, using Claude to propose
 reward modifications at each iteration.
+
+Each iteration creates a self-contained experiment directory under
+experiments/iter<n>_<ts>/ containing the source files, logs, reasoning.md,
+metrics.json, and evaluation.md. The base/ template is never modified.
+Scrapped experiments (probe failure, no checkpoint) are moved to failed/.
 """
 
 from __future__ import annotations
 
 import json
 import logging
-import os
 import shutil
 import signal
 import subprocess
 import sys
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass
 from datetime import datetime
 from os import path
 from pathlib import Path
 from typing import Literal
 
-from . import eval as eval_harness
-from .runner import run_training
-from .snapshot import create_snapshot, prune_snapshot, is_promising, EXPERIMENTS_DIR
+from .runner import run_training, TrainingResult
+from .snapshot import is_promising
 from .llm_engine import propose_modifications
 
 THIS_DIR = path.dirname(path.abspath(__file__))
 _JUMPING_ROOT = Path(THIS_DIR).resolve()
+_EXPERIMENTS_DIR = _JUMPING_ROOT / "experiments"
+_BASE_DIR = _EXPERIMENTS_DIR / "base"
+_FAILED_DIR = _JUMPING_ROOT / "failed"
 _RUN_HISTORY_PATH = path.join(THIS_DIR, "run_history.json")
 
 logger = logging.getLogger(__name__)
@@ -35,8 +41,8 @@ if not logger.handlers:
     logger.addHandler(handler)
     logger.setLevel(logging.INFO)
 
-# Files the agent may modify and that are backed up/restored on SIGINT
-_MANAGED_FILES = ["environment.py", "ppo.yaml", "train.py"]
+# Files the LLM may propose changes to (written into each experiment dir)
+_MANAGED_FILES = ["environment.py", "rewards.py", "terminations.py", "ppo.yaml"]
 
 # Maximum consecutive LLM failures before aborting
 _MAX_LLM_FAILURES = 3
@@ -51,13 +57,13 @@ class AgentConfig:
     full_num_envs: int = 2096
     device: str = "gpu"
     resume: bool = False
+    commentary: str = ""
 
 
 class JumpingAgent:
     def __init__(self, config: AgentConfig):
         self.config = config
         self._run_history: list[dict] = []
-        self._current_proc: subprocess.Popen | None = None
         self._consecutive_llm_failures = 0
         self._iteration = 0
 
@@ -68,10 +74,10 @@ class JumpingAgent:
     def run(self) -> None:
         if self.config.resume:
             self._load_run_history()
-        self._backup_managed_files()
         self._register_sigint()
 
         logger.info("Starting autonomous jumping agent (model=%s)", self.config.model)
+        logger.info("Experiment template: %s", _BASE_DIR)
 
         while True:
             self._iteration += 1
@@ -84,7 +90,8 @@ class JumpingAgent:
 
     def _run_iteration(self) -> None:
         prompt_mode = self._determine_prompt_mode()
-        current_files = self._read_managed_files()
+        source_dir = self._get_source_dir()
+        current_files = self._read_files_from(source_dir)
 
         # 1. Ask LLM for modifications
         proposal = propose_modifications(
@@ -92,6 +99,7 @@ class JumpingAgent:
             run_history=self._run_history,
             prompt_mode=prompt_mode,
             model=self.config.model,
+            commentary=self.config.commentary,
         )
         if proposal is None:
             self._consecutive_llm_failures += 1
@@ -107,15 +115,24 @@ class JumpingAgent:
             return
         self._consecutive_llm_failures = 0
 
-        # 2. Write proposed files to working dir (with path safety check)
-        self._write_proposed_files(proposal.modified_files)
+        # 2. Create experiment directory (copy base, overlay managed files from source)
+        iter_ts = _ts()
+        iter_dir = self._create_experiment_dir(iter_ts, source_dir)
+        iter_dir_name = iter_dir.name
 
-        # 3. Probe run
-        probe_exp = f"agent_iter{self._iteration:04d}_probe_{_ts()}"
-        logger.info("Probe run: %s (%d iters)", probe_exp, self.config.probe_iterations)
+        # 3. Write LLM proposal into the experiment dir
+        self._write_proposed_files(proposal.modified_files, iter_dir)
 
+        # 4. Write reasoning.md immediately (before training starts)
+        (iter_dir / "reasoning.md").write_text(proposal.reasoning)
+
+        logger.info("Experiment dir: %s", iter_dir_name)
+
+        # 5. Probe run
+        logger.info("Probe run: %s (%d iters)", iter_dir_name + "/0_probe", self.config.probe_iterations)
         probe_result = run_training(
-            experiment_name=probe_exp,
+            iter_dir=iter_dir,
+            run_name="0_probe",
             num_envs=self.config.probe_num_envs,
             max_iterations=self.config.probe_iterations,
             device=self.config.device,
@@ -128,15 +145,7 @@ class JumpingAgent:
             "error_tail": probe_result.error_tail or None,
         }
 
-        probe_snapshot = create_snapshot(
-            iteration=self._iteration,
-            run_type="probe",
-            log_dir=probe_result.log_dir,
-            metrics=probe_metrics,
-            reasoning=proposal.reasoning,
-        )
-
-        # 4. Evaluate probe reward curve
+        # 6. Probe promotion check
         probe_promoted = probe_result.stop_reason == "completed" or (
             probe_result.stop_reason not in ("flatline", "divergence", "error")
             and probe_result.final_mean_reward > 0
@@ -149,151 +158,228 @@ class JumpingAgent:
             )
             if probe_result.error_tail:
                 logger.warning("Subprocess error:\n%s", probe_result.error_tail)
-            prune_snapshot(probe_snapshot)
+
+            self._write_evaluation_doc(iter_dir=iter_dir, probe_metrics=probe_metrics)
             self._append_history(
+                iter_dir=iter_dir_name,
                 run_type="probe",
-                experiment_name=probe_exp,
                 stop_reason=probe_result.stop_reason,
                 is_promising_flag=False,
                 metrics=probe_metrics,
                 reasoning=proposal.reasoning,
             )
+            _move_to_failed(iter_dir)
+            logger.info("Moved scrapped experiment to failed/%s", iter_dir_name)
             return
 
-        # 5. Full run
-        full_exp = f"agent_iter{self._iteration:04d}_full_{_ts()}"
-        logger.info("Full run: %s (%d iters)", full_exp, self.config.full_iterations)
-
+        # 7. Full run
+        logger.info("Full run: %s (%d iters)", iter_dir_name + "/1_full", self.config.full_iterations)
         full_result = run_training(
-            experiment_name=full_exp,
+            iter_dir=iter_dir,
+            run_name="1_full",
             num_envs=self.config.full_num_envs,
             max_iterations=self.config.full_iterations,
             device=self.config.device,
             early_stop=True,
         )
 
-        # Check if checkpoint exists before eval
-        checkpoint_exists = path.exists(
-            path.join(full_result.log_dir, "model_*.pt".replace("*", str(full_result.iteration_reached)))
-        ) or any(
-            True for _ in Path(full_result.log_dir).glob("model_*.pt")
-        )
+        # Check for checkpoint before attempting eval
+        checkpoint_exists = any(iter_dir.glob("logs/1_full/model_*.pt"))
 
         if not checkpoint_exists:
             logger.warning("No checkpoint found after full run — skipping eval")
-            full_snapshot = create_snapshot(
-                iteration=self._iteration,
-                run_type="full",
-                log_dir=full_result.log_dir,
-                metrics={"stop_reason": full_result.stop_reason, "error": "no_checkpoint"},
-                reasoning=proposal.reasoning,
+            self._write_evaluation_doc(
+                iter_dir=iter_dir,
+                probe_metrics=probe_metrics,
+                full_result=full_result,
             )
-            prune_snapshot(full_snapshot)
             self._append_history(
+                iter_dir=iter_dir_name,
                 run_type="full",
-                experiment_name=full_exp,
                 stop_reason="error",
                 is_promising_flag=False,
                 metrics={"error": "no_checkpoint"},
                 reasoning=proposal.reasoning,
             )
+            _move_to_failed(iter_dir)
+            logger.info("Moved scrapped experiment to failed/%s", iter_dir_name)
             return
 
-        # 6. Eval
-        logger.info("Running eval for %s", full_exp)
-        try:
-            eval_metrics = eval_harness.run_eval(
-                log_dir=full_result.log_dir,
-                num_steps=250,
-                device=self.config.device,
-                record_video=True,
-            )
-        except Exception as exc:
-            logger.error("Eval failed: %s", exc)
-            eval_metrics = {"error": str(exc), "success": False}
+        # 8. Eval — subprocess so Genesis process state doesn't bleed
+        logger.info("Running eval for %s", iter_dir_name)
+        eval_metrics = _run_eval_subprocess(
+            log_dir=str(iter_dir / "logs" / "1_full"),
+            iter_dir_name=iter_dir_name,
+            num_steps=250,
+            device=self.config.device,
+        )
 
         promising = is_promising(eval_metrics)
         success = eval_metrics.get("success", False)
 
-        full_snapshot = create_snapshot(
-            iteration=self._iteration,
+        # 9. Write metrics.json
+        all_metrics = {
+            "probe": probe_metrics,
+            "full": {
+                "stop_reason": full_result.stop_reason,
+                "final_mean_reward": full_result.final_mean_reward,
+                "iteration_reached": full_result.iteration_reached,
+                "error_tail": full_result.error_tail or None,
+            },
+            "eval": eval_metrics,
+        }
+        (iter_dir / "metrics.json").write_text(json.dumps(all_metrics, indent=2))
+
+        # 10. Write evaluation.md
+        self._write_evaluation_doc(
+            iter_dir=iter_dir,
+            probe_metrics=probe_metrics,
+            full_result=full_result,
+            eval_metrics=eval_metrics,
+            promising=promising,
+            success=success,
+        )
+
+        self._append_history(
+            iter_dir=iter_dir_name,
             run_type="full",
-            log_dir=full_result.log_dir,
+            stop_reason=full_result.stop_reason,
+            is_promising_flag=promising,
             metrics={**eval_metrics, "stop_reason": full_result.stop_reason},
             reasoning=proposal.reasoning,
         )
 
         if promising:
-            logger.info("Full run is PROMISING — keeping snapshot at %s", full_snapshot)
-        else:
-            prune_snapshot(full_snapshot)
-
-        self._append_history(
-            run_type="full",
-            experiment_name=full_exp,
-            stop_reason=full_result.stop_reason,
-            is_promising_flag=promising,
-            metrics=eval_metrics,
-            reasoning=proposal.reasoning,
-        )
+            logger.info("Full run is PROMISING — experiment preserved at %s", iter_dir_name)
 
         if success:
             logger.info(
-                "SUCCESS! Policy achieves clean jump. Snapshot: %s  Video: %s",
-                full_snapshot,
+                "SUCCESS! Policy achieves clean jump. Experiment: %s  Video: %s",
+                iter_dir_name,
                 eval_metrics.get("video_path"),
             )
             sys.exit(0)
 
     # ------------------------------------------------------------------
-    # Helpers
+    # Experiment directory management
+    # ------------------------------------------------------------------
+
+    def _get_source_dir(self) -> Path:
+        """
+        In tune mode, return the last promising experiment dir so the LLM
+        sees the files it should tune.  Otherwise return the base template.
+        """
+        last_promising = next(
+            (e for e in reversed(self._run_history)
+             if e.get("run_type") == "full" and e.get("is_promising") and e.get("iter_dir")),
+            None,
+        )
+        if last_promising:
+            candidate = _EXPERIMENTS_DIR / last_promising["iter_dir"]
+            if candidate.exists():
+                return candidate
+        return _BASE_DIR
+
+    def _create_experiment_dir(self, iter_ts: str, source_dir: Path) -> Path:
+        """
+        Create experiments/iter<n>_<ts>/ by:
+          1. copying base/ (always, for train.py / eval.py / __init__.py)
+          2. overlaying managed files from source_dir if source_dir differs from base
+        """
+        iter_dir_name = f"iter{self._iteration:04d}_{iter_ts}"
+        iter_dir = _EXPERIMENTS_DIR / iter_dir_name
+        shutil.copytree(str(_BASE_DIR), str(iter_dir))
+
+        if source_dir != _BASE_DIR:
+            for name in _MANAGED_FILES:
+                src = source_dir / name
+                if src.exists():
+                    shutil.copy2(str(src), str(iter_dir / name))
+
+        return iter_dir
+
+    def _read_files_from(self, source_dir: Path) -> dict[str, str]:
+        result: dict[str, str] = {}
+        for name in _MANAGED_FILES:
+            fpath = source_dir / name
+            if fpath.exists():
+                result[name] = fpath.read_text()
+        return result
+
+    def _write_proposed_files(self, modified_files: dict[str, str], target_dir: Path) -> None:
+        for filename, content in modified_files.items():
+            if filename not in _MANAGED_FILES:
+                logger.warning("Ignoring proposed file not in managed list: %r", filename)
+                continue
+            target = (target_dir / filename).resolve()
+            if not target.is_relative_to(target_dir):
+                raise ValueError(
+                    f"Safety violation: proposed file {filename!r} resolves outside {target_dir}"
+                )
+            target.write_text(content)
+            logger.debug("Wrote %s → %s", filename, target_dir.name)
+
+    # ------------------------------------------------------------------
+    # Output documents
+    # ------------------------------------------------------------------
+
+    def _write_evaluation_doc(
+        self,
+        iter_dir: Path,
+        probe_metrics: dict,
+        full_result: TrainingResult | None = None,
+        eval_metrics: dict | None = None,
+        promising: bool = False,
+        success: bool = False,
+    ) -> None:
+        lines: list[str] = []
+        lines.append(f"# Evaluation — {iter_dir.name}\n\n")
+        lines.append(f"**Iteration:** {self._iteration}\n\n")
+
+        lines.append("## Probe run\n\n")
+        lines.append(f"- **Stop reason:** `{probe_metrics.get('stop_reason')}`\n")
+        lines.append(f"- **Final mean reward:** {probe_metrics.get('final_mean_reward', 0):.4f}\n")
+        lines.append(f"- **Iterations reached:** {probe_metrics.get('iteration_reached', 0)}\n")
+        if probe_metrics.get("error_tail"):
+            lines.append(f"\n**Error output:**\n```\n{probe_metrics['error_tail']}\n```\n")
+
+        if full_result is not None:
+            lines.append("\n## Full run\n\n")
+            lines.append(f"- **Stop reason:** `{full_result.stop_reason}`\n")
+            lines.append(f"- **Final mean reward:** {full_result.final_mean_reward:.4f}\n")
+            lines.append(f"- **Iterations reached:** {full_result.iteration_reached}\n")
+            if full_result.error_tail:
+                lines.append(f"\n**Error output:**\n```\n{full_result.error_tail}\n```\n")
+
+        if eval_metrics is not None:
+            lines.append("\n## Eval results\n\n")
+            if "error" in eval_metrics:
+                lines.append(f"- **Error:** {eval_metrics['error']}\n")
+            else:
+                lines.append(f"- **Height above resting:** {eval_metrics.get('height_above_resting_m', 0):.4f} m\n")
+                lines.append(f"- **Forward distance:** {eval_metrics.get('forward_distance_m', 0):.4f} m\n")
+                lines.append(f"- **Max non-feet force:** {eval_metrics.get('max_non_feet_force_N', 0):.1f} N\n")
+                lines.append(f"- **Airborne steps:** {eval_metrics.get('airborne_steps', 0)} ({eval_metrics.get('airborne_fraction', 0):.1%})\n")
+                lines.append(f"- **Max CoM height:** {eval_metrics.get('max_height_m', 0):.4f} m\n")
+                if eval_metrics.get("video_path"):
+                    lines.append(f"- **Video:** `{eval_metrics['video_path']}`\n")
+
+            lines.append(f"\n**Promising:** {'Yes' if promising else 'No'}\n")
+            lines.append(f"**Success:** {'Yes' if success else 'No'}\n")
+
+        (iter_dir / "evaluation.md").write_text("".join(lines))
+
+    # ------------------------------------------------------------------
+    # History
     # ------------------------------------------------------------------
 
     def _determine_prompt_mode(self) -> Literal["explore", "tune"]:
         if not self._run_history:
             return "explore"
         last = self._run_history[-1]
-        # Tune only when the last full run met R9 (is_promising)
         if last.get("run_type") == "full" and last.get("is_promising"):
             return "tune"
         return "explore"
-
-    def _read_managed_files(self) -> dict[str, str]:
-        result: dict[str, str] = {}
-        for name in _MANAGED_FILES:
-            fpath = path.join(THIS_DIR, name)
-            if path.exists(fpath):
-                with open(fpath) as f:
-                    result[name] = f.read()
-        return result
-
-    def _write_proposed_files(self, modified_files: dict[str, str]) -> None:
-        for filename, content in modified_files.items():
-            target = (_JUMPING_ROOT / filename).resolve()
-            # R15: must stay inside spiderbot/jumping/
-            if not target.is_relative_to(_JUMPING_ROOT):
-                raise ValueError(
-                    f"Safety violation: proposed file {filename!r} resolves to "
-                    f"{target}, which is outside {_JUMPING_ROOT}"
-                )
-            target.write_text(content)
-            logger.debug("Wrote %s", filename)
-
-    def _backup_managed_files(self) -> None:
-        for name in _MANAGED_FILES:
-            src = path.join(THIS_DIR, name)
-            bak = src + ".bak"
-            if path.exists(src) and not path.exists(bak):
-                shutil.copy2(src, bak)
-                logger.info("Backed up %s → %s", name, name + ".bak")
-
-    def _restore_from_backups(self) -> None:
-        for name in _MANAGED_FILES:
-            bak = path.join(THIS_DIR, name + ".bak")
-            dst = path.join(THIS_DIR, name)
-            if path.exists(bak):
-                shutil.copy2(bak, dst)
-                logger.info("Restored %s from backup", name)
 
     def _load_run_history(self) -> None:
         if path.exists(_RUN_HISTORY_PATH):
@@ -308,8 +394,8 @@ class JumpingAgent:
 
     def _append_history(
         self,
+        iter_dir: str,
         run_type: str,
-        experiment_name: str,
         stop_reason: str,
         is_promising_flag: bool,
         metrics: dict,
@@ -319,7 +405,7 @@ class JumpingAgent:
             "iteration": self._iteration,
             "timestamp": datetime.utcnow().isoformat(),
             "run_type": run_type,
-            "experiment_name": experiment_name,
+            "iter_dir": iter_dir,
             "stop_reason": stop_reason,
             "is_promising": is_promising_flag,
             "metrics": metrics,
@@ -329,19 +415,60 @@ class JumpingAgent:
 
     def _register_sigint(self) -> None:
         def handler(signum, frame):
-            logger.info("SIGINT received — cleaning up and restoring files")
-            if self._current_proc is not None:
-                try:
-                    self._current_proc.terminate()
-                    self._current_proc.wait(timeout=10)
-                except Exception:
-                    pass
+            logger.info("SIGINT received — saving history and exiting")
             self._save_run_history()
-            self._restore_from_backups()
             sys.exit(0)
 
         signal.signal(signal.SIGINT, handler)
 
 
+# ------------------------------------------------------------------
+# Module-level helpers
+# ------------------------------------------------------------------
+
 def _ts() -> str:
     return datetime.now().strftime("%Y%m%d_%H%M%S")
+
+
+def _move_to_failed(iter_dir: Path) -> Path:
+    """Move a scrapped experiment directory into the failed/ staging area."""
+    _FAILED_DIR.mkdir(exist_ok=True)
+    dest = _FAILED_DIR / iter_dir.name
+    shutil.move(str(iter_dir), str(dest))
+    return dest
+
+
+def _run_eval_subprocess(
+    log_dir: str,
+    iter_dir_name: str,
+    num_steps: int,
+    device: str,
+) -> dict:
+    """
+    Run the eval harness from the experiment's own eval module in a fresh
+    subprocess so Genesis process-level state doesn't bleed across runs.
+    Results are returned as a dict parsed from the subprocess's JSON stdout.
+    """
+    module_path = f"spiderbot.jumping.experiments.{iter_dir_name}.eval"
+    cmd = [
+        sys.executable, "-m", module_path,
+        log_dir,
+        "--num-steps", str(num_steps),
+        "--device", device,
+    ]
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+        if result.returncode != 0:
+            err = (result.stderr or result.stdout or "").strip()[-500:]
+            logger.error("Eval subprocess failed (exit %d):\n%s", result.returncode, err)
+            return {"error": err, "success": False}
+
+        # The last line of stdout is the JSON result; earlier lines are Genesis logs
+        json_line = result.stdout.strip().rsplit("\n", 1)[-1]
+        return json.loads(json_line)
+    except subprocess.TimeoutExpired:
+        logger.error("Eval subprocess timed out after 600 s")
+        return {"error": "timeout", "success": False}
+    except Exception as exc:
+        logger.error("Eval subprocess error: %s", exc)
+        return {"error": str(exc), "success": False}

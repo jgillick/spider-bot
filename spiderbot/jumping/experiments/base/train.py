@@ -4,25 +4,18 @@ import torch
 import shutil
 import pickle
 import argparse
-from os import path, makedirs
+from os import path
 from datetime import datetime
 from importlib import metadata
-import genesis as gs
 import yaml
+from rsl_rl.runners import OnPolicyRunner
+
+import genesis as gs
+from genesis import constants
 
 from genesis_forge.wrappers import RslRlWrapper
 from .environment import SpiderRobotJumpingEnv
 
-try:
-    try:
-        if metadata.version("rsl-rl"):
-            raise ImportError
-    except metadata.PackageNotFoundError:
-        if metadata.version("rsl-rl-lib").startswith("1."):
-            raise ImportError
-except (metadata.PackageNotFoundError, ImportError) as e:
-    raise ImportError("Please install install 'rsl-rl-lib>=2.2.4'.") from e
-from rsl_rl.runners import OnPolicyRunner
 
 THIS_DIR = path.dirname(path.abspath(__file__))
 DEFAULT_RSL_CONFIG = path.join(THIS_DIR, "ppo.yaml")
@@ -70,9 +63,9 @@ def train_main(
     Run a training session. Importable entry point — no module-level argparse.
     Still intended to be invoked as a subprocess for GPU process isolation.
     """
-    backend = gs.gpu
+    backend = constants.backend.gpu
     if device == "cpu":
-        backend = gs.cpu
+        backend = constants.backend.cpu
         torch.set_default_device("cpu")
 
     # Logging directory
@@ -93,12 +86,14 @@ def train_main(
         {"args": {"num_envs": num_envs, "max_iterations": max_iterations, "device": device}, "seed": seed, "rsl_rl": cfg},
         open(os.path.join(log_path, "cfgs.pkl"), "wb"),
     )
-    makedirs(path.join(log_path, "code"), exist_ok=True)
-    shutil.copy(path.join(THIS_DIR, "train.py"), path.join(log_path, "code", "train.py"))
-    shutil.copy(path.join(THIS_DIR, "environment.py"), path.join(log_path, "code", "environment.py"))
 
-    # Create and build environment (no VideoWrapper during training — saves disk on probe runs)
+    # Initialize genesis
     gs.init(logging_level="warning", backend=backend, performance_mode=True, seed=seed)
+    device_name: str = "cpu"
+    if gs.device:
+        device_name = gs.device.type
+
+    # Create and build environment
     env = SpiderRobotJumpingEnv(
         num_envs=num_envs,
         headless=True,
@@ -110,8 +105,7 @@ def train_main(
 
     # Train
     print("💪 Training model...")
-    runner = OnPolicyRunner(env, cfg, log_path, device=gs.device)
-    runner.git_status_repos = ["."]
+    runner = OnPolicyRunner(env, cfg, log_path, device=device_name)
     runner.learn(
         num_learning_iterations=max_iterations, init_at_random_ep_len=False
     )

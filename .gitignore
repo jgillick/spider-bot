@@ -219,5 +219,8 @@ archive/issac/cloud.cfg
 archive/issac/env.cfg
 secrets.cfg
 logs/
-experiments/
 run_history.json
+
+# Jumping spider experiments
+spiderbot/jumping/experiments/iter*
+spiderbot/jumping/failed

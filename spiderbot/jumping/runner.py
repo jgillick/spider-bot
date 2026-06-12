@@ -4,6 +4,7 @@ import sys
 import subprocess
 from dataclasses import dataclass, field
 from os import path
+from pathlib import Path
 from typing import Literal
 
 import numpy as np
@@ -20,7 +21,7 @@ _MIN_SAMPLES_FOR_STOP = 50
 
 @dataclass
 class TrainingResult:
-    experiment_name: str
+    run_name: str
     log_dir: str
     reward_curve: list[float] = field(default_factory=list)
     exit_code: int = 0
@@ -31,36 +32,38 @@ class TrainingResult:
 
 
 def run_training(
-    experiment_name: str,
+    iter_dir: str | Path,
+    run_name: str,
     num_envs: int,
     max_iterations: int,
-    ppo_config: str | None = None,
     device: str = "gpu",
     early_stop: bool = True,
 ) -> TrainingResult:
     """
-    Launch a training subprocess and monitor its reward curve.
-    Returns a TrainingResult with the reward history and stop reason.
+    Launch a training subprocess for one run inside an experiment directory.
+
+    iter_dir: absolute path to an experiments/iter<n>_<ts>/ directory
+    run_name: "0_probe" or "1_full" — used as the experiment name inside train.py
+              so logs land at <iter_dir>/logs/<run_name>/
     """
-    assert experiment_name, "experiment_name must be non-empty (required for stdout logging)"
+    iter_dir = Path(iter_dir)
+    iter_dir_name = iter_dir.name
 
-    log_dir = path.join(THIS_DIR, "logs", experiment_name)
+    log_dir = str(iter_dir / "logs" / run_name)
 
+    module_path = f"spiderbot.jumping.experiments.{iter_dir_name}.train"
     cmd = [
-        sys.executable, "-m", "spiderbot.jumping.train",
+        sys.executable, "-m", module_path,
         "-n", str(num_envs),
         "-i", str(max_iterations),
-        "-e", experiment_name,
+        "-e", run_name,
         "-d", device,
     ]
-    if ppo_config:
-        cmd += ["-c", ppo_config]
 
-    os.makedirs(path.join(THIS_DIR, "logs"), exist_ok=True)
+    stdout_log_path = str(iter_dir / f"{run_name}_stdout.log")
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
 
-    result = TrainingResult(experiment_name=experiment_name, log_dir=log_dir)
-    stdout_log_path = path.join(THIS_DIR, "logs", f"{experiment_name}_stdout.log")
+    result = TrainingResult(run_name=run_name, log_dir=log_dir)
     all_lines: list[str] = []
 
     try:

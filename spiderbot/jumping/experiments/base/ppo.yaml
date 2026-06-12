@@ -59,7 +59,7 @@ runner:
     # Surrogate loss
     desired_kl: 0.01
     entropy_coef: 0.005
-    gamma: 0.99
+    gamma: 0.995 # raised from 0.99: jump payout is delayed ~25-40 steps after takeoff
     lam: 0.95
     max_grad_norm: 1.0
 

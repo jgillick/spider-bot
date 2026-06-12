@@ -8,8 +8,9 @@ from genesis_forge.managers import (
 )
 from genesis_forge.managers.actuator import ActuatorManager, NoisyValue
 from genesis_forge.mdp import reset, rewards, terminations, observations
+import torch
 
-from spiderbot.environment import BaseSpiderRobotEnv, Terrain, EnvMode
+from spiderbot.environment import BaseSpiderRobotEnv, EnvMode
 from spiderbot.mdp.foot_angle import FootAngleMdp
 
 
@@ -217,3 +218,16 @@ class SpiderRobotJumpingEnv(BaseSpiderRobotEnv):
     def build(self):
         super().build()
         self.foot_angle_mdp.build()
+
+    def step(self, actions: torch.Tensor):
+        """
+        Perform a step in the environment.
+        """
+        obs, reward, terminated, truncated, extras = super().step(actions)
+
+        # Log custom success metrics here (not in reward functions).
+        # RSL-RL reads extras["episode"] for TensorBoard — always write there:
+        # ep = extras["episode"]
+        # ep["Metrics / avg_jump_distance"] = some_tensor.mean().clone()  # must be scalar tensor
+
+        return obs, reward, terminated, truncated, extras
