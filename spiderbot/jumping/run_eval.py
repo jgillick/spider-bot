@@ -69,7 +69,7 @@ def main() -> None:
 
 
 def _write_evaluation_doc(iter_dir: Path, run_name: str, eval_metrics: dict) -> None:
-    from .snapshot import is_promising
+    from .agent import is_promising
 
     promising = is_promising(eval_metrics)
     success = eval_metrics.get("success", False)

@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 SPIDER_XML = os.path.abspath(os.path.join(THIS_DIR, "../model/v2/SpiderBot.xml"))
 
-PD_KP = 30.0
+PD_KP = 50.0
 PD_KV = 0.5
 DAMPING = 0.04
 ARMATURE = 0.0020

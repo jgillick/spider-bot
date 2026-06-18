@@ -23,8 +23,16 @@ from os import path
 from pathlib import Path
 from typing import Literal
 
+from .config import (
+    EVAL_NUM_STEPS,
+    FULL_ITERATIONS,
+    FULL_NUM_ENVS,
+    MAX_LLM_FAILURES,
+    PROBE_ITERATIONS,
+    PROBE_NUM_ENVS,
+    PROMISING_HEIGHT_M, PROMISING_FORCE_N
+)
 from .runner import run_training, TrainingResult
-from .snapshot import is_promising
 from .llm_engine import propose_modifications
 
 THIS_DIR = path.dirname(path.abspath(__file__))
@@ -44,17 +52,13 @@ if not logger.handlers:
 # Files the LLM may propose changes to (written into each experiment dir)
 _MANAGED_FILES = ["environment.py", "rewards.py", "terminations.py", "ppo.yaml"]
 
-# Maximum consecutive LLM failures before aborting
-_MAX_LLM_FAILURES = 3
-
-
 @dataclass
 class AgentConfig:
     model: str = "claude-sonnet-4-6"
-    probe_iterations: int = 600
-    full_iterations: int = 1500
-    probe_num_envs: int = 512
-    full_num_envs: int = 2096
+    probe_iterations: int = PROBE_ITERATIONS
+    full_iterations: int = FULL_ITERATIONS
+    probe_num_envs: int = PROBE_NUM_ENVS
+    full_num_envs: int = FULL_NUM_ENVS
     device: str = "gpu"
     resume: bool = False
     commentary: str = ""
@@ -105,12 +109,12 @@ class JumpingAgent:
             self._consecutive_llm_failures += 1
             logger.warning(
                 "LLM returned no valid proposal (failure %d/%d)",
-                self._consecutive_llm_failures, _MAX_LLM_FAILURES,
+                self._consecutive_llm_failures, MAX_LLM_FAILURES,
             )
-            if self._consecutive_llm_failures >= _MAX_LLM_FAILURES:
+            if self._consecutive_llm_failures >= MAX_LLM_FAILURES:
                 raise RuntimeError(
                     f"LLM failed to produce valid modifications "
-                    f"{_MAX_LLM_FAILURES} consecutive times — aborting"
+                    f"{MAX_LLM_FAILURES} consecutive times — aborting"
                 )
             return
         self._consecutive_llm_failures = 0
@@ -210,7 +214,7 @@ class JumpingAgent:
         eval_metrics = _run_eval_subprocess(
             log_dir=str(iter_dir / "logs" / "1_full"),
             iter_dir_name=iter_dir_name,
-            num_steps=250,
+            num_steps=EVAL_NUM_STEPS,
             device=self.config.device,
         )
 
@@ -423,8 +427,25 @@ class JumpingAgent:
 
 
 # ------------------------------------------------------------------
-# Module-level helpers
+# Helpers
 # ------------------------------------------------------------------
+
+def is_promising(
+    metrics: dict,
+    height_threshold_m: float = PROMISING_HEIGHT_M,
+    force_threshold_N: float = PROMISING_FORCE_N,
+) -> bool:
+    """
+    Classify a full run as promising:
+      - CoM height above resting exceeds threshold
+      - Forward distance is positive
+      - Peak non-feet contact force at landing is below threshold
+    """
+    return (
+        metrics.get("height_above_resting_m", 0.0) > height_threshold_m
+        and metrics.get("forward_distance_m", 0.0) > 0.0
+        and metrics.get("max_non_feet_force_N", float("inf")) < force_threshold_N
+    )
 
 def _ts() -> str:
     return datetime.now().strftime("%Y%m%d_%H%M%S")

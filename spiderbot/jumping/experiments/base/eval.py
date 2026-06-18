@@ -18,14 +18,10 @@ from genesis_forge.wrappers.video import VideoWrapper
 from rsl_rl.runners import OnPolicyRunner
 
 from .environment import SpiderRobotJumpingEnv
+from spiderbot.jumping.config import AIRBORNE_FORCE_THRESHOLD_N, SUCCESS_FORCE_THRESHOLD_N
 
 THIS_DIR = path.dirname(path.abspath(__file__))
 DEFAULT_LOG_DIR = path.join(THIS_DIR, "logs", "1_full")
-
-# Contact force threshold below which a link is considered airborne
-_AIRBORNE_FORCE_THRESHOLD = 1.0
-# Force threshold for "successful" landing (no hard body-to-terrain impact)
-_SUCCESS_FORCE_THRESHOLD = 15.0
 
 
 def run_eval(
@@ -140,7 +136,7 @@ def run_eval(
                 max_non_feet_force_N = peak_body_force
 
             foot_forces = base_env.foot_contact_manager.contacts.norm(dim=-1)  # (n_envs, n_feet)
-            if foot_forces[0].max().item() < _AIRBORNE_FORCE_THRESHOLD:
+            if foot_forces[0].max().item() < AIRBORNE_FORCE_THRESHOLD_N:
                 airborne_steps += 1
 
     env.close()
@@ -150,7 +146,7 @@ def run_eval(
     success = (
         height_above_resting_m > 0.02
         and forward_distance_m > 0.0
-        and max_non_feet_force_N < _SUCCESS_FORCE_THRESHOLD
+        and max_non_feet_force_N < SUCCESS_FORCE_THRESHOLD_N
     )
 
     return {
