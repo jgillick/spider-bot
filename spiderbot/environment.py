@@ -71,7 +71,7 @@ class BaseSpiderRobotEnv(ManagedEnvironment):
                 enable_self_collision=True,
                 enable_neutral_collision=True,
                 multiplier_collision_broad_phase=32,
-                max_collision_pairs=35,
+                max_collision_pairs=40,
             ),
         )
 

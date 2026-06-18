@@ -6,8 +6,8 @@ import pickle
 import argparse
 from os import path, makedirs
 from datetime import datetime
-import genesis as gs
 import yaml
+import genesis as gs
 
 from genesis_forge.wrappers import (
     VideoWrapper,
@@ -26,12 +26,12 @@ TARGET_MINI_BATCH = 24_576
 
 
 parser = argparse.ArgumentParser(add_help=True)
-parser.add_argument("-n", "--num_envs", type=int, default=2096)
+parser.add_argument("-n", "--num_envs", type=int, default=4048)
 parser.add_argument("-i", "--max_iterations", type=int, default=8_000)
 parser.add_argument("-d", "--device", type=str, default="gpu")
 parser.add_argument("-c", "--config", type=str, default=DEFAULT_RSL_CONFIG)
 parser.add_argument(
-    "-t", "--terrain", type=str, default="flat", help="Set terrain: flat, rough, mixed"
+    "-t", "--terrain", type=str, default="mixed", help="Set terrain: flat, rough, mixed"
 )
 parser.add_argument(
     "--lidar",
@@ -72,9 +72,9 @@ def training_cfg(yaml_path: str, exp_name: str, max_iterations: int, num_envs: i
 
 def main():
     # Initialize Genesis
-    backend = gs.gpu
+    backend = gs.constants.backend.gpu
     if args.device == "cpu":
-        backend = gs.cpu
+        backend = gs.constants.backend.cpu
         torch.set_default_device("cpu")
 
     # Logging directory
@@ -130,7 +130,7 @@ def main():
     # Train
     print("💪 Training model...")
     runner = OnPolicyRunner(env, cfg, log_path, device=gs.device)
-    runner.git_status_repos = ["."]
+    runner.add_git_repo_to_log('.')
     runner.learn(
         num_learning_iterations=args.max_iterations, init_at_random_ep_len=False
     )

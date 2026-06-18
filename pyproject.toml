@@ -5,8 +5,10 @@ description = "Your friendly neighborhood eight-legged robot"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "genesis-forge>=0.3.0",
-    "genesis-world>=0.4.0",
+    "anthropic>=0.40.0",
+    "python-dotenv>=1.0.0",
+    "genesis-forge>=0.5.1",
+    "genesis-world>=1.1.1",
     "numpy>=1.24.0",
     "hidapi>=0.15.0",
     "odrive>=0.6.7,<0.7.0",

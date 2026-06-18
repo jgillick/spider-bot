@@ -4,6 +4,7 @@ import torch
 import shutil
 import pickle
 import argparse
+from os import path, makedirs
 from datetime import datetime
 from importlib import metadata
 import genesis as gs
@@ -13,7 +14,7 @@ from genesis_forge.wrappers import (
     VideoWrapper,
     RslRlWrapper,
 )
-from environment import SpiderRobotHeightEnv
+from .environment import SpiderRobotHeightEnv
 
 try:
     try:
@@ -26,7 +27,8 @@ except (metadata.PackageNotFoundError, ImportError) as e:
     raise ImportError("Please install install 'rsl-rl-lib>=2.2.4'.") from e
 from rsl_rl.runners import OnPolicyRunner
 
-DEFAULT_RSL_CONFIG = "./ppo.yaml"
+THIS_DIR = path.dirname(path.abspath(__file__))
+DEFAULT_RSL_CONFIG = path.join(THIS_DIR, "ppo.yaml")
 
 # Training parameters
 TOTAL_BATCH = 196_608
@@ -84,7 +86,7 @@ def main():
         torch.set_default_device("cpu")
 
     # Logging directory
-    log_base_dir = "./logs"
+    log_base_dir = path.join(THIS_DIR, "logs")
     experiment_name = datetime.now().strftime("%Y%m%d_%H%M%S")
     if args.experiment_name:
         experiment_name = args.experiment_name
@@ -105,9 +107,9 @@ def main():
         {"args": args, "seed": seed, "rsl_rl": cfg},
         open(os.path.join(log_path, "cfgs.pkl"), "wb"),
     )
-    os.makedirs(os.path.join(log_path, "code"), exist_ok=True)
-    shutil.copy("train.py", os.path.join(log_path, "code", "train_rsl.py"))
-    shutil.copy("environment.py", os.path.join(log_path, "code", "environment.py"))
+    makedirs(path.join(log_path, "code"), exist_ok=True)
+    shutil.copy(path.join(THIS_DIR, "train.py"), path.join(log_path, "code", "train.py"))
+    shutil.copy(path.join(THIS_DIR, "environment.py"), path.join(log_path, "code", "environment.py"))
 
     # Create environment
     gs.init(logging_level="warning", backend=backend, performance_mode=True, seed=seed)
