@@ -15,6 +15,8 @@ from genesis_forge.managers import (
     VelocityCommandManager,
 )
 from genesis_forge.managers.actuator import ActuatorManager, NoisyValue
+from genesis_forge.managers.command.velocity_command import VelocityCommandRange
+from typing import cast
 from genesis_forge.mdp import reset, rewards, terminations, observations
 
 
@@ -187,9 +189,9 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
         self.vel_command_manager = VelocityCommandManager(
             self,
             range={
-                "lin_vel_x": [-0.6, 0.6],
-                "lin_vel_y": [-0.5, 0.5],
-                "ang_vel_z": [-1.0, 1.0],
+                "lin_vel_x": (-0.6, 0.6),
+                "lin_vel_y": (-0.5, 0.5),
+                "ang_vel_z": (-1.0, 1.0),
             },
             resample_time_sec=4.0,
             debug_visualizer=True,
@@ -200,7 +202,7 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
 
         ##
         # Rewards
-        self.reward_manager = RewardManager(
+        self.reward_manager = RewardManager(  # type: ignore[arg-type]
             self,
             cfg={
                 # "gait_diagonal": {
@@ -419,7 +421,7 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
                     },
                 },
                 "control_force": {
-                    "fn": lambda env: self.robot.get_dofs_control_force(),
+                    "fn": lambda env: self.actuator_manager.get_dofs_control_force(),
                     "scale": 0.1,
                 },
                 "force": {
@@ -447,13 +449,13 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
         # Finish up
         return obs, reward, terminated, truncated, extras
 
-    def reset(self, envs_idx: list[int] | None = None):
-        if envs_idx is not None:
+    def reset(self, env_ids: list[int] | None = None):
+        if env_ids is not None:
             self._last_reset_mean_ep_length = (
-                self.episode_length[envs_idx].float().mean().item()
+                self.episode_length[env_ids].float().mean().item()
             )
-        result = super().reset(envs_idx)
-        if envs_idx is not None:
+        result = super().reset(env_ids)
+        if env_ids is not None:
             self.update_curriculum()
         return result
 
@@ -472,12 +474,9 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
 
     def log_curriculum(self, extras: dict):
         extras["episode"]["Curriculum / curriculum_level"] = self.curriculum_level
-        extras["episode"]["Curriculum / max_velocity_x"] = (
-            self.vel_command_manager.range["lin_vel_x"][1]
-        )
-        extras["episode"]["Curriculum / max_velocity_y"] = (
-            self.vel_command_manager.range["lin_vel_y"][1]
-        )
+        vel_range = cast(VelocityCommandRange, self.vel_command_manager.range)
+        extras["episode"]["Curriculum / max_velocity_x"] = vel_range["lin_vel_x"][1]
+        extras["episode"]["Curriculum / max_velocity_y"] = vel_range["lin_vel_y"][1]
         # extras["episode"]["Curriculum / gait_weight"] = self.reward_manager[
         #     "gait_diagonal"
         # ].weight
@@ -531,45 +530,13 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
 
         return extras
 
-    def air_time_observation(self, env: GenesisEnv) -> float:
+    def air_time_observation(self, env: GenesisEnv) -> torch.Tensor:
         """Return the mid point of the current foot air time target range"""
         params = self.reward_manager["foot_air_time"].params
         mid_point = (params["time_threshold"] + params["time_threshold_max"]) / 2.0
         obs = torch.zeros(env.num_envs, 1, device=gs.device)
         obs[:] = mid_point
         return obs
-
-    def feet_max_air_time_reward(
-        self,
-        env: GenesisEnv,
-        max_air_time: float,
-    ) -> torch.Tensor:
-        """Penalise any foot that stays airborne longer than ``max_air_time``.
-
-        Unlike ``feet_air_time`` (which fires once at touchdown), this is a
-        continuous per-step penalty that grows linearly with every additional
-        second the foot remains in the air beyond the threshold.  This gives
-        the policy an ongoing gradient to bring a retracted leg back down,
-        which ``feet_air_time`` alone cannot provide.
-
-        Should be registered with a negative weight.  Set ``max_air_time``
-        comfortably above the expected swing duration (e.g. 1.5× the
-        ``time_threshold_max`` used in ``feet_air_time``) so that normal
-        stepping is unaffected.
-
-        Args:
-            env: The Genesis Forge environment.
-            max_air_time: Seconds a foot may be airborne before the penalty
-                          starts accumulating.
-
-        Returns:
-            Per-environment sum of excess air time across all feet,
-            shape ``(n_envs,)``.
-        """
-        excess = (self.foot_contact_manager.current_air_time - max_air_time).clamp(
-            min=0.0
-        )
-        return excess.sum(dim=-1)
 
     def feet_max_air_time_reward(
         self,
@@ -660,7 +627,7 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
         self.curriculum_samples = []
         self.curriculum_ep_length_samples = []
 
-    def curriculum_terrain(self) -> Terrain:
+    def curriculum_terrain(self) -> str | None:
         """
         Select the terrain type for the environment.
         """

@@ -7,9 +7,9 @@ import glob
 import argparse
 import torch
 import pickle
-from skrl.utils.runner.torch import Runner
 
 import genesis as gs
+from genesis import constants
 
 from rsl_rl.runners import OnPolicyRunner
 from genesis_forge.wrappers import RslRlWrapper
@@ -68,9 +68,9 @@ def play():
     print(f"Playing model: {model}")
 
     # Processor backend (GPU or CPU)
-    backend = gs.gpu
+    backend = constants.backend.gpu
     if args.device == "cpu":
-        backend = gs.cpu
+        backend = constants.backend.cpu
         torch.set_default_device("cpu")
     gs.init(logging_level="warning", backend=backend, performance_mode=True)
 
@@ -82,11 +82,10 @@ def play():
     env.reward_manager.enabled = False
     env.termination_manager.enabled = False
     env.self_contact.enabled = False
-    env.action_manager.noise_scale = 0.0
     env.vel_command_manager.range = {
-        "lin_vel_x": [-1.0, 1.0],
-        "lin_vel_y": [-1.0, 1.0],
-        "ang_vel_z": [-0.5, 0.5],
+        "lin_vel_x": (-1.0, 1.0),
+        "lin_vel_y": (-1.0, 1.0),
+        "ang_vel_z": (-0.5, 0.5),
     }
 
     # Connect to gamepad

@@ -207,12 +207,21 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
+# Claude
+.claude/
+docs/
+
 # Other files
 .DS_Store
 *.tmp.usd
 ._*
 archive/issac/cloud.cfg
 archive/issac/env.cfg
-logs/
 secrets.cfg
 .claude/
+logs/
+
+# Jumping spider experiments
+run_history.json
+spiderbot/jumping/experiments/iter*
+spiderbot/jumping/failed
