@@ -14,6 +14,7 @@ Vertical height is useful only insofar as it enables more forward distance — d
 - Forward distance (x-axis) must exceed 0.3 m per jump
 - CoM height must exceed resting height by at least ${SUCCESS_HEIGHT_THRESHOLD_M} m (minimum jump confirmation — feet must leave the ground; this is not a height goal)
 - Peak contact force on non-feet body links must stay below ${SUCCESS_FORCE_THRESHOLD_N} N at landing
+- **No early terminations** — the 250-step eval rollout must complete without any termination condition firing (body slam, bad orientation, etc.). A policy that jumps but crashes on landing fails this criterion.
 
 ## Available managers in self (ONLY use what is listed here)
 These are the attributes you can reference in params:
@@ -66,6 +67,9 @@ Each entry shows the exact `"params"` dict to use in the reward config.
     params: {"contact_manager": self.foot_contact_manager, "time_threshold": 0.2}
     ⚠️ contact_manager MUST have track_air_time=True — only self.foot_contact_manager qualifies
     optional: add "time_threshold_max": 1.0 to cap the per-foot reward
+    ⚠️ This reward is per-foot and independent — a robot standing tall on 3 legs with 5 feet raised
+    will score well without ever achieving a true jump. If used, pair with a custom all-feet-simultaneous
+    liftoff check (see custom rewards below) to prevent this exploit.
 
 ## INTERNAL UTILITIES — NOT reward functions (DO NOT USE in reward config)
 entity_lin_vel, entity_ang_vel, entity_projected_gravity are internal helpers.
@@ -77,6 +81,9 @@ They take a RigidEntity, not an env. Do NOT put them in the RewardManager config
   - has_contact           — rewards feet staying planted on the ground
   - command_tracking_lin_vel / command_tracking_ang_vel — locomotion gait terms
   - feet_ground_time      — penalises feet leaving the ground
+  - CoM z-position (height) as a positive reward — causes the robot to stand as tall as possible
+    on a subset of legs rather than jump. The eval requires ALL 8 feet simultaneously off the
+    ground; a policy that lifts 5 feet while 3 remain planted will always fail eval.
 
 ## Reward config dict format (CRITICAL — KeyError crashes if wrong)
 Every reward entry MUST have a `"fn"` key and a `"weight"` key:
@@ -121,6 +128,20 @@ Use torch operations only (no numpy).
 Key design principle: reward COMPLETED forward displacement (Δx at landing), not instantaneous forward
 velocity during flight. Rewarding vx densely during flight caused a 6.9m gallop with 2770 N slams in a
 prior run — the robot found it could exploit forward speed without ever needing a clean landing.
+
+Known failure mode — "jump-then-crash": The robot achieves liftoff (all feet off ground) but triggers
+an early termination on landing (body slam, bad orientation, etc.), resetting the episode before any
+forward distance is recorded. Seen in multiple runs: `airborne_steps > 0` but `early_terminations > 0`
+and `forward_distance_m ≈ 0`. Fix: relax or remove aggressive termination conditions, or add a reward
+for soft landing so the policy learns to absorb the impact. The `contact_force_with_grace_period`
+termination is preferred over `contact_force` because it gives the robot a brief window to settle.
+
+Known failure mode — "tall standing": Rewarding CoM height or using `feet_air_time` without an
+all-feet-simultaneous check causes the robot to stand as tall as possible on a subset of legs.
+Observed in multiple runs: robot stood high on 3 legs with 5 feet raised — satisfying height and
+partial air-time rewards without ever leaving the ground with all 8 feet. The eval requires ALL 8
+feet simultaneously off the ground; any reward that can be maximised by lifting only some feet will
+produce this behaviour.
 
 Import and use in environment.py:
 ```python
@@ -168,6 +189,62 @@ You may also add `noise` and `scale` keys to any observation entry:
   `"scale": 0.1` multiplies the observation tensor;  `"noise": 0.01` adds Gaussian noise.
 
 DO NOT add `height_command_manager` — jumping env has none.
+
+### Privileged critic observations (asymmetric actor-critic)
+
+The critic only runs during training — it can observe privileged ground-truth state that the deployed
+policy cannot. Better critic inputs → better advantage estimates → faster learning. This is standard
+practice for contact-rich robot tasks.
+
+To add privileged observations, create a **second** `ObservationManager` with `name="critic"` — it
+must be a separate instance, NOT a nested group inside the existing cfg dict:
+
+**Step 1** — add a second `ObservationManager` in `config()`:
+```python
+# Existing actor observations — keep as-is (name defaults to "policy")
+ObservationManager(
+    self,
+    cfg={
+        "imu_lin_acc_ang_vel": {"fn": self.imu_observation},
+        # ... rest of existing observations unchanged ...
+    },
+)
+
+# Second manager — critic-only privileged observations
+ObservationManager(
+    self,
+    name="critic",   # ← this is what links it to ppo.yaml
+    cfg={
+        "true_foot_forces": {
+            "fn": lambda env: env.foot_contact_manager.contacts.norm(dim=-1),
+        },
+        "airborne": {
+            "fn": lambda env: (
+                env.foot_contact_manager.contacts.norm(dim=-1).max(dim=-1).values < 1.0
+            ).float().unsqueeze(-1),
+        },
+        "body_contact_forces": {
+            "fn": lambda env: env.body_terrain_contact.contacts.norm(dim=-1),
+        },
+        "com_height": {
+            "fn": lambda env: env.robot_manager.entity.get_pos()[:, 2:3],
+        },
+    },
+)
+```
+
+**Step 2** — update `ppo.yaml` so the critic sees both groups:
+```yaml
+obs_groups:
+  actor:
+    - policy
+  critic:
+    - policy
+    - critic    # ← add this line
+```
+
+Do NOT put the critic observations inside the `policy` manager's `cfg` — the deployed policy cannot
+access ground-truth physics state. Each `ObservationManager` instance is one flat group.
 
 ## Terminations — you MAY modify
 The `TerminationManager` in `config()` controls when episodes reset.
@@ -329,6 +406,40 @@ def step(self, actions: torch.Tensor):
     - `self.actuator_manager`, `self.action_manager`, `self.robot_manager` — core infrastructure
 - Do NOT add `self_contact` to TerminationManager
 - Do NOT add `height_command_manager` — jumping env has none
+
+## PPO configuration — you MAY modify
+
+The `ppo.yaml` file controls the training algorithm. Return a `--- ppo.yaml ---` block to change it.
+Include the full file — RSL-RL reads it wholesale.
+
+Key parameters for jumping:
+
+| Parameter | Current | Effect |
+|-----------|---------|--------|
+| `entropy_coef` | 0.005 | Higher (0.01–0.05) → more exploration; useful when the robot is stuck on the ground |
+| `num_steps_per_env` | 24 | Steps collected per env before each update; higher (48–96) gives more signal for delayed rewards like jump landings |
+| `gamma` | 0.995 | Discount factor — already tuned for jumping's delayed payout; do not lower |
+| `learning_rate` | 0.001 | Adaptive schedule (`schedule: adaptive`) adjusts this automatically via `desired_kl` |
+| `hidden_dims` (actor/critic) | [1024, 512, 256] | Network capacity; increase if the task is too complex for current architecture |
+| `init_std` | 1.0 | Initial policy action std; higher = more random early exploration |
+
+### RND — intrinsic exploration bonus
+
+The config includes a `rnd_cfg` block (Random Network Distillation). When enabled, it adds a bonus
+for visiting novel states — useful when the robot is stuck and rarely discovers the airborne state.
+
+To enable:
+```yaml
+rnd_cfg:
+  weight: 0.01     # intrinsic reward weight; try 0.005–0.05
+  weight_schedule: null
+  reward_normalization: true
+```
+
+Start small (`weight: 0.01`) and watch TensorBoard — too high and the robot chases novelty instead
+of learning to jump. Disable once the robot is reliably leaving the ground.
+
+---
 
 ## Response format
 Return ONLY file content blocks in this exact format:

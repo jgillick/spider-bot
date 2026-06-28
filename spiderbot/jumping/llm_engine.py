@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from typing import Literal
 
 import anthropic
+from anthropic.types import CacheControlEphemeralParam, MessageParam, TextBlockParam
 
 from .config import SUCCESS_FORCE_THRESHOLD_N, SUCCESS_HEIGHT_THRESHOLD_M
 
@@ -188,13 +189,26 @@ def propose_modifications(
     user_message = _build_user_message(current_files, run_history, prompt_mode, commentary)
     client = anthropic.Anthropic()
 
+    # Cache the system prompt and the initial user message (file contents + run history).
+    # On retries the first two messages are unchanged, so the cache is hit.
+    _cache = CacheControlEphemeralParam(type="ephemeral")
+    _system: list[TextBlockParam] = [
+        TextBlockParam(type="text", text=_SYSTEM_PROMPT, cache_control=_cache)
+    ]
+    messages: list[MessageParam] = [
+        MessageParam(
+            role="user",
+            content=[TextBlockParam(type="text", text=user_message, cache_control=_cache)],
+        )
+    ]
+
     for attempt in range(2):
         try:
             with client.messages.stream(
                 model=model,
                 max_tokens=32000,
-                system=_SYSTEM_PROMPT,
-                messages=[{"role": "user", "content": user_message}],
+                system=_system,
+                messages=messages,
             ) as stream:
                 response = stream.get_final_message()
         except anthropic.APIError:
@@ -228,12 +242,14 @@ def propose_modifications(
                 attempt + 1, stop_reason, text[-500:],
             )
             if attempt == 0:
-                user_message = (
-                    user_message
-                    + "\n\nYour previous response contained no file blocks. "
-                    "You MUST include at least one `--- environment.py ---` / `--- end ---` block "
-                    "with the complete modified Python file."
-                )
+                messages += [
+                    MessageParam(role="assistant", content=text),
+                    MessageParam(role="user", content=(
+                        "Your previous response contained no file blocks. "
+                        "You MUST include at least one `--- environment.py ---` / `--- end ---` block "
+                        "with the complete modified Python file."
+                    )),
+                ]
             continue
 
         # Validate Python syntax; accumulate errors for retry
@@ -258,11 +274,13 @@ def propose_modifications(
 
         _log.warning("LLM response had errors (attempt %d/2): %s", attempt + 1, errors)
         if attempt == 0:
-            error_text = "\n".join(errors)
-            user_message = (
-                user_message
-                + f"\n\nYour previous response had errors. Fix them and try again:\n{error_text}"
-            )
+            messages += [
+                MessageParam(role="assistant", content=text),
+                MessageParam(role="user", content=(
+                    "Your previous response had errors. Fix them and try again:\n"
+                    + "\n".join(errors)
+                )),
+            ]
 
     return None
 

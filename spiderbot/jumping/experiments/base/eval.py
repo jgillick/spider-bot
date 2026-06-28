@@ -86,8 +86,7 @@ def run_eval(
 
     video_path: str | None = None
     if record_video:
-        video_dir = path.join(log_dir, "eval_videos")
-        os.makedirs(video_dir, exist_ok=True)
+        video_dir = path.join(log_dir, '../../')
         video_path = path.join(video_dir, "eval.mp4")
         env = VideoWrapper(
             base_env,
@@ -114,11 +113,12 @@ def run_eval(
     forward_distance_m = 0.0
     max_non_feet_force_N = 0.0
     airborne_steps = 0
+    early_terminations = 0
 
     with torch.no_grad():
         for _ in range(num_steps):
             actions = policy(obs)
-            obs, _rew, _done, _info = env.step(actions)
+            obs, _rew, done, info = env.step(actions)
 
             pos = base_env.robot.get_pos()[0]  # (3,)
 
@@ -139,14 +139,24 @@ def run_eval(
             if foot_forces[0].max().item() < AIRBORNE_FORCE_THRESHOLD_N:
                 airborne_steps += 1
 
+            # Count early terminations (body slam, bad orientation, etc.).
+            # Timeouts are expected; early terminations mean the robot crashed.
+            done_flag = done.any().item() if hasattr(done, "any") else bool(done)
+            if done_flag:
+                is_timeout = info.get("time_outs", torch.zeros(1)).any().item()
+                if not is_timeout:
+                    early_terminations += 1
+
     env.close()
 
     height_above_resting_m = max_height_m - initial_pos[2].item()
+    clean_episode = early_terminations == 0
 
     success = (
         height_above_resting_m > 0.02
         and forward_distance_m > 0.0
         and max_non_feet_force_N < SUCCESS_FORCE_THRESHOLD_N
+        and clean_episode
     )
 
     return {
@@ -156,6 +166,8 @@ def run_eval(
         "max_non_feet_force_N": max_non_feet_force_N,
         "airborne_steps": airborne_steps,
         "airborne_fraction": airborne_steps / max(num_steps, 1),
+        "early_terminations": early_terminations,
+        "clean_episode": clean_episode,
         "success": success,
         "video_path": video_path if (video_path is not None and path.exists(video_path)) else None,
     }

@@ -34,6 +34,7 @@ from .config import (
 )
 from .runner import run_training, TrainingResult
 from .llm_engine import propose_modifications
+from .tb_metrics import extract_training_trends
 
 THIS_DIR = path.dirname(path.abspath(__file__))
 _JUMPING_ROOT = Path(THIS_DIR).resolve()
@@ -148,6 +149,9 @@ class JumpingAgent:
             "stop_reason": probe_result.stop_reason,
             "error_tail": probe_result.error_tail or None,
         }
+        probe_trends = extract_training_trends(iter_dir / "logs" / "0_probe")
+        if probe_trends:
+            probe_metrics["trends"] = probe_trends
 
         # 6. Probe promotion check
         probe_promoted = probe_result.stop_reason == "completed" or (
@@ -222,14 +226,19 @@ class JumpingAgent:
         success = eval_metrics.get("success", False)
 
         # 9. Write metrics.json
+        full_metrics = {
+            "stop_reason": full_result.stop_reason,
+            "final_mean_reward": full_result.final_mean_reward,
+            "iteration_reached": full_result.iteration_reached,
+            "error_tail": full_result.error_tail or None,
+        }
+        full_trends = extract_training_trends(iter_dir / "logs" / "1_full")
+        if full_trends:
+            full_metrics["trends"] = full_trends
+
         all_metrics = {
             "probe": probe_metrics,
-            "full": {
-                "stop_reason": full_result.stop_reason,
-                "final_mean_reward": full_result.final_mean_reward,
-                "iteration_reached": full_result.iteration_reached,
-                "error_tail": full_result.error_tail or None,
-            },
+            "full": full_metrics,
             "eval": eval_metrics,
         }
         (iter_dir / "metrics.json").write_text(json.dumps(all_metrics, indent=2))
@@ -244,12 +253,15 @@ class JumpingAgent:
             success=success,
         )
 
+        history_metrics = {**eval_metrics, "stop_reason": full_result.stop_reason}
+        if full_trends:
+            history_metrics["training_trends"] = full_trends
         self._append_history(
             iter_dir=iter_dir_name,
             run_type="full",
             stop_reason=full_result.stop_reason,
             is_promising_flag=promising,
-            metrics={**eval_metrics, "stop_reason": full_result.stop_reason},
+            metrics=history_metrics,
             reasoning=proposal.reasoning,
         )
 
@@ -365,6 +377,8 @@ class JumpingAgent:
                 lines.append(f"- **Max non-feet force:** {eval_metrics.get('max_non_feet_force_N', 0):.1f} N\n")
                 lines.append(f"- **Airborne steps:** {eval_metrics.get('airborne_steps', 0)} ({eval_metrics.get('airborne_fraction', 0):.1%})\n")
                 lines.append(f"- **Max CoM height:** {eval_metrics.get('max_height_m', 0):.4f} m\n")
+                lines.append(f"- **Early terminations:** {eval_metrics.get('early_terminations', 0)}\n")
+                lines.append(f"- **Clean episode:** {'Yes' if eval_metrics.get('clean_episode', True) else 'No'}\n")
                 if eval_metrics.get("video_path"):
                     lines.append(f"- **Video:** `{eval_metrics['video_path']}`\n")
 
@@ -445,6 +459,7 @@ def is_promising(
         metrics.get("height_above_resting_m", 0.0) > height_threshold_m
         and metrics.get("forward_distance_m", 0.0) > 0.0
         and metrics.get("max_non_feet_force_N", float("inf")) < force_threshold_N
+        and metrics.get("clean_episode", True)
     )
 
 def _ts() -> str:
