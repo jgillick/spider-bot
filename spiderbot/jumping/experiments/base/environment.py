@@ -97,7 +97,7 @@ class SpiderRobotJumpingEnv(BaseSpiderRobotEnv):
                 "L1_Hip": -0.9,
                 "L2_Hip": -0.2,
                 "L3_Hip": 0.2,
-                "L4_Hip": 0.0,
+                "L4_Hip": 0.9,
                 "[RL][1-4]_Femur": -0.4,
                 "[RL][1-4]_Tibia": 0.5,
             },

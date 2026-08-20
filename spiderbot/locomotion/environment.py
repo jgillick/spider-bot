@@ -128,7 +128,7 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
                 "L1_Hip": -0.9,
                 "L2_Hip": -0.2,
                 "L3_Hip": 0.2,
-                "L4_Hip": 0.0,
+                "L4_Hip": 0.9,
                 "[RL][1-4]_Femur": -0.4,
                 "[RL][1-4]_Tibia": 0.5,
             },
@@ -194,6 +194,7 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
                 "ang_vel_z": (-1.0, 1.0),
             },
             resample_time_sec=4.0,
+            standing_probability=0.15,
             debug_visualizer=True,
             debug_visualizer_cfg={
                 "envs_idx": [0],
@@ -389,6 +390,13 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
                 "imu_lin_acc_ang_vel": {
                     "fn": self.imu_observation,
                 },
+                "projected_gravity": {
+                    "fn": observations.entity_projected_gravity,
+                    "params": {
+                        "entity_manager": self.robot_manager
+                    },
+                    "noise": 0.05,
+                },
                 "dof_position": {
                     "fn": lambda env: self.action_manager.get_dofs_position(),
                     "noise": 0.01,
@@ -470,7 +478,9 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
             match = re.match(r"^[R|L][1-4]_(Hip|Femur|Tibia)$", name)
             if match:
                 group = match.group(1).lower()
-                self.joint_groups[group].append(joint.idx_local)
+                # DOF indices, not joint indices: the free base joint occupies
+                # DOFs 0-5, so joint.idx_local cannot index into DOF arrays.
+                self.joint_groups[group].extend(joint.dofs_idx_local)
 
     def log_curriculum(self, extras: dict):
         extras["episode"]["Curriculum / curriculum_level"] = self.curriculum_level
@@ -512,31 +522,25 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
         percentiles = [50, 90, 95, 99]
         q_tensors = torch.tensor([p / 100.0 for p in percentiles], device=gs.device)
 
-        for group in self.joint_groups:
-            for idx in self.joint_groups[group]:
-                group_torque = self.robot.get_dofs_control_force(idx).abs()
-                # extras["episode"][f"Actuators / {group}_torque_avg"] = group_torque.mean()
-                # extras["episode"][f"Actuators / {group}_torque_max"] = group_torque.max()
+        for group, dofs_idx in self.joint_groups.items():
+            if not dofs_idx:
+                continue
+            group_torque = self.robot.get_dofs_control_force(dofs_idx)
+            if group_torque is None:
+                continue
+            group_torque = group_torque.abs()
+            # extras["episode"][f"Actuators / {group}_torque_avg"] = group_torque.mean()
+            # extras["episode"][f"Actuators / {group}_torque_max"] = group_torque.max()
 
-                # group_velocity = self.robot.get_dofs_velocity(idx).abs()
-                # extras["episode"][f"Actuators / {group}_velocity_avg"] = group_velocity.mean()
-                # extras["episode"][f"Actuators / {group}_velocity_max"] = group_velocity.max()
+            # group_velocity = self.robot.get_dofs_velocity(dofs_idx).abs()
+            # extras["episode"][f"Actuators / {group}_velocity_avg"] = group_velocity.mean()
+            # extras["episode"][f"Actuators / {group}_velocity_max"] = group_velocity.max()
 
-                torque_pcts = torch.quantile(group_torque.float().flatten(), q_tensors)
-                for i, p in enumerate(percentiles):
-                    extras["episode"][f"Actuators / {group}_torque_p{p}"] = torque_pcts[
-                        i
-                    ]
+            torque_pcts = torch.quantile(group_torque.float().flatten(), q_tensors)
+            for i, p in enumerate(percentiles):
+                extras["episode"][f"Actuators / {group}_torque_p{p}"] = torque_pcts[i]
 
         return extras
-
-    def air_time_observation(self, env: GenesisEnv) -> torch.Tensor:
-        """Return the mid point of the current foot air time target range"""
-        params = self.reward_manager["foot_air_time"].params
-        mid_point = (params["time_threshold"] + params["time_threshold_max"]) / 2.0
-        obs = torch.zeros(env.num_envs, 1, device=gs.device)
-        obs[:] = mid_point
-        return obs
 
     def feet_max_air_time_reward(
         self,
