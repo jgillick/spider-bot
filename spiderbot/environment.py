@@ -61,7 +61,7 @@ class BaseSpiderRobotEnv(ManagedEnvironment):
                 camera_pos=(-2.5, -1.5, 2.0),
                 camera_lookat=(0.0, 0.0, 0.0),
                 camera_fov=40,
-                max_FPS=60,
+                refresh_rate=60,
             ),
             vis_options=gs.options.VisOptions(rendered_envs_idx=[0]),
             rigid_options=gs.options.RigidOptions(
