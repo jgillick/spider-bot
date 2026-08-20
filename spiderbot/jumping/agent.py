@@ -33,7 +33,7 @@ from .config import (
     PROMISING_HEIGHT_M, PROMISING_FORCE_N
 )
 from .runner import run_training, TrainingResult
-from .llm_engine import propose_modifications
+from .llm_engine import propose_modifications, ai_evaluate
 from .tb_metrics import extract_training_trends
 
 THIS_DIR = path.dirname(path.abspath(__file__))
@@ -99,12 +99,13 @@ class JumpingAgent:
         current_files = self._read_files_from(source_dir)
 
         # 1. Ask LLM for modifications
+        commentary = self._build_commentary()
         proposal = propose_modifications(
             current_files=current_files,
             run_history=self._run_history,
             prompt_mode=prompt_mode,
             model=self.config.model,
-            commentary=self.config.commentary,
+            commentary=commentary,
         )
         if proposal is None:
             self._consecutive_llm_failures += 1
@@ -225,14 +226,36 @@ class JumpingAgent:
         promising = is_promising(eval_metrics)
         success = eval_metrics.get("success", False)
 
+        # 9a. AI assessment — only when promising, to keep costs down
+        ai_assessment = ""
+        if promising:
+            previous_eval = next(
+                (e["metrics"] for e in reversed(self._run_history)
+                 if e.get("run_type") == "full" and e.get("metrics")),
+                None,
+            )
+            full_trends = extract_training_trends(iter_dir / "logs" / "1_full")
+            ai_assessment = ai_evaluate(
+                reasoning=proposal.reasoning,
+                eval_metrics=eval_metrics,
+                training_trends=full_trends,
+                operator_commentary=self.config.commentary,
+                previous_eval=previous_eval,
+                video_path=eval_metrics.get("video_path"),
+                model=self.config.model,
+            )
+            if ai_assessment:
+                logger.info("AI assessment:\n%s", ai_assessment)
+
         # 9. Write metrics.json
+        if not promising:
+            full_trends = extract_training_trends(iter_dir / "logs" / "1_full")
         full_metrics = {
             "stop_reason": full_result.stop_reason,
             "final_mean_reward": full_result.final_mean_reward,
             "iteration_reached": full_result.iteration_reached,
             "error_tail": full_result.error_tail or None,
         }
-        full_trends = extract_training_trends(iter_dir / "logs" / "1_full")
         if full_trends:
             full_metrics["trends"] = full_trends
 
@@ -251,6 +274,7 @@ class JumpingAgent:
             eval_metrics=eval_metrics,
             promising=promising,
             success=success,
+            ai_assessment=ai_assessment,
         )
 
         history_metrics = {**eval_metrics, "stop_reason": full_result.stop_reason}
@@ -263,6 +287,7 @@ class JumpingAgent:
             is_promising_flag=promising,
             metrics=history_metrics,
             reasoning=proposal.reasoning,
+            ai_assessment=ai_assessment,
         )
 
         if promising:
@@ -347,49 +372,58 @@ class JumpingAgent:
         eval_metrics: dict | None = None,
         promising: bool = False,
         success: bool = False,
+        ai_assessment: str = "",
     ) -> None:
-        lines: list[str] = []
-        lines.append(f"# Evaluation — {iter_dir.name}\n\n")
-        lines.append(f"**Iteration:** {self._iteration}\n\n")
-
-        lines.append("## Probe run\n\n")
-        lines.append(f"- **Stop reason:** `{probe_metrics.get('stop_reason')}`\n")
-        lines.append(f"- **Final mean reward:** {probe_metrics.get('final_mean_reward', 0):.4f}\n")
-        lines.append(f"- **Iterations reached:** {probe_metrics.get('iteration_reached', 0)}\n")
-        if probe_metrics.get("error_tail"):
-            lines.append(f"\n**Error output:**\n```\n{probe_metrics['error_tail']}\n```\n")
-
-        if full_result is not None:
-            lines.append("\n## Full run\n\n")
-            lines.append(f"- **Stop reason:** `{full_result.stop_reason}`\n")
-            lines.append(f"- **Final mean reward:** {full_result.final_mean_reward:.4f}\n")
-            lines.append(f"- **Iterations reached:** {full_result.iteration_reached}\n")
-            if full_result.error_tail:
-                lines.append(f"\n**Error output:**\n```\n{full_result.error_tail}\n```\n")
-
-        if eval_metrics is not None:
-            lines.append("\n## Eval results\n\n")
-            if "error" in eval_metrics:
-                lines.append(f"- **Error:** {eval_metrics['error']}\n")
-            else:
-                lines.append(f"- **Height above resting:** {eval_metrics.get('height_above_resting_m', 0):.4f} m\n")
-                lines.append(f"- **Forward distance:** {eval_metrics.get('forward_distance_m', 0):.4f} m\n")
-                lines.append(f"- **Max non-feet force:** {eval_metrics.get('max_non_feet_force_N', 0):.1f} N\n")
-                lines.append(f"- **Airborne steps:** {eval_metrics.get('airborne_steps', 0)} ({eval_metrics.get('airborne_fraction', 0):.1%})\n")
-                lines.append(f"- **Max CoM height:** {eval_metrics.get('max_height_m', 0):.4f} m\n")
-                lines.append(f"- **Early terminations:** {eval_metrics.get('early_terminations', 0)}\n")
-                lines.append(f"- **Clean episode:** {'Yes' if eval_metrics.get('clean_episode', True) else 'No'}\n")
-                if eval_metrics.get("video_path"):
-                    lines.append(f"- **Video:** `{eval_metrics['video_path']}`\n")
-
-            lines.append(f"\n**Promising:** {'Yes' if promising else 'No'}\n")
-            lines.append(f"**Success:** {'Yes' if success else 'No'}\n")
-
-        (iter_dir / "evaluation.md").write_text("".join(lines))
+        write_evaluation_doc(
+            iter_dir=iter_dir,
+            probe_metrics=probe_metrics,
+            full_result=full_result,
+            eval_metrics=eval_metrics,
+            promising=promising,
+            success=success,
+            iteration=self._iteration,
+            ai_assessment=ai_assessment,
+        )
 
     # ------------------------------------------------------------------
     # History
     # ------------------------------------------------------------------
+
+    def _build_commentary(self) -> str:
+        """
+        Combine operator commentary with auto-generated diagnostic notes derived
+        from the most recent full-run eval results.
+        """
+        parts: list[str] = []
+        if self.config.commentary.strip():
+            parts.append(self.config.commentary.strip())
+
+        # Find the last full-run eval metrics
+        last_eval: dict | None = None
+        for entry in reversed(self._run_history):
+            if entry.get("run_type") == "full":
+                last_eval = entry.get("metrics", {})
+                break
+
+        if last_eval:
+            airborne_frac = last_eval.get("airborne_fraction", 0.0)
+            early_terms = last_eval.get("early_terminations", 0)
+            max_force = last_eval.get("max_non_feet_force_N", 0.0)
+            jump_dist = last_eval.get("jump_distance_m", last_eval.get("forward_distance_m", 0.0))
+
+            if airborne_frac > 0.3 and early_terms > 5:
+                parts.append(
+                    f"DIAGNOSTIC: The previous run achieved {airborne_frac:.0%} airborne fraction "
+                    f"and {jump_dist:.2f} m jump distance — the robot CAN jump. However, it had "
+                    f"{early_terms} early terminations from hard landings "
+                    f"(peak body force {max_force:.0f} N). "
+                    "Do NOT change the takeoff reward structure. Focus this iteration entirely on "
+                    "landing absorption: raise the body contact termination threshold to 500-600 N "
+                    "(or remove it) and add a dense contact_force penalty reward on "
+                    "body_terrain_contact so the policy sees a gradient to reduce impact."
+                )
+
+        return "\n\n".join(parts)
 
     def _determine_prompt_mode(self) -> Literal["explore", "tune"]:
         if not self._run_history:
@@ -418,8 +452,9 @@ class JumpingAgent:
         is_promising_flag: bool,
         metrics: dict,
         reasoning: str,
+        ai_assessment: str = "",
     ) -> None:
-        self._run_history.append({
+        entry: dict = {
             "iteration": self._iteration,
             "timestamp": datetime.utcnow().isoformat(),
             "run_type": run_type,
@@ -428,7 +463,10 @@ class JumpingAgent:
             "is_promising": is_promising_flag,
             "metrics": metrics,
             "reasoning_summary": reasoning[:500] if reasoning else "",
-        })
+        }
+        if ai_assessment:
+            entry["ai_assessment"] = ai_assessment
+        self._run_history.append(entry)
         self._save_run_history()
 
     def _register_sigint(self) -> None:
@@ -444,6 +482,82 @@ class JumpingAgent:
 # Helpers
 # ------------------------------------------------------------------
 
+def write_evaluation_doc(
+    iter_dir: Path,
+    eval_metrics: dict | None = None,
+    probe_metrics: dict | None = None,
+    full_result: TrainingResult | None = None,
+    promising: bool = False,
+    success: bool = False,
+    iteration: int | None = None,
+    run_label: str = "Eval results",
+    ai_assessment: str = "",
+) -> None:
+    """
+    Write (or rewrite) evaluation.md for an experiment directory.
+
+    When probe_metrics/full_result are provided (agent loop), the file is written
+    from scratch with all sections.  When only eval_metrics is provided (run_eval
+    re-run), any existing probe/full run sections are preserved from the current file.
+    """
+    lines: list[str] = [f"# Evaluation — {iter_dir.name}\n\n"]
+
+    if iteration is not None:
+        lines.append(f"**Iteration:** {iteration}\n\n")
+
+    if probe_metrics is not None:
+        lines.append("## Probe run\n\n")
+        lines.append(f"- **Stop reason:** `{probe_metrics.get('stop_reason')}`\n")
+        lines.append(f"- **Final mean reward:** {probe_metrics.get('final_mean_reward', 0):.4f}\n")
+        lines.append(f"- **Iterations reached:** {probe_metrics.get('iteration_reached', 0)}\n")
+        if probe_metrics.get("error_tail"):
+            lines.append(f"\n**Error output:**\n```\n{probe_metrics['error_tail']}\n```\n")
+    else:
+        # Re-run mode: preserve existing probe/full sections from disk
+        existing_path = iter_dir / "evaluation.md"
+        if existing_path.exists():
+            existing = existing_path.read_text()
+            for section in ("## Probe run", "## Full run"):
+                start = existing.find(section)
+                if start != -1:
+                    end = existing.find("\n## ", start + 1)
+                    lines.append(existing[start: end if end != -1 else len(existing)])
+                    lines.append("\n")
+
+    if full_result is not None:
+        lines.append("\n## Full run\n\n")
+        lines.append(f"- **Stop reason:** `{full_result.stop_reason}`\n")
+        lines.append(f"- **Final mean reward:** {full_result.final_mean_reward:.4f}\n")
+        lines.append(f"- **Iterations reached:** {full_result.iteration_reached}\n")
+        if full_result.error_tail:
+            lines.append(f"\n**Error output:**\n```\n{full_result.error_tail}\n```\n")
+
+    if eval_metrics is not None:
+        lines.append(f"\n## {run_label}\n\n")
+        if "error" in eval_metrics:
+            lines.append(f"- **Error:** {eval_metrics['error']}\n")
+        else:
+            lines.append(f"- **Height above resting:** {eval_metrics.get('height_above_resting_m', 0):.4f} m\n")
+            lines.append(f"- **Jump distance:** {eval_metrics.get('jump_distance_m', 0):.4f} m (takeoff to landing)\n")
+            lines.append(f"- **Episode displacement:** {eval_metrics.get('forward_distance_m', 0):.4f} m (total, includes walking)\n")
+            lines.append(f"- **Max non-feet force:** {eval_metrics.get('max_non_feet_force_N', 0):.1f} N\n")
+            lines.append(f"- **Airborne steps:** {eval_metrics.get('airborne_steps', 0)} ({eval_metrics.get('airborne_fraction', 0):.1%}) — feet only\n")
+            lines.append(f"- **True flight steps:** {eval_metrics.get('true_flight_steps', 0)} ({eval_metrics.get('true_flight_fraction', 0):.1%}) — full body clear\n")
+            lines.append(f"- **Max CoM height:** {eval_metrics.get('max_height_m', 0):.4f} m\n")
+            lines.append(f"- **Early terminations:** {eval_metrics.get('early_terminations', 0)}\n")
+            lines.append(f"- **Clean episode:** {'Yes' if eval_metrics.get('clean_episode', True) else 'No'}\n")
+            if eval_metrics.get("video_path"):
+                lines.append(f"- **Video:** `{eval_metrics['video_path']}`\n")
+
+        lines.append(f"\n**Promising:** {'Yes' if promising else 'No'}\n")
+        lines.append(f"**Success:** {'Yes' if success else 'No'}\n")
+
+        if ai_assessment:
+            lines.append(f"\n## AI Assessment\n\n{ai_assessment}\n")
+
+    (iter_dir / "evaluation.md").write_text("".join(lines))
+
+
 def is_promising(
     metrics: dict,
     height_threshold_m: float = PROMISING_HEIGHT_M,
@@ -452,12 +566,13 @@ def is_promising(
     """
     Classify a full run as promising:
       - CoM height above resting exceeds threshold
-      - Forward distance is positive
+      - Best single-jump distance is positive (takeoff-to-landing Δx, not episode displacement)
       - Peak non-feet contact force at landing is below threshold
+      - No early terminations
     """
     return (
         metrics.get("height_above_resting_m", 0.0) > height_threshold_m
-        and metrics.get("forward_distance_m", 0.0) > 0.0
+        and metrics.get("jump_distance_m", metrics.get("forward_distance_m", 0.0)) > 0.0
         and metrics.get("max_non_feet_force_N", float("inf")) < force_threshold_N
         and metrics.get("clean_episode", True)
     )

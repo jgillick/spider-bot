@@ -64,46 +64,15 @@ def main() -> None:
 
     print(json.dumps(results, indent=2))
 
-    _write_evaluation_doc(iter_dir, args.run, results)
+    from .agent import is_promising, write_evaluation_doc
+    write_evaluation_doc(
+        iter_dir=iter_dir,
+        eval_metrics=results,
+        promising=is_promising(results),
+        success=results.get("success", False),
+        run_label=f"Eval results ({args.run})",
+    )
     print(f"\nUpdated: {iter_dir / 'evaluation.md'}")
-
-
-def _write_evaluation_doc(iter_dir: Path, run_name: str, eval_metrics: dict) -> None:
-    from .agent import is_promising
-
-    promising = is_promising(eval_metrics)
-    success = eval_metrics.get("success", False)
-
-    # Preserve existing content if present, otherwise start fresh
-    existing = (iter_dir / "evaluation.md").read_text() if (iter_dir / "evaluation.md").exists() else ""
-
-    lines = [f"# Evaluation — {iter_dir.name}\n\n"]
-
-    # Keep any probe/full run sections from existing doc
-    if existing:
-        for section in ("## Probe run", "## Full run"):
-            start = existing.find(section)
-            if start != -1:
-                end = existing.find("\n## ", start + 1)
-                lines.append(existing[start: end if end != -1 else len(existing)])
-                lines.append("\n")
-
-    lines.append(f"## Eval results ({run_name})\n\n")
-    if "error" in eval_metrics:
-        lines.append(f"- **Error:** {eval_metrics['error']}\n")
-    else:
-        lines.append(f"- **Height above resting:** {eval_metrics.get('height_above_resting_m', 0):.4f} m\n")
-        lines.append(f"- **Forward distance:** {eval_metrics.get('forward_distance_m', 0):.4f} m\n")
-        lines.append(f"- **Max non-feet force:** {eval_metrics.get('max_non_feet_force_N', 0):.1f} N\n")
-        lines.append(f"- **Airborne steps:** {eval_metrics.get('airborne_steps', 0)} ({eval_metrics.get('airborne_fraction', 0):.1%})\n")
-        lines.append(f"- **Max CoM height:** {eval_metrics.get('max_height_m', 0):.4f} m\n")
-        if eval_metrics.get("video_path"):
-            lines.append(f"- **Video:** `{eval_metrics['video_path']}`\n")
-
-    lines.append(f"\n**Promising:** {'Yes' if promising else 'No'}\n")
-    lines.append(f"**Success:** {'Yes' if success else 'No'}\n")
-
-    (iter_dir / "evaluation.md").write_text("".join(lines))
 
 
 if __name__ == "__main__":

@@ -7,10 +7,12 @@ validates the generated Python, and returns structured results.
 from __future__ import annotations
 
 import ast
+import base64
 import json
 import os
 import re
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Literal
 
 import anthropic
@@ -283,6 +285,129 @@ def propose_modifications(
             ]
 
     return None
+
+
+def extract_video_frames(video_path: str | Path, n_frames: int = 5) -> list[str]:
+    """
+    Extract n_frames evenly-spaced frames from a video file.
+    Returns a list of base64-encoded JPEG strings, or [] if cv2 is unavailable.
+    """
+    try:
+        import cv2
+    except ImportError:
+        return []
+
+    cap = cv2.VideoCapture(str(video_path))
+    if not cap.isOpened():
+        return []
+
+    total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    if total <= 0:
+        cap.release()
+        return []
+
+    indices = [int(total * i / (n_frames - 1)) for i in range(n_frames)] if n_frames > 1 else [total // 2]
+    indices[-1] = min(indices[-1], total - 1)
+
+    frames: list[str] = []
+    for idx in indices:
+        cap.set(cv2.CAP_PROP_POS_FRAMES, idx)
+        ret, frame = cap.read()
+        if not ret:
+            continue
+        ok, buf = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
+        if ok:
+            frames.append(base64.b64encode(buf.tobytes()).decode())
+
+    cap.release()
+    return frames
+
+
+def ai_evaluate(
+    reasoning: str,
+    eval_metrics: dict,
+    training_trends: dict,
+    operator_commentary: str,
+    previous_eval: dict | None,
+    video_path: str | Path | None = None,
+    model: str = "claude-sonnet-4-6",
+) -> str:
+    """
+    Ask Claude to assess whether a promising eval result actually met the iteration's
+    stated goals. Returns a plain-text assessment suitable for inclusion in evaluation.md
+    and run_history.
+
+    Args:
+        reasoning:           The iteration's reasoning.md text (what it claimed to fix).
+        eval_metrics:        The eval harness output dict (including any custom_eval fields).
+        training_trends:     TensorBoard tail-mean/tail-max values from the full run.
+        operator_commentary: The operator commentary that prompted this iteration.
+        previous_eval:       Eval metrics from the previous iteration, for comparison.
+        model:               Anthropic model ID.
+    """
+    import logging as _logging
+    _log = _logging.getLogger(__name__)
+
+    import json as _json
+
+    lines: list[str] = [
+        "You are evaluating a reinforcement learning training iteration for a spider robot "
+        "learning to jump. Assess whether this iteration met its stated goals.\n\n"
+        "Be concise — 3 to 6 sentences. Structure your response as:\n"
+        "1. Did it meet the operator's commentary goal? (yes / partially / no, with evidence)\n"
+        "2. Did it meet the hypothesis stated in the reasoning? (cite specific metrics)\n"
+        "3. What is the key remaining gap or next focus?\n\n"
+    ]
+
+    if operator_commentary.strip():
+        lines.append(f"## Operator commentary that drove this iteration\n{operator_commentary.strip()}\n\n")
+
+    lines.append(f"## Iteration reasoning (hypothesis)\n{reasoning.strip()}\n\n")
+
+    lines.append(f"## Eval metrics\n```json\n{_json.dumps(eval_metrics, indent=2)}\n```\n\n")
+
+    if training_trends:
+        lines.append(f"## Training trends (tail 25%)\n```json\n{_json.dumps(training_trends, indent=2)}\n```\n\n")
+
+    if previous_eval:
+        comparable = {k: v for k, v in previous_eval.items()
+                      if isinstance(v, (int, float)) and k != "success"}
+        lines.append(f"## Previous iteration eval (for comparison)\n```json\n{_json.dumps(comparable, indent=2)}\n```\n\n")
+
+    user_message = "".join(lines)
+
+    frames: list[str] = []
+    if video_path is not None:
+        frames = extract_video_frames(video_path)
+        if frames:
+            user_message += (
+                f"\n## Video frames ({len(frames)} evenly-spaced frames)\n"
+                "Red dots indicate active contact points (feet or body touching ground). "
+                "Use these to assess leg symmetry, flight posture, and landing quality.\n"
+            )
+
+    if frames:
+        content: list = [{"type": "text", "text": user_message}]
+        for frame_b64 in frames:
+            content.append({
+                "type": "image",
+                "source": {"type": "base64", "media_type": "image/jpeg", "data": frame_b64},
+            })
+    else:
+        content = user_message  # type: ignore[assignment]
+
+    client = anthropic.Anthropic()
+    try:
+        response = client.messages.create(
+            model=model,
+            max_tokens=512,
+            messages=[{"role": "user", "content": content}],
+        )
+        text_block = next((b for b in response.content if b.type == "text"), None)
+        return text_block.text.strip() if text_block else ""
+    except anthropic.APIError as exc:
+        _log.warning("AI evaluation call failed: %s", exc)
+        return ""
 
 
 def _build_user_message(

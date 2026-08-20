@@ -6,7 +6,6 @@ Runs a short rollout and returns jump quality metrics.  Optionally records a vid
 from __future__ import annotations
 
 import glob
-import os
 import pickle
 from os import path
 
@@ -46,10 +45,13 @@ def run_eval(
         dict with keys:
             max_height_m           - peak CoM z-position during rollout
             height_above_resting_m - peak CoM z above the initial resting height
-            forward_distance_m     - max forward (x-axis) displacement from reset position
+            jump_distance_m        - best single-jump Δx (takeoff to landing), matches training reward
+            forward_distance_m     - total episode x-displacement (includes walking/scurrying)
             max_non_feet_force_N   - peak contact force (N) on non-feet body links
-            airborne_steps         - steps with zero foot-to-ground contact
+            airborne_steps         - steps with zero foot-to-ground contact (feet only)
             airborne_fraction      - airborne_steps / num_steps
+            true_flight_steps      - steps with no contact from any part of the robot (feet + body)
+            true_flight_fraction   - true_flight_steps / num_steps
             success                - bool: good height + positive distance + soft landing
             video_path             - absolute path to saved mp4, or None
     """
@@ -110,10 +112,17 @@ def run_eval(
     initial_pos = base_env.robot.get_pos()[0].clone()  # (3,)
 
     max_height_m = initial_pos[2].item()
-    forward_distance_m = 0.0
     max_non_feet_force_N = 0.0
     airborne_steps = 0
+    true_flight_steps = 0
     early_terminations = 0
+
+    # Jump-distance tracking: measure takeoff-to-landing Δx, matching the training reward.
+    # "forward_distance_m" (total episode displacement) is kept for reference only.
+    was_airborne = False
+    x_launch = initial_pos[0].item()
+    jump_distance_m = 0.0       # best single-jump Δx during the rollout
+    forward_distance_m = 0.0    # total episode displacement (kept for reference)
 
     with torch.no_grad():
         for _ in range(num_steps):
@@ -126,7 +135,8 @@ def run_eval(
             if z > max_height_m:
                 max_height_m = z
 
-            dx = (pos[0] - initial_pos[0]).item()
+            x = pos[0].item()
+            dx = x - initial_pos[0].item()
             if dx > forward_distance_m:
                 forward_distance_m = dx
 
@@ -136,8 +146,21 @@ def run_eval(
                 max_non_feet_force_N = peak_body_force
 
             foot_forces = base_env.foot_contact_manager.contacts.norm(dim=-1)  # (n_envs, n_feet)
-            if foot_forces[0].max().item() < AIRBORNE_FORCE_THRESHOLD_N:
+            feet_clear = foot_forces[0].max().item() < AIRBORNE_FORCE_THRESHOLD_N
+            if feet_clear:
                 airborne_steps += 1
+            if feet_clear and peak_body_force < AIRBORNE_FORCE_THRESHOLD_N:
+                true_flight_steps += 1
+
+            # Takeoff: all feet just left the ground — record launch position
+            if feet_clear and not was_airborne:
+                x_launch = x
+            # Touchdown: first contact after airborne — record jump distance
+            if not feet_clear and was_airborne:
+                this_jump = max(0.0, x - x_launch)
+                if this_jump > jump_distance_m:
+                    jump_distance_m = this_jump
+            was_airborne = feet_clear
 
             # Count early terminations (body slam, bad orientation, etc.).
             # Timeouts are expected; early terminations mean the robot crashed.
@@ -154,23 +177,39 @@ def run_eval(
 
     success = (
         height_above_resting_m > 0.02
-        and forward_distance_m > 0.0
+        and jump_distance_m > 0.0
         and max_non_feet_force_N < SUCCESS_FORCE_THRESHOLD_N
         and clean_episode
     )
 
-    return {
+    results = {
         "max_height_m": max_height_m,
         "height_above_resting_m": height_above_resting_m,
+        "jump_distance_m": jump_distance_m,
         "forward_distance_m": forward_distance_m,
         "max_non_feet_force_N": max_non_feet_force_N,
         "airborne_steps": airborne_steps,
         "airborne_fraction": airborne_steps / max(num_steps, 1),
+        "true_flight_steps": true_flight_steps,
+        "true_flight_fraction": true_flight_steps / max(num_steps, 1),
         "early_terminations": early_terminations,
         "clean_episode": clean_episode,
         "success": success,
         "video_path": video_path if (video_path is not None and path.exists(video_path)) else None,
     }
+
+    # Allow the experiment to contribute hypothesis-specific metrics.
+    # If the environment defines custom_eval(), call it and merge the result.
+    if hasattr(base_env, "custom_eval"):
+        try:
+            custom = base_env.custom_eval()
+            if isinstance(custom, dict):
+                results.update(custom)
+        except Exception as exc:
+            import logging as _logging
+            _logging.getLogger(__name__).warning("custom_eval() raised: %s", exc)
+
+    return results
 
 
 def _latest_checkpoint(log_dir: str) -> str | None:

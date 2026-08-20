@@ -9,13 +9,13 @@
 SUCCESS_FORCE_THRESHOLD_N: float = 75.0
 
 # Contact force (N) per foot below which a foot is considered airborne.
-AIRBORNE_FORCE_THRESHOLD_N: float = 1.0
+AIRBORNE_FORCE_THRESHOLD_N: float = 0.5
 
 # Minimum CoM height gain (m) required to confirm feet left the ground.
 # This is a floor check, not a performance goal.
 SUCCESS_HEIGHT_THRESHOLD_M: float = 0.02
 
-# Rollout length for evaluation (steps at 50 Hz → 5 s of robot time).
+# Rollout length for evaluation (steps at 50 Hz → 5s of robot time).
 EVAL_NUM_STEPS: int = 250
 
 # ---------------------------------------------------------------------------

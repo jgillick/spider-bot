@@ -6,12 +6,18 @@ The robot must, in priority order:
 1. Maximize horizontal forward distance (x-axis displacement) on each jump — this is the PRIMARY objective
 2. Get all 8 feet simultaneously off the ground for at least 1 step (true jump)
 3. Land with ONLY the feet making contact with the ground
-4. Non-foot body parts (femur, tibia, motor housings, body) must not strike the ground hard at landing
+4. Absorb the landing — actively flex legs during descent to keep peak non-foot body forces below 50 N.
+   Landing absorption is a learnable skill: the policy must observe that it is descending (z-velocity < 0,
+   foot forces about to spike) and command leg extension. This is as hard to learn as the jump itself.
 
 Vertical height is useful only insofar as it enables more forward distance — do NOT reward height for its own sake.
 
+Priorities 1 and 2 are PERFORMANCE goals — reward them heavily. Priorities 3 and 4 are QUALITY goals —
+reward them lightly (weights 5–10× smaller than the primary reward). Never let quality rewards reduce
+`airborne_steps` by more than 30% vs the previous run; if they do, halve those weights.
+
 ## Success criteria (hard thresholds, evaluated by the eval harness)
-- Forward distance (x-axis) must exceed 0.3 m per jump
+- Jump distance (takeoff-to-landing Δx) must exceed 0.3 m — this is measured from the step all 8 feet leave the ground to the first touchdown step, matching the training reward
 - CoM height must exceed resting height by at least ${SUCCESS_HEIGHT_THRESHOLD_M} m (minimum jump confirmation — feet must leave the ground; this is not a height goal)
 - Peak contact force on non-feet body links must stay below ${SUCCESS_FORCE_THRESHOLD_N} N at landing
 - **No early terminations** — the 250-step eval rollout must complete without any termination condition firing (body slam, bad orientation, etc.). A policy that jumps but crashes on landing fails this criterion.
@@ -126,8 +132,23 @@ Available data inside a custom reward:
 Use torch operations only (no numpy).
 
 Key design principle: reward COMPLETED forward displacement (Δx at landing), not instantaneous forward
-velocity during flight. Rewarding vx densely during flight caused a 6.9m gallop with 2770 N slams in a
-prior run — the robot found it could exploit forward speed without ever needing a clean landing.
+velocity during flight. Rewarding vx densely during flight caused a gallop exploit in a prior run —
+the robot found it could exploit forward speed without ever needing a clean landing.
+
+Landing phase detection pattern (use when addressing "jump-but-slam landing" failure mode):
+```python
+def landing_softness_reward(env) -> torch.Tensor:
+    com_vz = env.robot_manager.entity.get_vel()[:, 2]             # (N,) descending when negative
+    foot_forces = env.foot_contact_manager.contacts.norm(dim=-1)   # (N, 8)
+    foot_contact = (foot_forces.max(dim=-1).values > 1.0)          # (N,) any foot touching
+    body_forces = env.body_terrain_contact.contacts.norm(dim=-1)   # (N, n_links)
+    peak_body = body_forces.max(dim=-1).values                     # (N,)
+
+    # Fire only during landing phase: descending AND feet just made contact
+    landing_phase = (com_vz < -0.05) & foot_contact
+    soft_factor = torch.exp(-peak_body / 30.0)  # 1.0 at 0 N, ~0.4 at 27 N, ~0.1 at 69 N
+    return landing_phase.float() * soft_factor
+```
 
 Known failure mode — "jump-then-crash": The robot achieves liftoff (all feet off ground) but triggers
 an early termination on landing (body slam, bad orientation, etc.), resetting the episode before any
@@ -136,12 +157,41 @@ and `forward_distance_m ≈ 0`. Fix: relax or remove aggressive termination cond
 for soft landing so the policy learns to absorb the impact. The `contact_force_with_grace_period`
 termination is preferred over `contact_force` because it gives the robot a brief window to settle.
 
+Known failure mode — "jump-but-slam landing": When `airborne_fraction > 0.3` and
+`early_terminations > 5`, the robot has learned to jump but not to absorb the landing. The
+`contact_force_with_grace_period` termination is resetting the episode at the moment of impact —
+before the policy can receive feedback about the impact quality. The policy cannot learn to reduce
+an impact it never gets to observe the result of.
+
+Fix options (try in order):
+  A. Raise the termination threshold to 500-600 N — allow hard landings during training. Use the
+     `contact_force` reward penalty on `body_terrain_contact` to discourage them, not the
+     termination. The gradient still teaches soft landing; the termination no longer prevents
+     the policy from experiencing and learning from the impact.
+  B. Remove the body contact termination entirely — rely only on `is_upsidedown` and `timeout`.
+     Add a dense contact_force penalty reward (`weight: -1.0 to -2.0`) so the policy sees a
+     per-step gradient to reduce impact on every landing.
+  C. Add an explicit landing reward: detect descent phase (CoM z-velocity < -0.1 m/s AND any
+     foot in contact) and reward `exp(-peak_body_force / 30)` per step during this phase. This
+     directly teaches the policy to extend legs and absorb the impact gracefully.
+
 Known failure mode — "tall standing": Rewarding CoM height or using `feet_air_time` without an
 all-feet-simultaneous check causes the robot to stand as tall as possible on a subset of legs.
 Observed in multiple runs: robot stood high on 3 legs with 5 feet raised — satisfying height and
 partial air-time rewards without ever leaving the ground with all 8 feet. The eval requires ALL 8
 feet simultaneously off the ground; any reward that can be maximised by lifting only some feet will
 produce this behaviour.
+
+Known failure mode — "symmetry-tuning regression": When a run achieves good forward distance and
+`airborne_steps` is tuned with coordination rewards (bilateral symmetry, sync_liftoff, force_sharing,
+action smoothness), cranking those weights too high collapses the jump entirely. Seen when heavy
+smoothness penalties were added to fix post-landing wobble: forward distance dropped from 1.19 m to
+0.003 m and `airborne_steps` fell from 19 to 3.
+
+Rule: coordination and symmetry rewards are STYLE rewards, not performance rewards. Their weights must
+be 5–10× smaller than the primary distance reward. After adding or increasing any smoothness,
+symmetry, or coordination term, verify that `airborne_steps` does not drop by more than 30% compared
+to the previous run. If it does, the weights are too high — halve them.
 
 Import and use in environment.py:
 ```python
@@ -395,10 +445,38 @@ def step(self, actions: torch.Tensor):
   ep["Metrics / mean_landing_force"]   — peak non-foot body contact force at landing (N)
   ep["Metrics / clean_landing_rate"]   — fraction of landings with peak force < ${SUCCESS_FORCE_THRESHOLD_N} N
 
+## custom_eval() — hypothesis-specific eval metrics
+
+After each eval rollout, the harness calls `custom_eval()` on the environment if defined, and
+merges the returned dict into the eval results. **You SHOULD define this method** to measure
+whatever your hypothesis claims to improve — if it isn't measured, it cannot be verified.
+
+The method reads from `self._step_state` (accumulated during the eval rollout by your `step()`
+implementation) and returns plain Python floats — no tensors.
+
+```python
+def custom_eval(self) -> dict:
+    """Return hypothesis-specific eval metrics. Called after the eval rollout."""
+    s = getattr(self, "_step_state", {})
+    return {
+        # Examples — replace with whatever your hypothesis targets:
+        "sync_touchdown_score": float(s["sync_score"].mean()) if "sync_score" in s else 0.0,
+        "foot_force_cv": float(s["foot_force_cv_acc"].mean()) if "foot_force_cv_acc" in s else 0.0,
+        "bilateral_symmetry": float(s["symmetry_acc"].mean()) if "symmetry_acc" in s else 0.0,
+    }
+```
+
+Rules:
+- Return a flat `dict[str, float]` — nested dicts and tensors will be ignored
+- Use descriptive snake_case keys; they appear directly in `evaluation.md` and the AI assessment
+- Match key names to what you claim in your reasoning — the AI assessment compares them
+- Never raise exceptions; use `getattr(self, "_step_state", {})` to guard against missing state
+
 ## Code constraints
 - Only import from `genesis_forge`, `spiderbot`, `torch`, and stdlib
 - Maintain the `config()` and `build()` method signatures exactly
 - You MAY add or extend `step()` in environment.py to log episodic metrics (see above)
+- You MAY define `custom_eval(self) -> dict` to expose hypothesis-specific metrics at eval time (see above)
 - PRESERVE these managers exactly as-is (required by eval and training infrastructure):
     - `self.body_terrain_contact` — required by eval harness
     - `self.foot_contact_manager` with `track_air_time=True` — required by eval harness
@@ -438,6 +516,25 @@ rnd_cfg:
 
 Start small (`weight: 0.01`) and watch TensorBoard — too high and the robot chases novelty instead
 of learning to jump. Disable once the robot is reliably leaving the ground.
+
+### Curriculum strategy for the jump-land cycle
+
+The jump (takeoff) and the landing (absorption) are two separate skills that are difficult to learn
+simultaneously. When the reward structure is correct but the policy is stuck in the "jump-but-slam"
+attractor after multiple iterations, consider a staged approach within a single training run:
+
+Stage 1 — Discover liftoff (training iterations 0–800):
+  - No body contact termination, or a very high threshold (600 N)
+  - Reward: all-feet-off event, pre-coil crouch, takeoff impulse
+  - Accept that landings will be crashes — the goal is for the policy to discover the airborne state
+
+Stage 2 — Add landing quality (after `all_feet_off_frac > 0.05` in TensorBoard):
+  - Add `landing_softness_reward` or a `contact_force` penalty on body_terrain_contact
+  - Tighten the termination threshold to 300 N once the policy reliably leaves the ground
+
+In practice, implement this as a single environment with a high/absent contact termination plus a dense
+body contact penalty reward. The penalty gradient teaches soft landing continuously; by the time the
+termination threshold would fire (300 N), the policy has already learned to avoid it.
 
 ---
 

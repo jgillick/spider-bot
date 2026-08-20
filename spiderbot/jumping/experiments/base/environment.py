@@ -38,6 +38,22 @@ class SpiderRobotJumpingEnv(BaseSpiderRobotEnv):
             height_sensor=height_sensor,
         )
 
+        # Add camera
+        self.camera = self.scene.add_camera(
+            pos=(
+                -1.5, # x (front/back) 
+                0.0,  # y (left/right)
+                1.0,  # z
+            ),
+            lookat=(0.0, 0.0, 0.0),
+            res=(1280, 720),
+            fov=40,
+            env_idx=0,
+            debug=True,
+            GUI=self.mode == "play",
+        )
+        self.camera.follow_entity(self.robot, smoothing=0.05)
+
     """
     Operations
     """
@@ -109,6 +125,7 @@ class SpiderRobotJumpingEnv(BaseSpiderRobotEnv):
             link_names=["[RL][1-4]_Foot"],
             with_entity_attr="terrain",
             track_air_time=True,
+            debug_visualizer=True,
         )
 
         # Detect self contacts
@@ -128,6 +145,7 @@ class SpiderRobotJumpingEnv(BaseSpiderRobotEnv):
                 "[RL][1-4]_Foot",
                 ".*_Motor",
             ],
+            debug_visualizer=True,
         )
 
         # Body-to-terrain contact for non-foot links (monitoring only — used in eval)
@@ -140,6 +158,7 @@ class SpiderRobotJumpingEnv(BaseSpiderRobotEnv):
                 ".*_Motor",
             ],
             with_entity_attr="terrain",
+            debug_visualizer=True,
         )
 
         ##
