@@ -117,7 +117,7 @@ def main():
     # Record videos in regular intervals
     env = VideoWrapper(
         env,
-        video_length_sec=12,
+        video_length_sec=15,
         out_dir=path.join(log_path, "videos"),
         episode_trigger=lambda episode_id: episode_id % 4 == 0,
     )

@@ -113,7 +113,7 @@ class BaseSpiderRobotEnv(ManagedEnvironment):
                 ),
                 morph=gs.morphs.Terrain(
                     n_subterrains=(1, 2),
-                    subterrain_size=(24, 12),
+                    subterrain_size=(48, 24),
                     subterrain_types=[
                         [
                             "flat_terrain",

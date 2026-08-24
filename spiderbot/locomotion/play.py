@@ -63,7 +63,7 @@ def play():
 
     # Load training files
     log_path = args.dir
-    [cfg] = pickle.load(open(os.path.join(log_path, "cfgs.pkl"), "rb"))
+    cfg = pickle.load(open(os.path.join(log_path, "cfgs.pkl"), "rb"))
     model = get_latest_model(log_path)
     print(f"Playing model: {model}")
 

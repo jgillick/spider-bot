@@ -22,14 +22,15 @@ from genesis_forge.mdp import reset, rewards, terminations, observations
 
 from spiderbot.environment import BaseSpiderRobotEnv, Terrain, EnvMode
 from spiderbot.mdp.foot_angle import FootAngleMdp
+from spiderbot.mdp.friction import RandomizeFrictionRatio
 from spiderbot.mdp.foot_clearance import FootClearanceMdp
 from spiderbot.mdp.gait_reward import GaitReward
 
-CURRICULUM_CHECK_EVERY_STEPS = 2400
+CURRICULUM_CHECK_EVERY_STEPS = 1200
 CURRICULUM_AVG_SAMPLES = 10
 CURRICULUM_MAX_LEVEL = 50
 CURRICULUM_MIN_EPISODE_LENGTH_RATIO = 0.6
-CURRICULUM_COOLDOWN_STEPS = 4800
+CURRICULUM_COOLDOWN_STEPS = 2400
 
 
 class SpiderRobotEnv(BaseSpiderRobotEnv):
@@ -41,7 +42,7 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
         self,
         num_envs: int = 1,
         dt: float = 1 / 50,
-        max_episode_length_sec: int | None = 6,
+        max_episode_length_sec: int | None = 15,
         headless: bool = True,
         mode: EnvMode = "train",
         terrain: Terrain = "flat",
@@ -112,6 +113,21 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
                         "subterrain": self.curriculum_terrain,
                     },
                 },
+                "random_mass": {
+                    "fn": reset.randomize_link_mass_shift,
+                    "params": {
+                        "mass_range": [0, 8.0],
+                        "link_name": "Body"
+                    }
+                },
+                "friction": {
+                    "fn": RandomizeFrictionRatio,
+                    "params": {
+                        "terrain_manager": self.terrain_manager,
+                        "link_names": ["[RL][1-4]_Foot"],
+                        "friction_range": (0.4, 1.8),
+                    },
+                },
             },
         )
 
@@ -121,16 +137,16 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
             self,
             joint_names=".*",
             default_pos={
-                "R1_Hip": 0.9,
-                "R2_Hip": 0.2,
-                "R3_Hip": -0.2,
-                "R4_Hip": -0.9,
-                "L1_Hip": -0.9,
-                "L2_Hip": -0.2,
-                "L3_Hip": 0.2,
-                "L4_Hip": 0.9,
-                "[RL][1-4]_Femur": -0.4,
-                "[RL][1-4]_Tibia": 0.5,
+                "R1_Hip": NoisyValue(0.9, 0.1),
+                "R2_Hip": NoisyValue(0.2, 0.1),
+                "R3_Hip": NoisyValue(-0.2, 0.1),
+                "R4_Hip": NoisyValue(-0.9, 0.1),
+                "L1_Hip": NoisyValue(-0.9, 0.1),
+                "L2_Hip": NoisyValue(-0.2, 0.1),
+                "L3_Hip": NoisyValue(0.2, 0.1),
+                "L4_Hip": NoisyValue(0.9, 0.1),
+                "[RL][1-4]_Femur": NoisyValue(-0.4, 0.1),
+                "[RL][1-4]_Tibia": NoisyValue(0.5, 0.1),
             },
             kp=NoisyValue(30, 5),
             kv=NoisyValue(2.0, 0.5),
@@ -294,6 +310,10 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
                         "max_air_time": 1.0,
                     },
                 },
+                "stand_still": {
+                    "weight": -0.05,
+                    "fn": self.stand_still_reward,
+                },
                 # "feet_slide": {
                 #     "weight": -0.1,
                 #     "fn": rewards.feet_slide,
@@ -382,7 +402,7 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
         # Observations
         ObservationManager(
             self,
-            history_len=2,
+            history_len=5,
             cfg={
                 "command": {
                     "fn": self.vel_command_manager.observation,
@@ -413,7 +433,7 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
         )
         ObservationManager(
             self,
-            history_len=2,
+            history_len=5,
             name="privileged",
             cfg={
                 "height_sensor": {
@@ -573,6 +593,32 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
             min=0.0
         )
         return excess.sum(dim=-1)
+
+    def stand_still_reward(self, env: GenesisEnv) -> torch.Tensor:
+        """Penalize lifted feet and joint motion when commanded to stand still.
+
+        With a zero velocity command the ``feet_air_time`` reward gates itself
+        off, leaving no incentive against marching in place.  This term fills
+        that vacuum: each foot not in firm ground contact costs 1.0, and joint
+        motion adds a smaller pressure (0.02 x sum of squared joint velocities,
+        which puts typical marching-level motion on the same scale as a few
+        lifted feet) so the policy can't satisfy the term by jittering with all
+        feet planted.  Zero for environments with an active velocity command,
+        so it cannot distort the walking gait.
+
+        Should be registered with a negative weight.
+
+        Returns:
+            Per-environment penalty, shape ``(n_envs,)``.
+        """
+        standing = self.vel_command_manager.standing_envs.float()
+        feet_in_air = (
+            (self.foot_contact_manager.contacts.norm(dim=-1) < 1.0).float().sum(dim=-1)
+        )
+        dof_vel_sq = torch.sum(
+            torch.square(self.action_manager.get_dofs_velocity()), dim=-1
+        )
+        return standing * (feet_in_air + 0.02 * dof_vel_sq)
 
     def update_curriculum(self):
         """
