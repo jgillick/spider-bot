@@ -74,12 +74,11 @@ class SpiderRobotJumpingEnv(BaseSpiderRobotEnv):
             entity_attr="robot",
             on_reset={
                 "position": {
-                    "fn": reset.position,
-                    "params": {
-                        "position":  [0.0, 0.0, 0.118],
-                        "quat": [1.0, 0.0, 0.0, 0.0],
-                        "zero_velocity": True,
-                    },
+                    "fn": reset.position(
+                        position=[0.0, 0.0, 0.118],
+                        quat=[1.0, 0.0, 0.0, 0.0],
+                        zero_velocity=True,
+                    ),
                 },
             },
         )
@@ -168,25 +167,23 @@ class SpiderRobotJumpingEnv(BaseSpiderRobotEnv):
             cfg={
                 "similar_to_default": {
                     "weight": -0.001,
-                    "fn": rewards.dof_similar_to_default,
-                    "params": {
-                        "action_manager": self.action_manager,
-                    },
+                    "fn": rewards.dof_similar_to_default(
+                        actuator_manager=self.actuator_manager,
+                    ),
                 },
                 "self_contact": {
                     "weight": -0.05,
-                    "fn": rewards.contact_force,
-                    "params": {
-                        "contact_manager": self.self_contact,
-                    },
+                    "fn": rewards.contact_force(
+                        contact_manager=self.self_contact,
+                    ),
                 },
                 "action_rate": {
                     "weight": -0.04,
-                    "fn": rewards.action_rate_l2,
+                    "fn": rewards.action_rate_l2(),
                 },
                 "action_acceleration": {
                     "weight": -1e-04,
-                    "fn": rewards.action_acceleration_l2,
+                    "fn": rewards.action_acceleration_l2(),
                 },
             },
         )
@@ -198,7 +195,7 @@ class SpiderRobotJumpingEnv(BaseSpiderRobotEnv):
             term_cfg={
                 "timeout": {
                     "time_out": True,
-                    "fn": terminations.timeout,
+                    "fn": terminations.timeout(),
                 },
                 "foot_angle": {
                     "fn": self.foot_angle_mdp.terminate,

@@ -22,7 +22,7 @@ from genesis_forge.mdp import reset, rewards, terminations, observations
 
 from spiderbot.environment import BaseSpiderRobotEnv, Terrain, EnvMode
 from spiderbot.mdp.foot_angle import FootAngleMdp
-from spiderbot.mdp.friction import RandomizeFrictionRatio
+from spiderbot.mdp.friction import randomize_terrain_friction
 from spiderbot.mdp.foot_clearance import FootClearanceMdp
 from spiderbot.mdp.gait_reward import GaitReward
 
@@ -103,30 +103,27 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
         # Robot manager
         self.robot_manager = EntityManager(
             self,
-            entity_attr="robot",
+            entity=self.robot,
             on_reset={
                 "position": {
-                    "fn": reset.randomize_terrain_position,
-                    "params": {
-                        "terrain_manager": self.terrain_manager,
-                        "height_offset": 0.118,
-                        "subterrain": self.curriculum_terrain,
-                    },
+                    "fn": reset.randomize_terrain_position(
+                        terrain_manager=self.terrain_manager,
+                        height_offset=0.118,
+                        subterrain=self.curriculum_terrain,
+                    ),
                 },
                 "random_mass": {
-                    "fn": reset.randomize_link_mass_shift,
-                    "params": {
-                        "mass_range": [0, 8.0],
-                        "link_name": "Body"
-                    }
+                    "fn": reset.randomize_link_mass_shift(
+                        mass_range=(0.0, 5.0),
+                        link_name="Body",
+                    ),
                 },
                 "friction": {
-                    "fn": RandomizeFrictionRatio,
-                    "params": {
-                        "terrain_manager": self.terrain_manager,
-                        "link_names": ["[RL][1-4]_Foot"],
-                        "friction_range": (0.4, 1.8),
-                    },
+                    "fn": randomize_terrain_friction(
+                        terrain=self.terrain,
+                        link_names=["[RL][1-4]_Foot"],
+                        friction_range=(0.4, 1.5),
+                    ),
                 },
             },
         )
@@ -177,21 +174,21 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
         self.foot_contact_manager = ContactManager(
             self,
             link_names=["[RL][1-4]_Foot"],
-            with_entity_attr="terrain",
+            with_entity=self.terrain,
             track_air_time=True,
         )
 
         # Detect self contacts
         self.self_contact = ContactManager(
             self,
-            entity_attr="robot",
+            entity=self.robot,
             link_names=[
                 "[RL][1-4]_Femur",
                 "[RL][1-4]_Tibia",
                 "[RL][1-4]_Foot",
                 ".*_Motor",
             ],
-            with_entity_attr="robot",
+            with_entity=self.robot,
             with_links_names=[
                 "[RL][1-4]_Femur",
                 "[RL][1-4]_Tibia",
@@ -224,84 +221,76 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
             cfg={
                 # "gait_diagonal": {
                 #     "weight": 0.18,
-                #     "fn": GaitReward,
-                #     "params": {
-                #         "contact_manager": self.foot_contact_manager,
-                #         "foot_groups": [
+                #     "fn": GaitReward(
+                #         contact_manager=self.foot_contact_manager,
+                #         foot_groups=[
                 #             ["R1_Foot", "L2_Foot"],
                 #             ["R2_Foot", "L1_Foot"],
                 #             ["R3_Foot", "L4_Foot"],
                 #             ["R4_Foot", "L3_Foot"],
                 #         ],
-                #     },
+                #     ),
                 # },
                 # "gait_lateral": {
                 #     "weight": 0.07,
-                #     "fn": GaitReward,
-                #     "params": {
-                #         "contact_manager": self.foot_contact_manager,
-                #         "foot_groups": [
+                #     "fn": GaitReward(
+                #         contact_manager=self.foot_contact_manager,
+                #         foot_groups=[
                 #             ["R1_Foot", "R2_Foot"],
                 #             ["R3_Foot", "R4_Foot"],
                 #             ["L1_Foot", "L2_Foot"],
                 #             ["L3_Foot", "L4_Foot"],
                 #         ],
-                #     },
+                #     ),
                 # },
                 "cmd_linear_vel": {
                     "weight": 1.0,
-                    "fn": rewards.command_tracking_lin_vel,
-                    "params": {
-                        "vel_cmd_manager": self.vel_command_manager,
-                    },
+                    "fn": rewards.command_tracking_lin_vel(
+                        vel_cmd_manager=self.vel_command_manager,
+                    ),
                 },
                 "cmd_angular_vel": {
                     "weight": 0.5,
-                    "fn": rewards.command_tracking_ang_vel,
-                    "params": {
-                        "vel_cmd_manager": self.vel_command_manager,
-                    },
+                    "fn": rewards.command_tracking_ang_vel(
+                        vel_cmd_manager=self.vel_command_manager,
+                    ),
                 },
                 # "height": {
                 #     "weight": -30.0,
-                #     "fn": rewards.base_height,
-                #     "params": {
-                #         "target_height": 0.11, # 0.12
-                #         "terrain_manager": self.terrain_manager,
-                #     },
+                #     "fn": rewards.base_height(
+                #         target_height=0.11, # 0.12
+                #         terrain_manager=self.terrain_manager,
+                #     ),
                 # },
                 "similar_to_default": {
                     "weight": -0.01,
-                    "fn": rewards.dof_similar_to_default,
-                    "params": {
-                        "action_manager": self.action_manager,
-                    },
+                    "fn": rewards.dof_similar_to_default(
+                        actuator_manager=self.actuator_manager,
+                    ),
                 },
                 "flat_orientation": {
                     "weight": -1.5,
-                    "fn": rewards.flat_orientation_l2,
+                    "fn": rewards.flat_orientation_l2(),
                 },
                 "ang_vel_xy_l2": {
                     "weight": -0.05,
-                    "fn": rewards.ang_vel_xy_l2,
+                    "fn": rewards.ang_vel_xy_l2(),
                 },
                 "foot_air_time": {
                     "weight": 0.5,
-                    "fn": rewards.feet_air_time,
-                    "params": {
-                        "contact_manager": self.foot_contact_manager,
-                        "vel_cmd_manager": self.vel_command_manager,
-                        "time_threshold": 0.2,
-                        "time_threshold_max": 0.8,
-                    },
+                    "fn": rewards.feet_air_time(
+                        contact_manager=self.foot_contact_manager,
+                        vel_cmd_manager=self.vel_command_manager,
+                        time_threshold=0.2,
+                        time_threshold_max=0.8,
+                    ),
                 },
                 "feet_ground_time": {
                     "weight": -1.0,
-                    "fn": rewards.feet_ground_time,
-                    "params": {
-                        "contact_manager": self.foot_contact_manager,
-                        "time_threshold": 0.3,
-                    },
+                    "fn": rewards.feet_ground_time(
+                        contact_manager=self.foot_contact_manager,
+                        time_threshold=0.3,
+                    ),
                 },
                 "feet_max_air_time": {
                     "weight": -1.0,
@@ -311,24 +300,22 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
                     },
                 },
                 "stand_still": {
-                    "weight": -0.05,
+                    "weight": -0.08,
                     "fn": self.stand_still_reward,
                 },
                 # "feet_slide": {
                 #     "weight": -0.1,
-                #     "fn": rewards.feet_slide,
-                #     "params": {
-                #         "contact_manager": self.foot_contact_manager,
-                #     },
+                #     "fn": rewards.feet_slide(
+                #         contact_manager=self.foot_contact_manager,
+                #     ),
                 # },
                 # "foot_clearance": {
                 #     "weight": -15,
-                #     "fn": FootClearanceMdp,
-                #     "params": {
-                #         "target_clearance": 0.1,
-                #         "contact_manager": self.foot_contact_manager,
-                #         "terrain_manager": self.terrain_manager,
-                #     },
+                #     "fn": FootClearanceMdp(
+                #         target_clearance=0.1,
+                #         contact_manager=self.foot_contact_manager,
+                #         terrain_manager=self.terrain_manager,
+                #     ),
                 # },
                 "leg_angle": {
                     "weight": -0.02,
@@ -336,18 +323,17 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
                 },
                 "self_contact": {
                     "weight": -0.05,
-                    "fn": rewards.contact_force,
-                    "params": {
-                        "contact_manager": self.self_contact,
-                    },
+                    "fn": rewards.contact_force(
+                        contact_manager=self.self_contact,
+                    ),
                 },
                 "action_rate": {
                     "weight": -0.04,
-                    "fn": rewards.action_rate_l2,
+                    "fn": rewards.action_rate_l2(),
                 },
                 "action_acceleration": {
                     "weight": -2e-04,
-                    "fn": rewards.action_acceleration_l2,
+                    "fn": rewards.action_acceleration_l2(),
                 },
             },
         )
@@ -359,27 +345,24 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
             term_cfg={
                 "timeout": {
                     "time_out": True,
-                    "fn": terminations.timeout,
+                    "fn": terminations.timeout(),
                 },
                 "out_of_bounds": {
                     "time_out": True,
-                    "fn": terminations.out_of_bounds,
-                    "params": {
-                        "terrain_manager": self.terrain_manager,
-                    },
+                    "fn": terminations.out_of_bounds(
+                        terrain_manager=self.terrain_manager,
+                    ),
                 },
                 "bad_orientation": {
-                    "fn": terminations.bad_orientation,
-                    "params": {
-                        "limit_angle": 70,
-                    },
+                    "fn": terminations.bad_orientation(
+                        limit_angle=70,
+                    ),
                 },
                 "self_contact": {
-                    "fn": terminations.contact_force,
-                    "params": {
-                        "contact_manager": self.self_contact,
-                        "threshold": 2.0,
-                    },
+                    "fn": terminations.contact_force(
+                        contact_manager=self.self_contact,
+                        threshold=2.0,
+                    ),
                 },
                 "foot_angle": {
                     "fn": self.foot_angle_mdp.terminate,
@@ -388,12 +371,11 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
                     },
                 },
                 "dof_velocity_limit": {
-                    "fn": terminations.dof_velocity_limit,
-                    "params": {
-                        "unit": "rpm",
-                        "threshold": 250.0,
-                        "actuator_manager": self.actuator_manager,
-                    },
+                    "fn": terminations.dof_velocity_limit(
+                        unit="rpm",
+                        threshold=250.0,
+                        actuator_manager=self.actuator_manager,
+                    ),
                 },
             },
         )
@@ -410,12 +392,10 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
                 "imu_lin_acc_ang_vel": {
                     "fn": self.imu_observation,
                 },
-                "projected_gravity": {
-                    "fn": observations.entity_projected_gravity,
-                    "params": {
-                        "entity_manager": self.robot_manager
-                    },
-                    "noise": 0.05,
+                "imu_projected_gravity": {
+                    "fn": observations.imu_projected_gravity(
+                        imu_sensor=self.imu,
+                    ),
                 },
                 "dof_position": {
                     "fn": lambda env: self.action_manager.get_dofs_position(),
@@ -427,7 +407,7 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
                     "noise": 0.1,
                 },
                 "actions": {
-                    "fn": lambda env: self.action_manager.raw_actions,
+                    "fn": observations.current_actions(),
                 },
             },
         )
@@ -443,13 +423,12 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
                     "fn": lambda env: self.robot_manager.get_linear_velocity(),
                 },
                 "foot_contacts": {
-                    "fn": observations.contact_force,
-                    "params": {
-                        "contact_manager": self.foot_contact_manager,
-                    },
+                    "fn": observations.contact_force(
+                        contact_manager=self.foot_contact_manager,
+                    ),
                 },
                 "control_force": {
-                    "fn": lambda env: self.actuator_manager.get_dofs_control_force(),
+                    "fn": lambda env: self.actuator_manager.get_dofs_control_force(clip_to_max_force=True),
                     "scale": 0.1,
                 },
                 "force": {

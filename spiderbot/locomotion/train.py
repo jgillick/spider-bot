@@ -119,7 +119,8 @@ def main():
         env,
         video_length_sec=15,
         out_dir=path.join(log_path, "videos"),
-        episode_trigger=lambda episode_id: episode_id % 4 == 0,
+        iteration_trigger=lambda i: i % 100 == 0,
+        steps_per_iteration=cfg["num_steps_per_env"],
     )
 
     # Build the environment

@@ -70,6 +70,7 @@ class BaseSpiderRobotEnv(ManagedEnvironment):
                 enable_joint_limit=True,
                 enable_self_collision=True,
                 enable_neutral_collision=True,
+                batch_links_info=True,
                 multiplier_collision_broad_phase=32,
                 max_collision_pairs=40,
             ),
@@ -187,7 +188,7 @@ class BaseSpiderRobotEnv(ManagedEnvironment):
         """
         Configure the environment managers.
         """
-        self.terrain_manager = TerrainManager(self, terrain_attr="terrain")
+        self.terrain_manager = TerrainManager(self, terrain=self.terrain)
 
     def step(self, actions: torch.Tensor):
         """

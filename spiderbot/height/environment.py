@@ -58,11 +58,10 @@ class SpiderRobotHeightEnv(BaseSpiderRobotEnv):
             entity_attr="robot",
             on_reset={
                 "position": {
-                    "fn": reset.randomize_terrain_position,
-                    "params": {
-                        "terrain_manager": self.terrain_manager,
-                        "height_offset": 0.118,
-                    },
+                    "fn": reset.randomize_terrain_position(
+                        terrain_manager=self.terrain_manager,
+                        height_offset=0.118,
+                    ),
                 },
             },
         )
@@ -143,25 +142,23 @@ class SpiderRobotHeightEnv(BaseSpiderRobotEnv):
             cfg={
                 "height": {
                     "weight": -40.0,
-                    "fn": rewards.base_height,
-                    "params": {
-                        "height_command": self.height_command_manager,
-                    },
+                    "fn": rewards.base_height(
+                        height_command=self.height_command_manager,
+                    ),
                 },
                 "similar_to_default": {
                     "weight": -0.001,
-                    "fn": rewards.dof_similar_to_default,
-                    "params": {
-                        "action_manager": self.action_manager,
-                    },
+                    "fn": rewards.dof_similar_to_default(
+                        actuator_manager=self.actuator_manager,
+                    ),
                 },
                 "flat_orientation": {
                     "weight": -1.5,
-                    "fn": rewards.flat_orientation_l2,
+                    "fn": rewards.flat_orientation_l2(),
                 },
                 "ang_vel_xy_l2": {
                     "weight": -0.05,
-                    "fn": rewards.ang_vel_xy_l2,
+                    "fn": rewards.ang_vel_xy_l2(),
                 },
                 "leg_angle": {
                     "weight": -0.02,
@@ -169,25 +166,23 @@ class SpiderRobotHeightEnv(BaseSpiderRobotEnv):
                 },
                 "stable_footing": {
                     "weight": 0.02,
-                    "fn": rewards.has_contact,
-                    "params": {
-                        "contact_manager": self.foot_contact_manager,
-                    },
+                    "fn": rewards.has_contact(
+                        contact_manager=self.foot_contact_manager,
+                    ),
                 },
                 "self_contact": {
                     "weight": -0.05,
-                    "fn": rewards.contact_force,
-                    "params": {
-                        "contact_manager": self.self_contact,
-                    },
+                    "fn": rewards.contact_force(
+                        contact_manager=self.self_contact,
+                    ),
                 },
                 "action_rate": {
                     "weight": -0.04,
-                    "fn": rewards.action_rate_l2,
+                    "fn": rewards.action_rate_l2(),
                 },
                 "action_acceleration": {
                     "weight": -1e-04,
-                    "fn": rewards.action_acceleration_l2,
+                    "fn": rewards.action_acceleration_l2(),
                 },
             },
         )
@@ -199,14 +194,13 @@ class SpiderRobotHeightEnv(BaseSpiderRobotEnv):
             term_cfg={
                 "timeout": {
                     "time_out": True,
-                    "fn": terminations.timeout,
+                    "fn": terminations.timeout(),
                 },
                 # "self_contact": {
-                #     "fn": terminations.contact_force,
-                #     "params": {
-                #         "contact_manager": self.self_contact,
-                #         "threshold": 2.0,
-                #     },
+                #     "fn": terminations.contact_force(
+                #         contact_manager=self.self_contact,
+                #         threshold=2.0,
+                #     ),
                 # },
                 "foot_angle": {
                     "fn": self.foot_angle_mdp.terminate,
@@ -255,10 +249,9 @@ class SpiderRobotHeightEnv(BaseSpiderRobotEnv):
                     "fn": lambda env: self.robot_manager.get_linear_velocity(),
                 },
                 "foot_contacts": {
-                    "fn": observations.contact_force,
-                    "params": {
-                        "contact_manager": self.foot_contact_manager,
-                    },
+                    "fn": observations.contact_force(
+                        contact_manager=self.foot_contact_manager,
+                    ),
                 },
                 "control_force": {
                     "fn": lambda env: self.robot.get_dofs_control_force(),

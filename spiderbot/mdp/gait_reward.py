@@ -1,7 +1,8 @@
 import torch
 import genesis as gs
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
-from genesis_forge.managers import ContactManager, MdpFnClass
+from genesis_forge.managers import ContactManager, MdpFn
 from genesis_forge.genesis_env import GenesisEnv
 
 
@@ -9,7 +10,8 @@ if TYPE_CHECKING:
     from genesis.engine.entities import RigidEntity
 
 
-class GaitReward(MdpFnClass):
+@dataclass(kw_only=True, eq=False)
+class GaitReward(MdpFn):
     """
     Reward foot groups that have at least half of the feet in contact.
     This is a very basic way to reward stable walking and encourage an alternating tetrapod gait.
@@ -20,7 +22,6 @@ class GaitReward(MdpFnClass):
     different velocities and terrain.
 
     Args:
-        env: The environment
         foot_groups: The foot groups to reward. Each group is a list of link names,
                      and the reward is based on whether at least half of the feet in each group are in contact.
         contact_manager: The contact manager for the feet
@@ -36,45 +37,35 @@ class GaitReward(MdpFnClass):
             cfg={
                 "foot_sync": {
                     "weight": 0.25,
-                    "fn": GaitReward,
-                    "params": {
-                        "contact_manager": self.foot_contact_manager,
-                        "foot_groups": [
+                    "fn": GaitReward(
+                        contact_manager=self.foot_contact_manager,
+                        foot_groups=[
                             ["FL_Foot", "RR_Foot"],
                             ["FR_Foot", "RL_Foot"],
                         ],
-                    },
+                    ),
                 },
             },
         )
     """
 
-    def __init__(
-        self,
-        env: GenesisEnv,
-        foot_groups: list[list[str]],
-        contact_manager: ContactManager,
-        force_threshold: float = 1.0,
-        entity_attr: str = "robot",
-    ):
-        super().__init__(env)
-
-        self._foot_group_names = foot_groups
-        self._foot_group_link_idx = []
-        self._robot: RigidEntity = getattr(env, entity_attr)
-        self._group_rewards = torch.zeros(
-            (self.env.num_envs, len(foot_groups)), device=gs.device
-        )
+    foot_groups: list[list[str]] | None = None
+    contact_manager: ContactManager | None = None
+    force_threshold: float = 1.0
+    entity_attr: str = "robot"
 
     def build(self):
         """
         Get foot link indices
         """
-        super().build()
+        self._robot: RigidEntity = getattr(self.env, self.entity_attr)
+        self._group_rewards = torch.zeros(
+            (self.env.num_envs, len(self.foot_groups)), device=gs.device
+        )
 
         # Organize feet into the movement groups
         self._foot_group_link_idx = []
-        for group in self._foot_group_names:
+        for group in self.foot_groups:
             group_link_idx = []
             for link_name in group:
                 link = self._robot.get_link(link_name)
@@ -83,17 +74,11 @@ class GaitReward(MdpFnClass):
                 group_link_idx.append(link.idx)
             self._foot_group_link_idx.append(group_link_idx)
 
-    def __call__(
-        self,
-        env: GenesisEnv,
-        contact_manager: ContactManager,
-        force_threshold: float = 1.0,
-        **kwargs,
-    ) -> torch.Tensor:
+    def __call__(self, env: GenesisEnv) -> torch.Tensor:
         for i, group in enumerate(self._foot_group_link_idx):
             # Get contact state for all feet in group
-            contact_forces = contact_manager.get_contact_forces(group).norm(dim=-1)
-            num_in_contact = (contact_forces >= force_threshold).float().sum(dim=-1)
+            contact_forces = self.contact_manager.get_contact_forces(group).norm(dim=-1)
+            num_in_contact = (contact_forces >= self.force_threshold).float().sum(dim=-1)
 
             num_feet = len(group)
             feet_multiplier = 1 / num_feet
