@@ -1,22 +1,40 @@
+"""
+Play a trained agent in the simulator while mirroring one leg's actions to real motors.
+
+    python -m spiderbot.locomotion.play_motors ./logs/<TRAINING DIR>
+
+On first run (or with --position), the leg is calibrated using the alignment tool, and
+the motor positions are saved to default_pos.json (next to this script). These are the motors' virtual
+"zero" positions, which are added to the simulated joint targets.
+"""
+
 import os
 import glob
-import time
 import argparse
 import torch
 import pickle
-from serial.tools import list_ports
+import sdl2
 import genesis as gs
 from rsl_rl.runners import OnPolicyRunner
 from genesis_forge.wrappers import RslRlWrapper
 from genesis_forge.gamepads import Gamepad
-from environment import SpiderRobotEnv
-from motor.can_motor_controller import CanMotorController
-from motor.protocol import AxisState, ControlMode, InputMode
+from spiderbot.locomotion.environment import SpiderRobotEnv
+from spiderbot.motor.can_motor_controller import CanMotorController
+from spiderbot.motor.protocol import AxisState
+from spiderbot.locomotion.leg_motors import (
+    CAN_ACTUATOR_MAP,
+    CAN_ACTUATOR_DIRECTION,
+    DEFAULT_POS_FILE,
+    connect_to_can,
+    enable_motors,
+    load_default_positions,
+    calibrate_default_positions,
+)
 
-MOTOR_KP = 38.0
-MOTOR_KD = 1.2
+MOTOR_KP = 25.0
+MOTOR_KD = 1.0
 MOTOR_SMOOTHING = 0.3  # EMA alpha: 0=no movement, 1=no smoothing
-MOTOR_DEADBAND = 0.01   # radians — ignore changes smaller than this
+MOTOR_DEADBAND = 0.01  # radians — ignore changes smaller than this
 
 parser = argparse.ArgumentParser(add_help=True)
 parser.add_argument(
@@ -26,61 +44,25 @@ parser.add_argument(
     default="gpu",
     help="Where to process the simulation (cpu or gpu)",
 )
+parser.add_argument(
+    "-p",
+    "--position",
+    action="store_true",
+    help="Force recalibration of the actuator zero positions with the alignment tool.",
+)
 parser.add_argument("dir", help="The training output directory.")
 args = parser.parse_args()
 
-CAN_BITRATE = 500000
 
-# Map actuator names to CAN node IDs
-CAN_ACTUATOR_MAP = {
-    "Leg1_Hip": 1,
-}
-
-
-def choose_port():
-    """List serial ports and let user select one."""
-    IGNORE_PORTS = ["/dev/cu.debug-console", "/dev/cu.Bluetooth-Incoming-Port"]
-    ports = list(list_ports.comports())
-    ports = [p for p in ports if p.device not in IGNORE_PORTS]
-    if not ports:
-        print("No serial ports found.")
-        port = input("Enter serial port path manually: ").strip()
-        return port or None
-
-    print("\nSelect your CAN bus port:")
-    for i, p in enumerate(ports, 1):
-        desc = p.description or "—"
-        print(f"  {i}) {p.device}  —  {desc}")
-    print(f"  {len(ports) + 1}) Enter path manually")
-
-    while True:
-        try:
-            choice = input("\nSelect port [1]: ").strip() or "1"
-            n = int(choice)
-            if 1 <= n <= len(ports):
-                return ports[n - 1].device
-            if n == len(ports) + 1:
-                return input("Enter port path: ").strip() or None
-        except ValueError:
-            pass
-        print("Invalid choice.")
-
-
-def connect_to_can() -> CanMotorController:
-    """Open the CAN bus, register all motor nodes, and enable closed-loop control."""
-    port = choose_port()
-    bus = CanMotorController(channel=port, bitrate=CAN_BITRATE)
-    for node_id in CAN_ACTUATOR_MAP.values():
-        bus.register_node(node_id)
-    bus.start()
-    for node_id in CAN_ACTUATOR_MAP.values():
-        bus.send_clear_errors(node_id)
-        time.sleep(0.05)
-        bus.send_set_control_mode(node_id, ControlMode.POSITION_CONTROL, InputMode.PASSTHROUGH)
-        time.sleep(0.05)
-        bus.send_set_state(node_id, AxisState.CLOSED_LOOP_CONTROL)
-        time.sleep(0.05)
-    return bus
+def get_default_positions(bus: CanMotorController) -> dict[str, float]:
+    """Get the motor zero positions from the saved file, or by calibrating."""
+    if args.position:
+        return calibrate_default_positions(bus)
+    default_pos = load_default_positions()
+    if default_pos is not None:
+        print(f"Using zero positions from {DEFAULT_POS_FILE}")
+        return default_pos
+    return calibrate_default_positions(bus)
 
 
 def get_latest_model(log_dir: str) -> str:
@@ -101,22 +83,38 @@ def get_latest_model(log_dir: str) -> str:
     return sorted_models[-1]
 
 
-def get_training_config():
-    cfg = os.path.join(args.dir, "cfg.pkl")
-    if not os.path.exists(cfg):
-        cfg = os.path.join(args.dir, "snapshot", "cfg.pkl")
-    if not os.path.exists(cfg):
-        return None
-    with open(cfg, "rb") as f:
-        return pickle.load(f)
+def get_training_config(log_dir: str) -> dict:
+    """Load the RSL-RL config saved by train.py"""
+    with open(os.path.join(log_dir, "cfgs.pkl"), "rb") as f:
+        cfgs = pickle.load(f)
+    if isinstance(cfgs, dict) and "rsl_rl" in cfgs:
+        return cfgs["rsl_rl"]
+    if isinstance(cfgs, (list, tuple)):  # Legacy format
+        return cfgs[0]
+    return cfgs
+
+
+def gamepad_connected() -> bool:
+    """Check if SDL can see at least one game controller."""
+    sdl2.SDL_InitSubSystem(sdl2.SDL_INIT_GAMECONTROLLER)
+    try:
+        return any(
+            sdl2.SDL_IsGameController(i) for i in range(sdl2.SDL_NumJoysticks())
+        )
+    finally:
+        sdl2.SDL_QuitSubSystem(sdl2.SDL_INIT_GAMECONTROLLER)
 
 
 def play():
     """Play a trained agent."""
 
+    if not gamepad_connected():
+        print("🎮 No gamepad found. Connect a gamepad and try again.")
+        exit(1)
+
     # Load training files
     log_path = args.dir
-    [cfg] = pickle.load(open(os.path.join(log_path, "cfgs.pkl"), "rb"))
+    cfg = get_training_config(log_path)
     model = get_latest_model(log_path)
     print(f"Playing model: {model}")
 
@@ -124,74 +122,86 @@ def play():
     print("🚌 Connecting to the CAN bus...")
     bus = connect_to_can()
 
-    print("🔌 Initializing simulator...")
-
-    # Processor backend (GPU or CPU)
-    backend = gs.constants.backend.gpu
-    if args.device == "cpu":
-        backend = gs.constants.backend.cpu
-        torch.set_default_device("cpu")
-    gs.init(logging_level="warning", backend=backend, performance_mode=True)
-
-    # Customize environment for playing
-    base_env = SpiderRobotEnv(
-        num_envs=1, headless=False, terrain="mixed", height_sensor=False, mode="play"
-    )
-    base_env.build()
-    base_env.reward_manager.enabled = False
-    base_env.termination_manager.enabled = False
-    base_env.self_contact.enabled = False
-    base_env.vel_command_manager.range = {
-        "lin_vel_x": (-1.0, 1.0),
-        "lin_vel_y": (-1.0, 1.0),
-        "ang_vel_z": (-0.5, 0.5),
-    }
-
-    # Connect to gamepad
-    print("🎮 Connecting to gamepad...")
-    gamepad = Gamepad()
-    base_env.vel_command_manager.use_gamepad(
-        gamepad, lin_vel_y_axis=0, lin_vel_x_axis=1, ang_vel_z_axis=2
-    )
-
-    # Eval
-    print("Loading environment...")
-    env = RslRlWrapper(base_env)
-    runner = OnPolicyRunner(env, cfg, log_path, device=gs.device)
-    runner.load(model)
-    policy = runner.get_inference_policy(device=gs.device)
-
-    obs, _ = env.reset()
-    smoothed_positions = {node_id: None for node_id in CAN_ACTUATOR_MAP.values()}
     try:
-        with torch.no_grad():
-            while True:
-                actions = policy(obs)
-                obs, _rews, _dones, _infos = env.step(actions)
+        # Motors are left idle during calibration, so the leg can be moved by hand
+        default_pos = get_default_positions(bus)
 
-                # Move the actuators
-                actuator_values = base_env.action_manager.get_actions_dict()
-                for name, node_id in CAN_ACTUATOR_MAP.items():
-                    target = actuator_values[name]
-                    prev = smoothed_positions[node_id]
-                    if prev is None:
-                        prev = target
-                    smoothed = MOTOR_SMOOTHING * target + (1.0 - MOTOR_SMOOTHING) * prev
-                    smoothed_positions[node_id] = smoothed
-                    if abs(smoothed - prev) > MOTOR_DEADBAND:
-                        bus.send_mit_control(node_id, smoothed, kp=MOTOR_KP, kd=MOTOR_KD)
+        print("🔌 Initializing simulator...")
 
-    except KeyboardInterrupt:
-        pass
-    except gs.GenesisException as e:
-        if e.message != "Viewer closed.":
-            raise e
-    except Exception as e:
-        raise e
+        # Processor backend (GPU or CPU)
+        backend = gs.constants.backend.gpu
+        if args.device == "cpu":
+            backend = gs.constants.backend.cpu
+            torch.set_default_device("cpu")
+        gs.init(logging_level="warning", backend=backend, performance_mode=True)
+
+        # Customize environment for playing
+        base_env = SpiderRobotEnv(
+            num_envs=1, headless=False, terrain="flat", height_sensor=False, mode="play"
+        )
+        base_env.build()
+        base_env.reward_manager.enabled = False
+        base_env.termination_manager.enabled = False
+        base_env.self_contact.enabled = False
+        base_env.vel_command_manager.range = {
+            "lin_vel_x": (-1.0, 1.0),
+            "lin_vel_y": (-1.0, 1.0),
+            "ang_vel_z": (-0.5, 0.5),
+        }
+
+        # Connect to gamepad
+        print("🎮 Connecting to gamepad...")
+        gamepad = Gamepad()
+        base_env.vel_command_manager.use_gamepad(
+            gamepad, lin_vel_y_axis=0, lin_vel_x_axis=1, ang_vel_z_axis=2
+        )
+
+        # Eval
+        print("Loading environment...")
+        env = RslRlWrapper(base_env)
+        runner = OnPolicyRunner(env, cfg, log_path, device=gs.device)
+        runner.load(model)
+        policy = runner.get_inference_policy(device=gs.device)
+
+        obs, _ = env.reset()
+        # Motor targets are sent relative to the alignment-tool zero
+        for name, node_id in CAN_ACTUATOR_MAP.items():
+            bus.set_zero_offset(node_id, default_pos[name])
+        enable_motors(bus)
+        smoothed_positions: dict[str, float | None] = {name: None for name in CAN_ACTUATOR_MAP}
+        sent_positions: dict[str, float | None] = {name: None for name in CAN_ACTUATOR_MAP}
+        try:
+            with torch.no_grad():
+                while True:
+                    actions = policy(obs)
+                    obs, _rews, _dones, _infos = env.step(actions)
+
+                    # Move the actuators (the bus adds each motor's zero offset)
+                    actuator_values = base_env.action_manager.get_actions_dict()
+                    for name, node_id in CAN_ACTUATOR_MAP.items():
+                        target = actuator_values[name] * CAN_ACTUATOR_DIRECTION[name]
+                        prev = smoothed_positions[name]
+                        if prev is None:
+                            prev = target
+                        smoothed = MOTOR_SMOOTHING * target + (1.0 - MOTOR_SMOOTHING) * prev
+                        smoothed_positions[name] = smoothed
+                        last_sent = sent_positions[name]
+                        if last_sent is None or abs(smoothed - last_sent) > MOTOR_DEADBAND:
+                            bus.send_mit_control(node_id, smoothed, kp=MOTOR_KP, kd=MOTOR_KD)
+                            sent_positions[name] = smoothed
+
+        except KeyboardInterrupt:
+            pass
+        except gs.GenesisException as e:
+            if str(e) != "Viewer closed.":
+                raise e
+        finally:
+            gamepad.stop()
+            env.close()
     finally:
+        for node_id in CAN_ACTUATOR_MAP.values():
+            bus.send_set_state(node_id, AxisState.IDLE)
         bus.stop()
-    env.close()
-    gamepad.stop()
 
 
 if __name__ == "__main__":

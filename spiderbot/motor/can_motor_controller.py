@@ -13,6 +13,7 @@ Example
     bus.register_node(2)
     bus.start()
 
+    bus.set_zero_here(1)
     bus.send_mit_control(1, position=0.5)
     state = bus.get_state(1)
     print(state.position, state.is_connected)
@@ -32,7 +33,6 @@ from typing import Optional
 
 from .protocol import (
     MOTOR_TO_RAD,
-    MOTOR_UNITS_PER_REV,
     RAD_TO_MOTOR,
     MIT_POS_MIN,
     MIT_POS_MAX,
@@ -45,7 +45,6 @@ from .protocol import (
     MIT_TORQUE_MIN,
     MIT_TORQUE_MAX,
     HEARTBEAT_TIMEOUT,
-    ENCODER_OFFSET_ENDPOINT_ID,
     ENCODER_POSITION_ESTIMATE_ID,
     AxisState,
     ControlMode,
@@ -201,6 +200,32 @@ class CanMotorController:
                 result[nd.node_id] = nd.axis_error
         return result
 
+    # -- Software zero ----------------------------------------------------
+
+    def set_zero_here(self, node_id: int) -> None:
+        """
+        Make the current position of *node_id* read as zero.
+
+        The offset lives on the host only: :meth:`get_state` positions and
+        ``send_*`` position targets are relative to it.  Nothing is written
+        to the motor, so it is lost when this controller is discarded.
+        """
+        node = self._get_node(node_id)
+        with node.lock:
+            node.zero_offset = node.position
+
+    def set_zero_offset(self, node_id: int, offset: float) -> None:
+        """Set the zero of *node_id* to *offset* radians in the encoder frame (0 resets it)."""
+        node = self._get_node(node_id)
+        with node.lock:
+            node.zero_offset = offset * RAD_TO_MOTOR
+
+    def get_zero_offset(self, node_id: int) -> float:
+        """Return the zero of *node_id* in radians, in the encoder frame."""
+        node = self._get_node(node_id)
+        with node.lock:
+            return node.zero_offset * MOTOR_TO_RAD
+
     # -- Send commands (non-blocking) -------------------------------------
 
     def _send(self, cmd_id: int, node_id: int, data: bytes = b"") -> None:
@@ -238,7 +263,8 @@ class CanMotorController:
         node_id : int
             Target CAN node.
         position : float
-            Target position in radians (-12.5 .. 12.5).
+            Target position in radians, relative to the node's zero.  The
+            resulting encoder-frame position is clamped to -12.5 .. 12.5.
         kp : float
             Position gain (0 .. 500).
         kd : float
@@ -248,6 +274,7 @@ class CanMotorController:
         torque : float
             Feed-forward torque in Nm (-50 .. 50).
         """
+        position += self.get_zero_offset(node_id)
         position = max(MIT_POS_MIN, min(MIT_POS_MAX, position))
         velocity = max(MIT_VEL_MIN, min(MIT_VEL_MAX, velocity))
         kp = max(MIT_KP_MIN, min(MIT_KP_MAX, kp))
@@ -297,13 +324,13 @@ class CanMotorController:
         node_id : int
             Target CAN node.
         position : float
-            Target position in radians.
+            Target position in radians, relative to the node's zero.
         vel_ff : float
             Velocity feed-forward in rad/s.
         torque_ff : float
             Torque feed-forward in Nm.
         """
-        motor_pos = position * RAD_TO_MOTOR
+        motor_pos = (position + self.get_zero_offset(node_id)) * RAD_TO_MOTOR
         vel_ff_units = int(rad_to_rev(vel_ff) / 0.001)
         data = struct.pack("<fhh", motor_pos, vel_ff_units, int(torque_ff / 0.001))
         self._send(CANCommand.SET_INPUT_POS, node_id, data)
@@ -375,6 +402,19 @@ class CanMotorController:
             node.sdo_waiters.pop(endpoint_id, None)
             return node.sdo_results.pop(endpoint_id)
 
+    def read_position(self, node_id: int, timeout: float = 1.5) -> float:
+        """
+        Read the encoder position estimate (radians, encoder frame -- not
+        relative to the software zero) of *node_id* via SDO.
+
+        Unlike :meth:`get_state`, this works in any axis state: the cyclic
+        encoder estimate messages report 0 while the axis is idle.
+        """
+        return (
+            self.read_float_parameter(node_id, ENCODER_POSITION_ESTIMATE_ID, timeout)
+            * MOTOR_TO_RAD
+        )
+
     def write_float_parameter(
         self, node_id: int, endpoint_id: int, value: float
     ) -> None:
@@ -382,21 +422,6 @@ class CanMotorController:
         payload = struct.pack("<f", value)
         data = struct.pack("<BHB", 1, endpoint_id & 0xFFFF, 0) + payload
         self._send(CANCommand.RXSDO, node_id, data)
-
-    def save_zero_to_motor(self, node_id: int) -> None:
-        """
-        Persist the current position as zero on *node_id*.
-
-        Reads the current encoder offset and position estimate via SDO,
-        computes the new offset, writes it back, and saves configuration
-        to flash.  The motor will reboot after save.
-        """
-        current_offset = self.read_float_parameter(node_id, ENCODER_OFFSET_ENDPOINT_ID)
-        pos_estimate = self.read_float_parameter(node_id, ENCODER_POSITION_ESTIMATE_ID)
-        new_offset = (pos_estimate + current_offset) % MOTOR_UNITS_PER_REV
-        self.write_float_parameter(node_id, ENCODER_OFFSET_ENDPOINT_ID, new_offset)
-        time.sleep(0.05)
-        self.send_save_configuration(node_id)
 
     # -- Background reader ------------------------------------------------
 
@@ -460,7 +485,7 @@ class NodeSnapshot:
     """Immutable point-in-time snapshot of a motor node's state."""
 
     node_id: int
-    position: float  # radians (raw encoder)
+    position: float  # radians, relative to the node's zero
     velocity: float  # rad/s
     axis_state: AxisState
     axis_error: int
@@ -483,6 +508,7 @@ class NodeData:
         self.node_id = node_id
         self.lock = threading.Lock()
         self.position = 0.0  # motor units
+        self.zero_offset = 0.0  # motor units, host-side software zero
         self.velocity = 0.0  # motor units/s
         self.axis_state = AxisState.UNDEFINED
         self.axis_error = 0
@@ -497,7 +523,7 @@ class NodeData:
         with self.lock:
             return NodeSnapshot(
                 node_id=self.node_id,
-                position=self.position * MOTOR_TO_RAD,
+                position=(self.position - self.zero_offset) * MOTOR_TO_RAD,
                 velocity=self.velocity * MOTOR_TO_RAD,
                 axis_state=self.axis_state,
                 axis_error=self.axis_error,

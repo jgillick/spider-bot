@@ -7,6 +7,7 @@ import glob
 import argparse
 import torch
 import pickle
+import sdl2
 
 import genesis as gs
 from genesis import constants
@@ -14,9 +15,7 @@ from genesis import constants
 from rsl_rl.runners import OnPolicyRunner
 from genesis_forge.wrappers import RslRlWrapper
 from genesis_forge.gamepads import Gamepad
-from environment import SpiderRobotEnv
-
-from genesis_forge.gamepads import Gamepad
+from spiderbot.locomotion.environment import SpiderRobotEnv
 
 parser = argparse.ArgumentParser(add_help=True)
 parser.add_argument(
@@ -48,22 +47,38 @@ def get_latest_model(log_dir: str) -> str:
     return sorted_models[-1]
 
 
-def get_training_config():
-    cfg = os.path.join(args.dir, "cfg.pkl")
-    if not os.path.exists(cfg):
-        cfg = os.path.join(args.dir, "snapshot", "cfg.pkl")
-    if not os.path.exists(cfg):
-        return None
-    with open(cfg, "rb") as f:
-        return pickle.load(f)
+def get_training_config(log_dir: str) -> dict:
+    """Load the RSL-RL config saved by train.py"""
+    with open(os.path.join(log_dir, "cfgs.pkl"), "rb") as f:
+        cfgs = pickle.load(f)
+    if isinstance(cfgs, dict) and "rsl_rl" in cfgs:
+        return cfgs["rsl_rl"]
+    if isinstance(cfgs, (list, tuple)):  # Legacy format
+        return cfgs[0]
+    return cfgs
+
+
+def gamepad_connected() -> bool:
+    """Check if SDL can see at least one game controller."""
+    sdl2.SDL_InitSubSystem(sdl2.SDL_INIT_GAMECONTROLLER)
+    try:
+        return any(
+            sdl2.SDL_IsGameController(i) for i in range(sdl2.SDL_NumJoysticks())
+        )
+    finally:
+        sdl2.SDL_QuitSubSystem(sdl2.SDL_INIT_GAMECONTROLLER)
 
 
 def play():
     """Play a trained agent."""
 
+    if not gamepad_connected():
+        print("🎮 No gamepad found. Connect a gamepad and try again.")
+        exit(1)
+
     # Load training files
     log_path = args.dir
-    cfg = pickle.load(open(os.path.join(log_path, "cfgs.pkl"), "rb"))
+    cfg = get_training_config(log_path)
     model = get_latest_model(log_path)
     print(f"Playing model: {model}")
 
@@ -76,7 +91,7 @@ def play():
 
     # Customize environment for playing
     env = SpiderRobotEnv(
-        num_envs=1, headless=False, terrain="mixed", height_sensor=False, mode="play"
+        num_envs=1, headless=False, terrain="flat", height_sensor=False, mode="play"
     )
     env.build()
     env.reward_manager.enabled = False
@@ -87,6 +102,7 @@ def play():
         "lin_vel_y": (-1.0, 1.0),
         "ang_vel_z": (-0.5, 0.5),
     }
+    env.robot_manager.on_reset["random_ground_pose"].fn.probability = 0
 
     # Connect to gamepad
     print("🎮 Connecting to gamepad...")
@@ -111,12 +127,11 @@ def play():
     except KeyboardInterrupt:
         pass
     except gs.GenesisException as e:
-        if e.message != "Viewer closed.":
+        if str(e) != "Viewer closed.":
             raise e
-    except Exception as e:
-        raise e
-    env.close()
-    gamepad.stop()
+    finally:
+        gamepad.stop()
+        env.close()
 
 
 if __name__ == "__main__":

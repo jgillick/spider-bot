@@ -76,9 +76,7 @@ def run_controller_loop(bus: CanMotorController, node_id: int, port: str) -> str
     """
     old_settings = termios.tcgetattr(sys.stdin)
 
-    # Virtual zero offset (radians, absolute encoder frame).
-    zero_offset: float = 0.0
-    target_position: Optional[float] = None  # radians, relative to virtual zero
+    target_position: Optional[float] = None  # radians, relative to the bus zero
 
     try:
         tty.setcbreak(sys.stdin.fileno())
@@ -90,8 +88,8 @@ def run_controller_loop(bus: CanMotorController, node_id: int, port: str) -> str
         print("  Type a number and press Enter to set position")
         print("  'e' - Enable closed loop control")
         print("  'i' - Set to idle (disable)")
-        print("  'z' - Set current position as zero (software)")
-        print("  'Z' - Save current position as zero to motor (persistent)")
+        print("  'z' - Set current position as zero (until quit)")
+        print("  'Z' - Reset zero to the encoder zero")
         print("  'h' - Go to zero (home)")
         print("  'q' - Quit")
         print("=" * 50 + "\n")
@@ -101,7 +99,7 @@ def run_controller_loop(bus: CanMotorController, node_id: int, port: str) -> str
 
         while True:
             state = bus.get_state(node_id)
-            position = state.position - zero_offset
+            position = state.position
 
             if time.time() - last_update > 0.1:
                 target_str = (
@@ -143,21 +141,21 @@ def run_controller_loop(bus: CanMotorController, node_id: int, port: str) -> str
                     input_buffer = ""
 
                 elif char == "z":
-                    print("\n\nSetting current position as zero (software)...")
-                    zero_offset = state.position
+                    print("\n\nSetting current position as zero...")
+                    bus.set_zero_here(node_id)
                     target_position = 0.0
                     input_buffer = ""
 
                 elif char == "Z":
-                    print("\n\nSaving current position as zero to motor flash...")
-                    bus.save_zero_to_motor(node_id)
+                    print("\n\nResetting zero to the encoder zero...")
+                    bus.set_zero_offset(node_id, 0.0)
+                    target_position = None
                     input_buffer = ""
-                    return "reconnect"
 
                 elif char == "h":
                     print("\n\nGoing to zero (home)...")
                     target_position = 0.0
-                    bus.send_position(node_id, zero_offset)
+                    bus.send_position(node_id, 0.0)
                     input_buffer = ""
 
                 elif char == "\n" or char == "\r":
