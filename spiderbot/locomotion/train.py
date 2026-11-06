@@ -27,7 +27,7 @@ TARGET_MINI_BATCH = 24_576
 
 parser = argparse.ArgumentParser(add_help=True)
 parser.add_argument("-n", "--num_envs", type=int, default=4048)
-parser.add_argument("-i", "--max_iterations", type=int, default=8_000)
+parser.add_argument("-i", "--max_iterations", type=int, default=3_000)
 parser.add_argument("-d", "--device", type=str, default="gpu")
 parser.add_argument("-c", "--config", type=str, default=DEFAULT_RSL_CONFIG)
 parser.add_argument(
@@ -121,6 +121,7 @@ def main():
         out_dir=path.join(log_path, "videos"),
         iteration_trigger=lambda i: i % 100 == 0,
         steps_per_iteration=cfg["num_steps_per_env"],
+        wait_for_episode_start=True
     )
 
     # Build the environment

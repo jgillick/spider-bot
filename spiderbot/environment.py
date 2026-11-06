@@ -58,7 +58,7 @@ class BaseSpiderRobotEnv(ManagedEnvironment):
             show_viewer=not self.headless,
             sim_options=gs.options.SimOptions(dt=self.dt, substeps=4),
             viewer_options=gs.options.ViewerOptions(
-                camera_pos=(-2.5, -1.5, 2.0),
+                camera_pos=(-2.25, -1.25, 1.25),
                 camera_lookat=(0.0, 0.0, 0.0),
                 camera_fov=40,
                 refresh_rate=60,
@@ -118,8 +118,6 @@ class BaseSpiderRobotEnv(ManagedEnvironment):
                     subterrain_types=[
                         [
                             "flat_terrain",
-                            # "discrete_obstacles_terrain",
-                            # "pyramid_stairs_terrain",
                             "random_uniform_terrain",
                         ],
                     ],
@@ -172,15 +170,19 @@ class BaseSpiderRobotEnv(ManagedEnvironment):
 
         # Add camera
         self.camera = self.scene.add_camera(
-            pos=(-2.5, -1.5, 1.0),
+            pos=(-2.5, -1.5, 1.25),
             lookat=(0.0, 0.0, 0.0),
             res=(1280, 720),
             fov=40,
             env_idx=0,
             debug=True,
-            GUI=self.mode == "play",
         )
         self.camera.follow_entity(self.robot, smoothing=0.05)
+
+        # Follow the robot in the viewer. (A GUI camera window would open an OpenCV/Qt
+        # window, which deadlocks with the viewer thread and freezes the process.)
+        if self.mode == "play" and not self.headless:
+            self.scene.viewer.follow_entity(self.robot, smoothing=0.05)
 
         return self.scene
 
@@ -195,9 +197,6 @@ class BaseSpiderRobotEnv(ManagedEnvironment):
         Perform a step in the environment.
         """
         obs, reward, terminated, truncated, extras = super().step(actions)
-
-        if self.mode == "play":
-            self.camera.render()
 
         # Finish up
         return obs, reward, terminated, truncated, extras
