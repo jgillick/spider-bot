@@ -220,6 +220,7 @@ archive/issac/env.cfg
 secrets.cfg
 .claude/
 logs/
+default_pos.json
 
 # Jumping spider experiments
 run_history.json
