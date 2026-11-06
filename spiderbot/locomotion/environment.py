@@ -25,12 +25,19 @@ from spiderbot.mdp.foot_angle import FootAngleMdp
 from spiderbot.mdp.friction import randomize_terrain_friction
 from spiderbot.mdp.foot_clearance import FootClearanceMdp
 from spiderbot.mdp.gait_reward import GaitReward
+from spiderbot.mdp.reset import random_ground_pose
+from spiderbot.locomotion.ground_positions import RANDOM_GROUND_POSES
 
 CURRICULUM_CHECK_EVERY_STEPS = 1200
-CURRICULUM_AVG_SAMPLES = 10
+CURRICULUM_AVG_SAMPLES = 5
 CURRICULUM_MAX_LEVEL = 50
 CURRICULUM_MIN_EPISODE_LENGTH_RATIO = 0.6
-CURRICULUM_COOLDOWN_STEPS = 2400
+CURRICULUM_COOLDOWN_STEPS = 1200
+
+# Fraction of resets that start from a random ground pose instead of the default pose
+RANDOM_POSE_PROBABILITY_START = 0.2
+RANDOM_POSE_PROBABILITY_INC = 0.05
+RANDOM_POSE_PROBABILITY_MAX = 0.8
 
 
 class SpiderRobotEnv(BaseSpiderRobotEnv):
@@ -110,6 +117,15 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
                         terrain_manager=self.terrain_manager,
                         height_offset=0.118,
                         subterrain=self.curriculum_terrain,
+                    ) if self.mode == 'train' else reset.position(position=(0.0, 0.0, 0.118)),
+                },
+                # Must come after "position", since it builds on the position and heading.
+                # The probability is increased by the curriculum.
+                "random_ground_pose": {
+                    "fn": random_ground_pose(
+                        poses=RANDOM_GROUND_POSES,
+                        terrain_manager=self.terrain_manager,
+                        probability=RANDOM_POSE_PROBABILITY_START,
                     ),
                 },
                 "random_mass": {
@@ -211,6 +227,7 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
             debug_visualizer=True,
             debug_visualizer_cfg={
                 "envs_idx": [0],
+                "ang_arc_offset": 0.15
             },
         )
 
@@ -219,30 +236,6 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
         self.reward_manager = RewardManager(  # type: ignore[arg-type]
             self,
             cfg={
-                # "gait_diagonal": {
-                #     "weight": 0.18,
-                #     "fn": GaitReward(
-                #         contact_manager=self.foot_contact_manager,
-                #         foot_groups=[
-                #             ["R1_Foot", "L2_Foot"],
-                #             ["R2_Foot", "L1_Foot"],
-                #             ["R3_Foot", "L4_Foot"],
-                #             ["R4_Foot", "L3_Foot"],
-                #         ],
-                #     ),
-                # },
-                # "gait_lateral": {
-                #     "weight": 0.07,
-                #     "fn": GaitReward(
-                #         contact_manager=self.foot_contact_manager,
-                #         foot_groups=[
-                #             ["R1_Foot", "R2_Foot"],
-                #             ["R3_Foot", "R4_Foot"],
-                #             ["L1_Foot", "L2_Foot"],
-                #             ["L3_Foot", "L4_Foot"],
-                #         ],
-                #     ),
-                # },
                 "cmd_linear_vel": {
                     "weight": 1.0,
                     "fn": rewards.command_tracking_lin_vel(
@@ -262,12 +255,12 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
                 #         terrain_manager=self.terrain_manager,
                 #     ),
                 # },
-                "similar_to_default": {
-                    "weight": -0.01,
-                    "fn": rewards.dof_similar_to_default(
-                        actuator_manager=self.actuator_manager,
-                    ),
-                },
+                # "similar_to_default": {
+                #     "weight": -0.01,
+                #     "fn": rewards.dof_similar_to_default(
+                #         actuator_manager=self.actuator_manager,
+                #     ),
+                # },
                 "flat_orientation": {
                     "weight": -1.5,
                     "fn": rewards.flat_orientation_l2(),
@@ -303,20 +296,12 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
                     "weight": -0.08,
                     "fn": self.stand_still_reward,
                 },
-                # "feet_slide": {
-                #     "weight": -0.1,
-                #     "fn": rewards.feet_slide(
-                #         contact_manager=self.foot_contact_manager,
-                #     ),
-                # },
-                # "foot_clearance": {
-                #     "weight": -15,
-                #     "fn": FootClearanceMdp(
-                #         target_clearance=0.1,
-                #         contact_manager=self.foot_contact_manager,
-                #         terrain_manager=self.terrain_manager,
-                #     ),
-                # },
+                "feet_slide": {
+                    "weight": -0.1,
+                    "fn": rewards.feet_slide(
+                        contact_manager=self.foot_contact_manager,
+                    ),
+                },
                 "leg_angle": {
                     "weight": -0.02,
                     "fn": self.foot_angle_mdp.reward,
@@ -486,6 +471,9 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
         vel_range = cast(VelocityCommandRange, self.vel_command_manager.range)
         extras["episode"]["Curriculum / max_velocity_x"] = vel_range["lin_vel_x"][1]
         extras["episode"]["Curriculum / max_velocity_y"] = vel_range["lin_vel_y"][1]
+        extras["episode"]["Curriculum / random_pose_probability"] = (
+            self.robot_manager.on_reset["random_ground_pose"].fn.probability
+        )
         # extras["episode"]["Curriculum / gait_weight"] = self.reward_manager[
         #     "gait_diagonal"
         # ].weight
@@ -638,6 +626,13 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
             )
             self.vel_command_manager.increment_range(
                 "ang_vel_z", self.velocity_inc, limit=self.max_velocity_z
+            )
+
+            # Start more episodes from a random pose
+            random_pose = self.robot_manager.on_reset["random_ground_pose"].fn
+            random_pose.probability = min(
+                random_pose.probability + RANDOM_POSE_PROBABILITY_INC,
+                RANDOM_POSE_PROBABILITY_MAX,
             )
 
             # Increase the gait reward

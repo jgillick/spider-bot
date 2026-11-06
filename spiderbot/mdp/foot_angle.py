@@ -27,21 +27,13 @@ class FootAngleMdp:
             self._foot_links_idx.append(link.idx_local)
 
         # Buffers
-        self._foot_link_gravity = torch.tensor([0.0, 0.0, -1.0], device=gs.device)
-        self._foot_link_gravity = self._foot_link_gravity.unsqueeze(0).expand(
-            self.env.num_envs, len(self._foot_links_idx), 3
-        )
         self.step_leg_angle = torch.zeros(
             self.env.num_envs, len(self._foot_links_idx), device=gs.device
         )
 
     def calculate_leg_angle(self):
         quats = self.env.robot.get_links_quat(links_idx_local=self._foot_links_idx)
-
-        # Transform link frames to world gravity frames
-        inv_quats = inv_quat(quats)
-        gravity_in_links = transform_by_quat(self._foot_link_gravity, inv_quats)
-        self.step_leg_angle = -gravity_in_links[..., 2]
+        self.step_leg_angle = calculate_leg_angles(quats)
 
     def terminate(self, env: GenesisEnv, angle_threshold: float = -0.75):
         """
@@ -56,3 +48,19 @@ class FootAngleMdp:
         """
         angles = self.step_leg_angle
         return torch.abs(torch.sum(angles * (angles < target_angle), dim=1))
+
+
+def calculate_leg_angles(foot_quats: torch.Tensor) -> torch.Tensor:
+    """
+    Calculate how far each foot link is angled above (positive) or under (negative) the body.
+
+    Args:
+        foot_quats: World-frame quaternions of the foot links, shape (..., n_feet, 4).
+
+    Returns:
+        The leg angle of each foot, shape (..., n_feet).
+    """
+    gravity = torch.tensor([0.0, 0.0, -1.0], device=foot_quats.device)
+    gravity = gravity.expand(*foot_quats.shape[:-1], 3)
+    gravity_in_links = transform_by_quat(gravity, inv_quat(foot_quats))
+    return -gravity_in_links[..., 2]
