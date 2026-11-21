@@ -1,12 +1,9 @@
 import os
-import re
 import torch
-import numpy as np
-from PIL import Image
 from typing import Literal
 import genesis as gs
 
-from genesis_forge import ManagedEnvironment, GenesisEnv
+from genesis_forge import ManagedEnvironment, GenesisEnv, terrain
 from genesis_forge.managers import (
     TerrainManager,
 )
@@ -69,7 +66,7 @@ class BaseSpiderRobotEnv(ManagedEnvironment):
                 enable_collision=True,
                 enable_joint_limit=True,
                 enable_self_collision=True,
-                enable_neutral_collision=True,
+                enable_neutral_collision=False,
                 batch_links_info=True,
                 multiplier_collision_broad_phase=32,
                 max_collision_pairs=40,
@@ -77,60 +74,35 @@ class BaseSpiderRobotEnv(ManagedEnvironment):
         )
 
         # Create terrain
-        checker_path = os.path.join(THIS_DIR, "assets/checker.png")
-        checker_image = np.array(Image.open(checker_path))
-        tiled_image = np.tile(checker_image, (24, 24, 1))
-        if terrain_type == "flat":
-            self.terrain = self.scene.add_entity(gs.morphs.Plane())
-        elif terrain_type == "rough":
-            self.terrain = self.scene.add_entity(
-                surface=gs.surfaces.Default(
-                    diffuse_texture=gs.textures.ImageTexture(
-                        image_array=tiled_image,
-                    )
+        subterrains = []
+        if terrain_type == "flat" or terrain_type == "mixed":
+            subterrains += [terrain.Flat(name="flat")]
+        if terrain_type == "rough" or terrain_type == "mixed":
+            subterrains += [
+                terrain.RandomUniform(
+                    name="rough",
+                    min_height=0.0,
+                    max_height=0.08,
+                    step=0.04,
+                    downsampled_scale=0.25,
+                    border_width=0.5,
                 ),
-                morph=gs.morphs.Terrain(
-                    pos=(-12, -12, 0),
-                    n_subterrains=(1, 1),
-                    subterrain_size=(24, 24),
-                    vertical_scale=0.001,
-                    subterrain_types=[["random_uniform_terrain"]],
-                    subterrain_parameters={
-                        "random_uniform_terrain": {
-                            "min_height": 0.0,
-                            "max_height": 0.08,
-                            "step": 0.04,
-                            "downsampled_scale": 0.25,
-                        },
-                    },
-                ),
-            )
-        elif terrain_type == "mixed":
-            self.terrain = self.scene.add_entity(
-                surface=gs.surfaces.Default(
-                    diffuse_texture=gs.textures.ImageTexture(
-                        image_array=tiled_image,
-                    )
-                ),
-                morph=gs.morphs.Terrain(
-                    n_subterrains=(1, 2),
-                    subterrain_size=(48, 24),
-                    subterrain_types=[
-                        [
-                            "flat_terrain",
-                            "random_uniform_terrain",
-                        ],
-                    ],
-                    subterrain_parameters={
-                        "random_uniform_terrain": {
-                            "min_height": 0.0,
-                            "max_height": 0.08,
-                            "step": 0.04,
-                            "downsampled_scale": 0.25,
-                        },
-                    },
-                ),
-            )
+                terrain.RandomGrid(
+                    name="box",
+                    grid_width=0.25,
+                    grid_height=0.04,
+                    platform_width=0.0,
+                    horizontal_scale=0.0625,
+                )
+            ]
+        self.terrain_layout = terrain.TerrainLayout(
+            self.scene,
+            pos=(-12, -12, 0),
+            subterrain_size=(24, 24),
+            vertical_scale=0.001,
+            grid=[subterrains],
+        )
+        self.terrain = self.terrain_layout.entity
 
         # Robot
         self.robot = self.scene.add_entity(
@@ -190,7 +162,10 @@ class BaseSpiderRobotEnv(ManagedEnvironment):
         """
         Configure the environment managers.
         """
-        self.terrain_manager = TerrainManager(self, terrain=self.terrain)
+        if self.terrain_layout is not None:
+            self.terrain_manager = TerrainManager(self, layout=self.terrain_layout)
+        else:
+            self.terrain_manager = TerrainManager(self, terrain=self.terrain)
 
     def step(self, actions: torch.Tensor):
         """

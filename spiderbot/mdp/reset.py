@@ -14,7 +14,9 @@ class random_ground_pose(ResetMdpFn):
     Reset the robot's joints, height and tilt to a random pre-generated resting pose.
 
     The poses are recorded on flat ground, so the pose height is applied relative to the
-    terrain height under the robot. The pose rotation is applied on top of the robot's
+    highest terrain point under the robot's footprint. This keeps the legs and body from
+    starting inside taller neighboring terrain (i.e. random grid boxes), which causes a
+    large spike in contacts. The pose rotation is applied on top of the robot's
     current rotation, so this should run after a reset function that sets the
     position/heading of the robot (i.e. `reset.randomize_terrain_position`).
 
@@ -25,12 +27,15 @@ class random_ground_pose(ResetMdpFn):
                      The rest are left as they are (i.e. the default pose).
         height_margin: Extra height added to the pose to prevent the feet starting
                        inside uneven terrain.
+        footprint: Half-width (in meters) of the square under the robot that's checked
+                   for the highest terrain point.
     """
 
     poses: list[dict]
     terrain_manager: TerrainManager
     probability: float = 1.0
     height_margin: float = 0.005
+    footprint: float = 0.3
 
     def build(self):
         if len(self.poses) == 0:
@@ -54,6 +59,14 @@ class random_ground_pose(ResetMdpFn):
             dtype=gs.tc_float,
         )
 
+        # 9x9 grid of xy offsets covering the robot's footprint
+        grid = torch.linspace(
+            -self.footprint, self.footprint, 9, device=gs.device, dtype=gs.tc_float
+        )
+        self._footprint_offsets = torch.stack(
+            torch.meshgrid(grid, grid, indexing="ij"), dim=-1
+        ).reshape(-1, 2)
+
     def __call__(self, env: GenesisEnv, entity: RigidEntity, envs_idx: torch.Tensor):
         envs_idx = envs_idx[torch.rand(len(envs_idx), device=gs.device) < self.probability]
         if len(envs_idx) == 0:
@@ -61,9 +74,13 @@ class random_ground_pose(ResetMdpFn):
 
         idx = torch.randint(0, self._quat.shape[0], (len(envs_idx),), device=gs.device)
 
-        # Height relative to the terrain
+        # Height relative to the highest terrain under the robot
         pos = entity.get_pos(envs_idx).clone()
-        terrain_height = self.terrain_manager.get_terrain_height(pos[:, 0], pos[:, 1])
+        points = pos[:, None, :2] + self._footprint_offsets[None]
+        heights = self.terrain_manager.get_terrain_height(
+            points[..., 0].flatten(), points[..., 1].flatten()
+        )
+        terrain_height = heights.reshape(len(envs_idx), -1).max(dim=1).values
         pos[:, 2] = terrain_height + self._height[idx] + self.height_margin
         entity.set_pos(pos, envs_idx=envs_idx, zero_velocity=True)
 
