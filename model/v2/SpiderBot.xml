@@ -27,31 +27,19 @@
     <mesh name="Foot_visual" file="meshes/Foot/visual.stl" />
     <mesh name="Foot_collision00" file="meshes/Foot/collision00.stl" />
     <mesh name="TibiaBearingTrack_visual" file="meshes/TibiaBearingTrack/visual.stl" />
-    <mesh name="TibiaBearingTrack_collision00" file="meshes/TibiaBearingTrack/collision00.stl" />
-    <mesh name="TibiaBearingTrack_collision01" file="meshes/TibiaBearingTrack/collision01.stl" />
-    <mesh name="TibiaBearingTrack_collision02" file="meshes/TibiaBearingTrack/collision02.stl" />
-    <mesh name="TibiaBearingTrack_collision03" file="meshes/TibiaBearingTrack/collision03.stl" />
     <mesh name="TibiaMotorSpacer_visual" file="meshes/TibiaMotorSpacer/visual.stl" />
     <mesh name="Hip_visual" file="meshes/Hip/visual.stl" />
-    <mesh name="Hip_collision00" file="meshes/Hip/collision00.stl" />
-    <mesh name="Hip_collision01" file="meshes/Hip/collision01.stl" />
     <mesh name="TopBearingArm_visual" file="meshes/TopBearingArm/visual.stl" />
-    <mesh name="TopBearingArm_collision00" file="meshes/TopBearingArm/collision00.stl" />
     <mesh name="MainClamp_visual" file="meshes/MainClamp/visual.stl" />
-    <mesh name="MainClamp_collision00" file="meshes/MainClamp/collision00.stl" />
-    <mesh name="MainClamp_collision01" file="meshes/MainClamp/collision01.stl" />
     <mesh name="TopPlate_visual" file="meshes/TopPlate/visual.stl" />
-    <mesh name="TopPlate_collision00" file="meshes/TopPlate/collision00.stl" />
     <mesh name="95185A620_Zinc-Plated Steel Press-Fit Nut for Sheet Metal_visual" file="meshes/95185A620_Zinc-Plated Steel Press-Fit Nut for Sheet Metal/visual.stl" />
     <mesh name="90323A463_18-8 Stainless Steel Low-Profile Precision Shoulder Screw_visual" file="meshes/90323A463_18-8 Stainless Steel Low-Profile Precision Shoulder Screw/visual.stl" />
     <mesh name="91437A181_18-8 Stainless Steel Shims_visual" file="meshes/91437A181_18-8 Stainless Steel Shims/visual.stl" />
     <mesh name="6661K11_Steel Ball Bearing_visual" file="meshes/6661K11_Steel Ball Bearing/visual.stl" />
     <mesh name="Rods_visual" file="meshes/Rods/visual.stl" />
     <mesh name="CenterBracket_visual" file="meshes/CenterBracket/visual.stl" />
-    <mesh name="CenterBracket_collision00" file="meshes/CenterBracket/collision00.stl" />
     <mesh name="BodyCrossConnector_visual" file="meshes/BodyCrossConnector/visual.stl" />
     <mesh name="TopClamp_visual" file="meshes/TopClamp/visual.stl" />
-    <mesh name="TopClamp_collision00" file="meshes/TopClamp/collision00.stl" />
     <mesh name="TopRods_visual" file="meshes/TopRods/visual.stl" />
     <mesh name="TopRods_collision00" file="meshes/TopRods/collision00.stl" />
     <mesh name="TopRods_collision01" file="meshes/TopRods/collision01.stl" />
@@ -89,16 +77,12 @@
       <inertial mass="0.08470973881771371" pos="0.0009181295872686507 7.187354035723147e-08 0.016850022506815016" fullinertia="0.000820337159402764 0.001656178552784288 0.002103475666853155 4.5679003885287184e-07 9.052561929314645e-07 -7.947189376308341e-10" />
       <body name="R1_MainClamp" pos="0.20771608688276316 -0.18144046972349948 -0.13168027618801464" quat="0.9999993871500045 -6.779113122137469e-20 6.12323024311284e-17 -0.0011071131900001559">
         <geom mesh="MainClamp_visual" name="R1_MainClamp_MainClamp_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="MainClamp_mat" />
-        <geom mesh="MainClamp_collision00" name="R1_MainClamp_MainClamp_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-        <geom mesh="MainClamp_collision01" name="R1_MainClamp_MainClamp_collision01_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
         <inertial mass="0.041263254103619855" pos="9.613160616582985e-07 0.12765894961523463 0.13277126881503842" fullinertia="2.555982397641284e-05 4.7631326478598535e-05 7.194388786003385e-05 -4.8385092289796457e-08 -3.8099384279789993e-11 -4.79864764158163e-09" />
         <body name="R1_TopPlate" pos="0.0 0.0 0.0" quat="1.0 -1.2037062152420224e-35 6.162975822039155e-33 1.4088911579575866e-19">
           <geom mesh="TopPlate_visual" name="R1_TopPlate_TopPlate_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="TopPlate_mat" />
-          <geom mesh="TopPlate_collision00" name="R1_TopPlate_TopPlate_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
           <inertial mass="0.05537159447168183" pos="-1.3288545540704119e-05 0.13422381820535692 0.14078027618800998" fullinertia="2.557130840197821e-05 2.3435446508748576e-05 4.8912254056163174e-05 4.729275636928478e-09 -5.31675771654793e-19 1.2079579072094785e-19" />
           <body name="CenterBracket-1" pos="-0.20807965089554298 0.18148244166989103 0.13168027618801506" quat="1.0 2.4485343113124373e-17 -5.911512812347819e-17 1.553833444408839e-19">
             <geom mesh="CenterBracket_visual" name="CenterBracket-1_CenterBracket_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="CenterBracket_mat" />
-            <geom mesh="CenterBracket_collision00" name="CenterBracket-1_CenterBracket_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
             <inertial mass="0.0630276573979288" pos="0.2080000001110599 -6.669327454379393e-14 -0.007316479091913721" fullinertia="2.0798392550286713e-05 4.852937026452115e-05 3.469623794734181e-05 -7.987686837839584e-20 -1.4359640952622344e-13 5.431310216647021e-18" />
             <body name="Rods" pos="3.5522799979315066e-17 6.938893903907229e-19 0.0" quat="1.0 -1.0631133293017542e-31 -1.332936114510406e-30 1.6987757308600611e-19">
               <geom mesh="Rods_visual" name="Rods_Rods_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Rods_mat" />
@@ -129,12 +113,9 @@
           <body name="R1_Hip" pos="0.013620638666749408 0.10367684953742169 -0.010559193887263021" quat="0.0007836750244969087 0.7071063469192364 -0.0007836750244923422 -0.7071063469192203">
             <joint type="hinge" name="R1_Hip" axis="-1.148288559847196e-16 -6.597734406312645e-15 1.0" pos="-0.010329361332247398 0.1037004424712559 0.03425000000004459" range="-0.3 1.4" limited="true" />
             <geom mesh="Hip_visual" name="R1_Hip_Hip_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Hip_mat" />
-            <geom mesh="Hip_collision00" name="R1_Hip_Hip_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-            <geom mesh="Hip_collision01" name="R1_Hip_Hip_collision01_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
             <inertial mass="0.05983731986282102" pos="-0.01173850441411096 0.05634305715218131 0.03480928715778279" fullinertia="9.073758717740232e-05 4.2714546002120664e-05 6.614361192623286e-05 -1.645430198511597e-06 4.1801944821636127e-07 -1.407545450973899e-05" />
             <body name="R1_TopBearingArm" pos="-0.010439557352729025 -0.024492983336473272 -0.062430276187970826" quat="1.0 3.298810778655128e-15 4.7223011270116927e-17 1.0587911875196932e-22">
               <geom mesh="TopBearingArm_visual" name="R1_TopBearingArm_TopBearingArm_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="TopBearingArm_mat" />
-              <geom mesh="TopBearingArm_collision00" name="R1_TopBearingArm_TopBearingArm_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
               <inertial mass="0.010796340418574843" pos="3.1726671119894115e-05 0.10085526964408899 0.14833573828336147" fullinertia="3.6674127664951223e-06 1.6226840545658503e-06 5.134350047743892e-06 -3.786917300335616e-08 -9.733222588634338e-10 4.473648691088385e-08" />
             </body>
             <body name="R1_Femur-assembly_Motor" pos="0.0 -1.0658141036401502e-16 0.05000000000000027" quat="-6.123233995736772e-17 1.0 -1.108380034989759e-15 -2.9033356485289977e-29">
@@ -208,10 +189,6 @@
             </body>
             <body name="R1_TibiaBearingTrack" pos="0.0 1.0658141036401502e-16 3.552713678800501e-16" quat="1.0 2.6702564478264843e-15 2.6143343437090094e-29 -1.1082713548340453e-15">
               <geom mesh="TibiaBearingTrack_visual" name="R1_TibiaBearingTrack_TibiaBearingTrack_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="TibiaBearingTrack_mat" />
-              <geom mesh="TibiaBearingTrack_collision00" name="R1_TibiaBearingTrack_TibiaBearingTrack_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-              <geom mesh="TibiaBearingTrack_collision01" name="R1_TibiaBearingTrack_TibiaBearingTrack_collision01_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-              <geom mesh="TibiaBearingTrack_collision02" name="R1_TibiaBearingTrack_TibiaBearingTrack_collision02_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-              <geom mesh="TibiaBearingTrack_collision03" name="R1_TibiaBearingTrack_TibiaBearingTrack_collision03_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
               <inertial mass="0.020518745199399262" pos="0.011811924647872311 0.0011365243000390488 0.045430405842203994" fullinertia="5.9695144521989486e-05 3.1909777103975626e-05 2.812183122444397e-05 8.540548230908535e-09 -5.077358625957333e-09 7.359107625731357e-07" />
             </body>
           </body>
@@ -219,12 +196,9 @@
       </body>
       <body name="L1_MainClamp" pos="0.208283913117243 0.1814404697234998 -0.13168027618801473" quat="0.001107113190000159 -2.3763956531905888e-14 -2.6309405846782748e-17 0.9999993871500054">
         <geom mesh="MainClamp_visual" name="L1_MainClamp_MainClamp_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="MainClamp_mat" />
-        <geom mesh="MainClamp_collision00" name="L1_MainClamp_MainClamp_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-        <geom mesh="MainClamp_collision01" name="L1_MainClamp_MainClamp_collision01_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
         <inertial mass="0.041263254103619855" pos="9.613160616160353e-07 0.1276589496152355 0.13277126881503842" fullinertia="2.555982397641845e-05 4.763132647860386e-05 7.194388786002843e-05 -4.8385092289578756e-08 -3.8099384257785154e-11 -4.79864764155828e-09" />
         <body name="L1_TopPlate" pos="3.552713678800501e-17 0.0 0.0" quat="1.0 0.0 -1.5777218104420236e-30 1.7102462657046468e-19">
           <geom mesh="TopPlate_visual" name="L1_TopPlate_TopPlate_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="TopPlate_mat" />
-          <geom mesh="TopPlate_collision00" name="L1_TopPlate_TopPlate_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
           <inertial mass="0.05537159447168183" pos="-1.3288545540699973e-05 0.13422381820535786 0.14078027618800998" fullinertia="2.5571308401987497e-05 2.343544650875655e-05 4.89122540561571e-05 4.729275636822971e-09 -4.99369140295358e-19 -5.192782158296289e-20" />
           <body name="L1_95185A620_Zinc-Plated-Steel-Press-Fit-Nut-for-Sheet-Metal" pos="-2.842170943040401e-16 0.12822234157639417 0.1396936095213433" quat="-9.684278906830575e-16 1.0 1.710246265923147e-19 2.2114255647276122e-14">
             <geom mesh="95185A620_Zinc-Plated Steel Press-Fit Nut for Sheet Metal_visual" name="L1_95185A620_Zinc-Plated-Steel-Press-Fit-Nut-for-Sheet-Metal_95185A620_Zinc-Plated Steel Press-Fit Nut for Sheet Metal_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="95185A620_Zinc-Plated Steel Press-Fit Nut for Sheet Metal_mat" />
@@ -250,12 +224,9 @@
           <body name="L1_Hip" pos="0.013620638666749408 0.1036768495374217 -0.010559193887263056" quat="0.0007836750244969087 0.7071063469192364 -0.0007836750244923422 -0.7071063469192203">
             <joint type="hinge" name="L1_Hip" axis="-4.7520306367251106e-14 -6.597623415036186e-15 1.0" pos="-0.010329361332245839 0.10370044247125651 0.03425000000004472" range="-1.4 0.3" limited="true" />
             <geom mesh="Hip_visual" name="L1_Hip_Hip_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Hip_mat" />
-            <geom mesh="Hip_collision00" name="L1_Hip_Hip_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-            <geom mesh="Hip_collision01" name="L1_Hip_Hip_collision01_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
             <inertial mass="0.05983731986282102" pos="-0.011738504414111018 0.05634305715218171 0.03480928715778279" fullinertia="9.073758717740446e-05 4.2714546002121836e-05 6.614361192623118e-05 -1.6454301985111581e-06 4.1801944821639017e-07 -1.4075454509739144e-05" />
             <body name="L1_TopBearingArm" pos="-0.010439557352729025 -0.02449298333647331 -0.062430276187970826" quat="1.0 3.2988107786551285e-15 4.72230112701168e-17 -2.972974656304064e-23">
               <geom mesh="TopBearingArm_visual" name="L1_TopBearingArm_TopBearingArm_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="TopBearingArm_mat" />
-              <geom mesh="TopBearingArm_collision00" name="L1_TopBearingArm_TopBearingArm_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
               <inertial mass="0.010796340418574843" pos="3.1726671119896676e-05 0.1008552696440897 0.14833573828336147" fullinertia="3.667412766496897e-06 1.6226840545675427e-06 5.134350047742917e-06 -3.786917300335855e-08 -9.73322258858439e-10 4.4736486910897465e-08" />
             </body>
             <body name="L1_Femur-assembly_Motor" pos="-3.552713678800501e-17 -1.0658141036401502e-16 0.05000000000000029" quat="-6.123233995736752e-17 1.0 -1.1083801705986991e-15 -2.785634419266617e-29">
@@ -329,10 +300,6 @@
             </body>
             <body name="L1_TibiaBearingTrack" pos="-3.552713678800501e-17 1.0658141036401502e-16 3.552713678800501e-16" quat="1.0 2.6702564478264843e-15 2.68212707775144e-29 -1.1082714904429234e-15">
               <geom mesh="TibiaBearingTrack_visual" name="L1_TibiaBearingTrack_TibiaBearingTrack_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="TibiaBearingTrack_mat" />
-              <geom mesh="TibiaBearingTrack_collision00" name="L1_TibiaBearingTrack_TibiaBearingTrack_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-              <geom mesh="TibiaBearingTrack_collision01" name="L1_TibiaBearingTrack_TibiaBearingTrack_collision01_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-              <geom mesh="TibiaBearingTrack_collision02" name="L1_TibiaBearingTrack_TibiaBearingTrack_collision02_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-              <geom mesh="TibiaBearingTrack_collision03" name="L1_TibiaBearingTrack_TibiaBearingTrack_collision03_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
               <inertial mass="0.020518745199399262" pos="0.011811924647872401 0.0011365243000390705 0.045430405842204" fullinertia="5.9695144521990556e-05 3.190977710397596e-05 2.812183122444375e-05 8.54054823109055e-09 -5.077358625951381e-09 7.359107625731388e-07" />
             </body>
           </body>
@@ -340,16 +307,12 @@
       </body>
       <body name="R2_MainClamp" pos="0.06971608688275885 -0.24794046972349948 -0.1316802761880134" quat="0.9999993871500045 -1.8155507650884498e-17 1.639895241811647e-14 -0.0011071131900001559">
         <geom mesh="MainClamp_visual" name="R2_MainClamp_MainClamp_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="MainClamp_mat" />
-        <geom mesh="MainClamp_collision00" name="R2_MainClamp_MainClamp_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-        <geom mesh="MainClamp_collision01" name="R2_MainClamp_MainClamp_collision01_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
         <inertial mass="0.041263254103619855" pos="9.61316061636481e-07 0.12765894961523463 0.13277126881503842" fullinertia="2.555982397641319e-05 4.763132647859905e-05 7.19438878600344e-05 -4.838509228974246e-08 -3.8099384252943756e-11 -4.7986476415921415e-09" />
         <body name="R2_TopPlate" pos="8.881784197001253e-18 3.552713678800501e-17 0.0" quat="1.0 -3.0814879110195774e-33 -1.5777218104420236e-30 1.4088911579575866e-19">
           <geom mesh="TopPlate_visual" name="R2_TopPlate_TopPlate_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="TopPlate_mat" />
-          <geom mesh="TopPlate_collision00" name="R2_TopPlate_TopPlate_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
           <inertial mass="0.05537159447168183" pos="-1.3288545540712355e-05 0.13422381820535692 0.14078027618800998" fullinertia="2.557130840197886e-05 2.3435446508748414e-05 4.891225405616296e-05 4.7292756369302716e-09 -5.285437696649783e-19 8.014504331727884e-20" />
           <body name="TopClamp-1" pos="-0.07005753315891074 0.24800460843372013 0.13168027618801006" quat="1.0 9.684278906830575e-16 -1.639684525638666e-14 1.5538334445616817e-19">
             <geom mesh="TopClamp_visual" name="TopClamp-1_TopClamp_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="TopClamp_mat" />
-            <geom mesh="TopClamp_collision00" name="TopClamp-1_TopClamp_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
             <inertial mass="0.014285354686409681" pos="0.06999384453860917 -0.10008940490546579 0.016196796571932674" fullinertia="7.46191606137454e-07 5.417935695176072e-06 5.849954239299602e-06 -8.145979213006335e-10 2.1426387948150437e-12 3.5792848981594437e-10" />
             <body name="TopRods" pos="-0.00020737881416970215 -0.00021911361537963327 1.0462377067473571e-15" quat="0.9999993871500045 -9.321186258734072e-16 -1.045051245017375e-18 0.0011071131900001559">
               <geom mesh="TopRods_visual" name="TopRods_TopRods_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="TopRods_mat" />
@@ -382,12 +345,9 @@
           <body name="R2_Hip" pos="0.013620638666749408 0.1036768495374217 -0.010559193887263039" quat="0.0007836750244969087 0.7071063469192364 -0.0007836750244923422 -0.7071063469192203">
             <joint type="hinge" name="R2_Hip" axis="-3.279028911242151e-14 -6.597657902684095e-15 1.0" pos="-0.010329361332246186 0.1037004424712559 0.03425000000004337" range="-0.4 0.9" limited="true" />
             <geom mesh="Hip_visual" name="R2_Hip_Hip_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Hip_mat" />
-            <geom mesh="Hip_collision00" name="R2_Hip_Hip_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-            <geom mesh="Hip_collision01" name="R2_Hip_Hip_collision01_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
             <inertial mass="0.05983731986282102" pos="-0.01173850441411095 0.05634305715218131 0.03480928715778279" fullinertia="9.073758717740229e-05 4.271454600212099e-05 6.614361192623398e-05 -1.6454301985112454e-06 4.180194482163246e-07 -1.4075454509738988e-05" />
             <body name="R2_TopBearingArm" pos="-0.010439557352729034 -0.024492983336473272 -0.06243027618797083" quat="1.0 3.298810778655128e-15 4.72230112701168e-17 1.0587917264704776e-22">
               <geom mesh="TopBearingArm_visual" name="R2_TopBearingArm_TopBearingArm_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="TopBearingArm_mat" />
-              <geom mesh="TopBearingArm_collision00" name="R2_TopBearingArm_TopBearingArm_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
               <inertial mass="0.010796340418574843" pos="3.172667111987887e-05 0.10085526964408899 0.14833573828336147" fullinertia="3.667412766495217e-06 1.6226840545658706e-06 5.134350047743892e-06 -3.786917300333052e-08 -9.733222588639328e-10 4.473648691090972e-08" />
             </body>
             <body name="R2_Femur-assembly_Motor" pos="1.7763568394002505e-17 -7.105427357601002e-17 0.050000000000000266" quat="-6.123233995736733e-17 1.0 -1.1083800349897583e-15 -2.791398281316788e-29">
@@ -461,10 +421,6 @@
             </body>
             <body name="R2_TibiaBearingTrack" pos="0.0 1.4210854715202004e-16 3.552713678800501e-16" quat="1.0 2.670256447826484e-15 2.68212707775144e-29 -1.1082713548340017e-15">
               <geom mesh="TibiaBearingTrack_visual" name="R2_TibiaBearingTrack_TibiaBearingTrack_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="TibiaBearingTrack_mat" />
-              <geom mesh="TibiaBearingTrack_collision00" name="R2_TibiaBearingTrack_TibiaBearingTrack_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-              <geom mesh="TibiaBearingTrack_collision01" name="R2_TibiaBearingTrack_TibiaBearingTrack_collision01_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-              <geom mesh="TibiaBearingTrack_collision02" name="R2_TibiaBearingTrack_TibiaBearingTrack_collision02_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-              <geom mesh="TibiaBearingTrack_collision03" name="R2_TibiaBearingTrack_TibiaBearingTrack_collision03_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
               <inertial mass="0.020518745199399262" pos="0.0118119246478723 0.0011365243000390844 0.045430405842203994" fullinertia="5.9695144521989486e-05 3.190977710397533e-05 2.812183122444375e-05 8.540548231101328e-09 -5.077358625962428e-09 7.359107625731225e-07" />
             </body>
           </body>
@@ -472,16 +428,12 @@
       </body>
       <body name="L2_MainClamp" pos="0.07028391311723682 0.24794046972349953 -0.13168027618801328" quat="0.0011071131900001567 -2.760158298449018e-34 -9.860767358433877e-32 0.9999993871500047">
         <geom mesh="MainClamp_visual" name="L2_MainClamp_MainClamp_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="MainClamp_mat" />
-        <geom mesh="MainClamp_collision00" name="L2_MainClamp_MainClamp_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-        <geom mesh="MainClamp_collision01" name="L2_MainClamp_MainClamp_collision01_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
         <inertial mass="0.041263254103619855" pos="9.613160616476354e-07 0.12765894961523486 0.13277126881503842" fullinertia="2.555982397641421e-05 4.7631326478600466e-05 7.194388786003298e-05 -4.838509228974349e-08 -3.8099384258284816e-11 -4.798647641651466e-09" />
         <body name="L2_TopPlate" pos="0.0 -3.552713678800501e-17 0.0" quat="1.0 -2.1895289126861573e-47 -2.1382117680737565e-50 -6.841744100766564e-20">
           <geom mesh="TopPlate_visual" name="L2_TopPlate_TopPlate_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="TopPlate_mat" />
-          <geom mesh="TopPlate_collision00" name="L2_TopPlate_TopPlate_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
           <inertial mass="0.05537159447168183" pos="-1.328854554072276e-05 0.13422381820535714 0.14078027618800998" fullinertia="2.557130840198118e-05 2.3435446508749972e-05 4.8912254056161656e-05 4.729275636986183e-09 -5.355335687831377e-19 9.368212791611568e-20" />
           <body name="TopClamp-6" pos="-0.07002639254827427 0.24787686674775675 0.13168027618801198" quat="1.0 9.442712221628821e-16 1.5953708403268555e-17 -6.032106844500528e-17">
             <geom mesh="TopClamp_visual" name="TopClamp-6_TopClamp_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="TopClamp_mat" />
-            <geom mesh="TopClamp_collision00" name="TopClamp-6_TopClamp_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
             <inertial mass="0.014285354686409681" pos="0.06999384453860942 -0.100089404905466 0.016196796571932685" fullinertia="7.461916061378091e-07 5.417935695176029e-06 5.849954239298726e-06 -8.145979212317961e-10 2.1426389116493243e-12 3.5792848981622473e-10" />
           </body>
           <body name="L2_95185A620_Zinc-Plated-Steel-Press-Fit-Nut-for-Sheet-Metal" pos="-3.4638958368304885e-16 0.12822234157639412 0.1396936095213433" quat="-9.684278906830575e-16 1.0 -6.841744100766564e-20 2.2114255647276122e-14">
@@ -508,12 +460,9 @@
           <body name="L2_Hip" pos="0.013620638666749408 0.10367684953742172 -0.010559193887263021" quat="0.0007836750244969086 0.7071063469192364 -0.0007836750244923418 -0.7071063469192203">
             <joint type="hinge" name="L2_Hip" axis="7.635823929680056e-18 -6.59773469304135e-15 1.0" pos="-0.010329361332247376 0.10370044247125607 0.03425000000004324" range="-0.9 0.4" limited="true" />
             <geom mesh="Hip_visual" name="L2_Hip_Hip_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Hip_mat" />
-            <geom mesh="Hip_collision00" name="L2_Hip_Hip_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-            <geom mesh="Hip_collision01" name="L2_Hip_Hip_collision01_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
             <inertial mass="0.05983731986282102" pos="-0.011738504414110966 0.0563430571521814 0.03480928715778279" fullinertia="9.07375871774027e-05 4.271454600212128e-05 6.6143611926232e-05 -1.645430198511168e-06 4.180194482163586e-07 -1.4075454509739056e-05" />
             <body name="L2_TopBearingArm" pos="-0.010439557352729034 -0.024492983336473238 -0.062430276187970826" quat="1.0 3.298810778655129e-15 4.722301127011692e-17 -8.684179493626282e-23">
               <geom mesh="TopBearingArm_visual" name="L2_TopBearingArm_TopBearingArm_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="TopBearingArm_mat" />
-              <geom mesh="TopBearingArm_collision00" name="L2_TopBearingArm_TopBearingArm_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
               <inertial mass="0.010796340418574843" pos="3.172667111988563e-05 0.10085526964408917 0.14833573828336147" fullinertia="3.6674127664955763e-06 1.6226840545663005e-06 5.1343500477436755e-06 -3.786917300336978e-08 -9.733222588666429e-10 4.473648691092456e-08" />
             </body>
             <body name="L2_Femur-assembly_Motor" pos="0.0 -7.105427357601002e-17 0.05000000000000029" quat="-6.123233995736792e-17 1.0 -1.1081633872761753e-15 -2.9024997194658395e-29">
@@ -587,10 +536,6 @@
             </body>
             <body name="L2_TibiaBearingTrack" pos="0.0 1.4210854715202004e-16 3.552713678800501e-16" quat="1.0 2.6702564478264847e-15 2.613332860137928e-29 -1.1080547071204615e-15">
               <geom mesh="TibiaBearingTrack_visual" name="L2_TibiaBearingTrack_TibiaBearingTrack_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="TibiaBearingTrack_mat" />
-              <geom mesh="TibiaBearingTrack_collision00" name="L2_TibiaBearingTrack_TibiaBearingTrack_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-              <geom mesh="TibiaBearingTrack_collision01" name="L2_TibiaBearingTrack_TibiaBearingTrack_collision01_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-              <geom mesh="TibiaBearingTrack_collision02" name="L2_TibiaBearingTrack_TibiaBearingTrack_collision02_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-              <geom mesh="TibiaBearingTrack_collision03" name="L2_TibiaBearingTrack_TibiaBearingTrack_collision03_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
               <inertial mass="0.020518745199399262" pos="0.011811924647872327 0.0011365243000390852 0.045430405842203994" fullinertia="5.969514452198981e-05 3.190977710397544e-05 2.812183122444397e-05 8.540548231071268e-09 -5.077358625957816e-09 7.359107625731499e-07" />
             </body>
           </body>
@@ -598,16 +543,12 @@
       </body>
       <body name="R3_MainClamp" pos="-0.06828391311724118 -0.24794046972349948 -0.1316802761880134" quat="0.9999993871500045 -1.8155507650884498e-17 1.639895241811647e-14 -0.0011071131900001559">
         <geom mesh="MainClamp_visual" name="R3_MainClamp_MainClamp_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="MainClamp_mat" />
-        <geom mesh="MainClamp_collision00" name="R3_MainClamp_MainClamp_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-        <geom mesh="MainClamp_collision01" name="R3_MainClamp_MainClamp_collision01_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
         <inertial mass="0.041263254103619855" pos="9.61316061654262e-07 0.12765894961523463 0.13277126881503842" fullinertia="2.5559823976413193e-05 4.763132647859897e-05 7.194388786003418e-05 -4.8385092289850687e-08 -3.809938425929649e-11 -4.798647641592156e-09" />
         <body name="R3_TopPlate" pos="8.881784197001253e-18 0.0 0.0" quat="1.0 -3.0814879110195774e-33 -1.5777218104420236e-30 1.4088911579575866e-19">
           <geom mesh="TopPlate_visual" name="R3_TopPlate_TopPlate_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="TopPlate_mat" />
-          <geom mesh="TopPlate_collision00" name="R3_TopPlate_TopPlate_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
           <inertial mass="0.05537159447168183" pos="-1.3288545540703465e-05 0.13422381820535692 0.14078027618800998" fullinertia="2.557130840197886e-05 2.3435446508748414e-05 4.891225405616339e-05 4.729275636821852e-09 -5.217675226982854e-19 8.016004748965226e-20" />
           <body name="TopClamp-2" pos="-0.07005753315891071 0.24800460843372021 0.13168027618801006" quat="1.0 9.802511976547468e-16 -1.639681907686033e-14 1.6987757310148578e-19">
             <geom mesh="TopClamp_visual" name="TopClamp-2_TopClamp_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="TopClamp_mat" />
-            <geom mesh="TopClamp_collision00" name="TopClamp-2_TopClamp_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
             <inertial mass="0.014285354686409681" pos="0.06999384453860918 -0.10008940490546582 0.016196796571932674" fullinertia="7.461916061375354e-07 5.417935695176061e-06 5.849954239299575e-06 -8.145979212462144e-10 2.142638794799792e-12 3.5792848982273087e-10" />
           </body>
           <body name="R3_95185A620_Zinc-Plated-Steel-Press-Fit-Nut-for-Sheet-Metal" pos="-3.2862601528904633e-16 0.1282223415763942 0.1396936095213433" quat="-9.684278906830575e-16 1.0 1.4088911581083686e-19 2.2114255647276122e-14">
@@ -634,12 +575,9 @@
           <body name="R3_Hip" pos="0.013620638666749408 0.10367684953742172 -0.010559193887263013" quat="0.0007836750244969087 0.7071063469192364 -0.0007836750244923422 -0.7071063469192203">
             <joint type="hinge" name="R3_Hip" axis="-3.279028911242151e-14 -6.597657902684095e-15 1.0" pos="-0.010329361332246165 0.1037004424712559 0.03425000000004337" range="-0.9 0.4" limited="true" />
             <geom mesh="Hip_visual" name="R3_Hip_Hip_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Hip_mat" />
-            <geom mesh="Hip_collision00" name="R3_Hip_Hip_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-            <geom mesh="Hip_collision01" name="R3_Hip_Hip_collision01_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
             <inertial mass="0.05983731986282102" pos="-0.01173850441411095 0.05634305715218131 0.03480928715778279" fullinertia="9.073758717740229e-05 4.271454600212099e-05 6.614361192623376e-05 -1.6454301985114622e-06 4.180194482163788e-07 -1.4075454509738988e-05" />
             <body name="R3_TopBearingArm" pos="-0.010439557352729034 -0.024492983336473272 -0.06243027618797083" quat="1.0 3.298810778655128e-15 4.72230112701168e-17 1.0587917264704776e-22">
               <geom mesh="TopBearingArm_visual" name="R3_TopBearingArm_TopBearingArm_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="TopBearingArm_mat" />
-              <geom mesh="TopBearingArm_collision00" name="R3_TopBearingArm_TopBearingArm_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
               <inertial mass="0.010796340418574843" pos="3.1726671119887745e-05 0.10085526964408899 0.14833573828336147" fullinertia="3.667412766495217e-06 1.6226840545658435e-06 5.134350047743892e-06 -3.7869173003371177e-08 -9.733222588622388e-10 4.473648691090972e-08" />
             </body>
             <body name="R3_Femur-assembly_Motor" pos="0.0 -7.105427357601002e-17 0.05000000000000027" quat="-6.123233995736733e-17 1.0 -1.1083800349897583e-15 -2.791398281316788e-29">
@@ -713,10 +651,6 @@
             </body>
             <body name="R3_TibiaBearingTrack" pos="0.0 1.4210854715202004e-16 3.552713678800501e-16" quat="1.0 2.670256447826484e-15 2.68212707775144e-29 -1.1082713548340017e-15">
               <geom mesh="TibiaBearingTrack_visual" name="R3_TibiaBearingTrack_TibiaBearingTrack_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="TibiaBearingTrack_mat" />
-              <geom mesh="TibiaBearingTrack_collision00" name="R3_TibiaBearingTrack_TibiaBearingTrack_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-              <geom mesh="TibiaBearingTrack_collision01" name="R3_TibiaBearingTrack_TibiaBearingTrack_collision01_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-              <geom mesh="TibiaBearingTrack_collision02" name="R3_TibiaBearingTrack_TibiaBearingTrack_collision02_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-              <geom mesh="TibiaBearingTrack_collision03" name="R3_TibiaBearingTrack_TibiaBearingTrack_collision03_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
               <inertial mass="0.020518745199399262" pos="0.0118119246478723 0.0011365243000390844 0.045430405842203994" fullinertia="5.9695144521989486e-05 3.190977710397528e-05 2.812183122444375e-05 8.540548231047118e-09 -5.07735862595904e-09 7.359107625731225e-07" />
             </body>
           </body>
@@ -724,16 +658,12 @@
       </body>
       <body name="L3_MainClamp" pos="-0.06771608688276326 0.24794046972349967 -0.13168027618801328" quat="0.0011071131900001578 3.9566068200004255e-48 0.0 0.999999387150005">
         <geom mesh="MainClamp_visual" name="L3_MainClamp_MainClamp_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="MainClamp_mat" />
-        <geom mesh="MainClamp_collision00" name="L3_MainClamp_MainClamp_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-        <geom mesh="MainClamp_collision01" name="L3_MainClamp_MainClamp_collision01_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
         <inertial mass="0.041263254103619855" pos="9.613160616295944e-07 0.12765894961523516 0.13277126881503842" fullinertia="2.5559823976416015e-05 4.7631326478602675e-05 7.194388786003082e-05 -4.838509228985281e-08 -3.809938426957349e-11 -4.798647641717566e-09" />
         <body name="L3_TopPlate" pos="0.0 0.0 0.0" quat="1.0 3.003297409412629e-67 0.0 -2.9066487334943358e-21">
           <geom mesh="TopPlate_visual" name="L3_TopPlate_TopPlate_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="TopPlate_mat" />
-          <geom mesh="TopPlate_collision00" name="L3_TopPlate_TopPlate_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
           <inertial mass="0.05537159447168183" pos="-1.328854554071427e-05 0.1342238182053575 0.14078027618800998" fullinertia="2.5571308401984393e-05 2.3435446508753343e-05 4.891225405615938e-05 4.729275636931619e-09 -5.423398240945995e-19 1.0721961767715297e-19" />
           <body name="TopClamp-5" pos="-0.0700263925482742 0.24787686674775683 0.13168027618801195" quat="1.0000000000000002 9.44402925466908e-16 -4.8629680547180845e-18 -6.121684564510416e-17">
             <geom mesh="TopClamp_visual" name="TopClamp-5_TopClamp_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="TopClamp_mat" />
-            <geom mesh="TopClamp_collision00" name="TopClamp-5_TopClamp_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
             <inertial mass="0.014285354686409681" pos="0.06999384453860957 -0.10008940490546632 0.0161967965719327" fullinertia="7.46191606137648e-07 5.417935695176141e-06 5.849954239298518e-06 -8.145979212188152e-10 2.14263886721711e-12 3.5792848981612785e-10" />
           </body>
           <body name="L3_95185A620_Zinc-Plated-Steel-Press-Fit-Nut-for-Sheet-Metal" pos="-3.4638958368304885e-16 0.12822234157639417 0.1396936095213433" quat="-9.684278906830575e-16 1.0 -2.9066487334943358e-21 2.2114255647276122e-14">
@@ -760,12 +690,9 @@
           <body name="L3_Hip" pos="0.013620638666749408 0.1036768495374217 -0.010559193887263021" quat="0.0007836750244969086 0.7071063469192364 -0.0007836750244923422 -0.7071063469192203">
             <joint type="hinge" name="L3_Hip" axis="7.635823929680056e-18 -6.597734693041349e-15 1.0" pos="-0.01032936133224746 0.10370044247125626 0.03425000000004324" range="-0.4 0.9" limited="true" />
             <geom mesh="Hip_visual" name="L3_Hip_Hip_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Hip_mat" />
-            <geom mesh="Hip_collision00" name="L3_Hip_Hip_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-            <geom mesh="Hip_collision01" name="L3_Hip_Hip_collision01_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
             <inertial mass="0.05983731986282102" pos="-0.011738504414111 0.056343057152181575 0.03480928715778279" fullinertia="9.073758717740381e-05 4.271454600212183e-05 6.614361192623286e-05 -1.645430198511281e-06 4.1801944821633205e-07 -1.4075454509739183e-05" />
             <body name="L3_TopBearingArm" pos="-0.010439557352729016 -0.02449298333647331 -0.062430276187970826" quat="1.0 3.298810778655128e-15 4.722301127011692e-17 1.534724268671143e-22">
               <geom mesh="TopBearingArm_visual" name="L3_TopBearingArm_TopBearingArm_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="TopBearingArm_mat" />
-              <geom mesh="TopBearingArm_collision00" name="L3_TopBearingArm_TopBearingArm_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
               <inertial mass="0.010796340418574843" pos="3.1726671119894596e-05 0.10085526964408943 0.14833573828336147" fullinertia="3.667412766496155e-06 1.6226840545669282e-06 5.13435004774335e-06 -3.7869173003383426e-08 -9.73322258861562e-10 4.473648691090429e-08" />
             </body>
             <body name="L3_Femur-assembly_Motor" pos="1.7763568394002505e-17 -1.0658141036401502e-16 0.05000000000000029" quat="-6.123233995736733e-17 1.0 -1.1083799873964495e-15 -2.902576756663615e-29">
@@ -839,10 +766,6 @@
             </body>
             <body name="L3_TibiaBearingTrack" pos="1.7763568394002505e-17 1.0658141036401502e-16 3.552713678800501e-16" quat="1.0 2.670256447826484e-15 2.6134484159345913e-29 -1.1082713072407359e-15">
               <geom mesh="TibiaBearingTrack_visual" name="L3_TibiaBearingTrack_TibiaBearingTrack_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="TibiaBearingTrack_mat" />
-              <geom mesh="TibiaBearingTrack_collision00" name="L3_TibiaBearingTrack_TibiaBearingTrack_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-              <geom mesh="TibiaBearingTrack_collision01" name="L3_TibiaBearingTrack_TibiaBearingTrack_collision01_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-              <geom mesh="TibiaBearingTrack_collision02" name="L3_TibiaBearingTrack_TibiaBearingTrack_collision02_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-              <geom mesh="TibiaBearingTrack_collision03" name="L3_TibiaBearingTrack_TibiaBearingTrack_collision03_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
               <inertial mass="0.020518745199399262" pos="0.011811924647872351 0.0011365243000390868 0.045430405842203994" fullinertia="5.969514452199019e-05 3.1909777103975796e-05 2.812183122444375e-05 8.540548231125503e-09 -5.077358625967987e-09 7.359107625731373e-07" />
             </body>
           </body>
@@ -850,16 +773,12 @@
       </body>
       <body name="R4_MainClamp" pos="-0.2062839131172369 -0.18144046972349948 -0.13168027618801464" quat="0.9999993871500045 -6.779113122137469e-20 6.12323024311284e-17 -0.0011071131900001559">
         <geom mesh="MainClamp_visual" name="R4_MainClamp_MainClamp_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="MainClamp_mat" />
-        <geom mesh="MainClamp_collision00" name="R4_MainClamp_MainClamp_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-        <geom mesh="MainClamp_collision01" name="R4_MainClamp_MainClamp_collision01_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
         <inertial mass="0.041263254103619855" pos="9.613160616227367e-07 0.12765894961523463 0.13277126881503842" fullinertia="2.5559823976412837e-05 4.7631326478598535e-05 7.194388786003385e-05 -4.838509228974226e-08 -3.8099384271319683e-11 -4.798647641581611e-09" />
         <body name="R4_TopPlate" pos="3.552713678800501e-17 0.0 0.0" quat="1.0 -1.2037062152420224e-35 6.162975822039155e-33 1.4088911579575866e-19">
           <geom mesh="TopPlate_visual" name="R4_TopPlate_TopPlate_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="TopPlate_mat" />
-          <geom mesh="TopPlate_collision00" name="R4_TopPlate_TopPlate_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
           <inertial mass="0.05537159447168183" pos="-1.3288545540704119e-05 0.13422381820535692 0.14078027618800998" fullinertia="2.557130840197821e-05 2.3435446508748576e-05 4.8912254056163174e-05 4.729275636928478e-09 -5.31675771654793e-19 1.2079579072094785e-19" />
           <body name="CenterBracket-3" pos="-0.20807955846242576 0.181398950165351 0.13168027618801417" quat="1.0 1.3336587688120821e-19 -5.918689244876341e-17 1.553833444408824e-19">
             <geom mesh="CenterBracket_visual" name="CenterBracket-3_CenterBracket_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="CenterBracket_mat" />
-            <geom mesh="CenterBracket_collision00" name="CenterBracket-3_CenterBracket_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
             <inertial mass="0.0630276573979288" pos="0.2080000001110599 -6.669324346218374e-14 -0.007316479091913721" fullinertia="2.0798392550286716e-05 4.852937026452028e-05 3.469623794734094e-05 -7.826883318632288e-20 -1.4359643662779525e-13 5.431282037622326e-18" />
           </body>
           <body name="R4_95185A620_Zinc-Plated-Steel-Press-Fit-Nut-for-Sheet-Metal" pos="-2.842170943040401e-16 0.12822234157639417 0.1396936095213433" quat="-9.684278906830575e-16 1.0 1.40889115795815e-19 2.2114255647276122e-14">
@@ -886,12 +805,9 @@
           <body name="R4_Hip" pos="0.013620638666749408 0.10367684953742169 -0.010559193887263021" quat="0.0007836750244969087 0.7071063469192364 -0.0007836750244923422 -0.7071063469192203">
             <joint type="hinge" name="R4_Hip" axis="-1.148288559847196e-16 -6.597734406312645e-15 1.0" pos="-0.010329361332247315 0.1037004424712559 0.03425000000004459" range="-1.4 0.3" limited="true" />
             <geom mesh="Hip_visual" name="R4_Hip_Hip_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Hip_mat" />
-            <geom mesh="Hip_collision00" name="R4_Hip_Hip_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-            <geom mesh="Hip_collision01" name="R4_Hip_Hip_collision01_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
             <inertial mass="0.05983731986282102" pos="-0.01173850441411096 0.05634305715218131 0.03480928715778279" fullinertia="9.073758717740232e-05 4.2714546002120664e-05 6.614361192623373e-05 -1.6454301985111632e-06 4.1801944821636127e-07 -1.407545450973899e-05" />
             <body name="R4_TopBearingArm" pos="-0.010439557352729025 -0.024492983336473272 -0.06243027618797083" quat="1.0 3.298810778655128e-15 4.7223011270116927e-17 1.0587911875196932e-22">
               <geom mesh="TopBearingArm_visual" name="R4_TopBearingArm_TopBearingArm_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="TopBearingArm_mat" />
-              <geom mesh="TopBearingArm_collision00" name="R4_TopBearingArm_TopBearingArm_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
               <inertial mass="0.010796340418574843" pos="3.1726671119894115e-05 0.10085526964408899 0.14833573828336147" fullinertia="3.6674127664951223e-06 1.6226840545657419e-06 5.134350047743784e-06 -3.786917300335616e-08 -9.7332225887021e-10 4.473648691088385e-08" />
             </body>
             <body name="R4_Femur-assembly_Motor" pos="-3.552713678800501e-17 -1.0658141036401502e-16 0.05000000000000027" quat="-6.123233995736772e-17 1.0 -1.108380034989759e-15 -2.9033356485289977e-29">
@@ -965,10 +881,6 @@
             </body>
             <body name="R4_TibiaBearingTrack" pos="-3.552713678800501e-17 1.0658141036401502e-16 3.552713678800501e-16" quat="1.0 2.6702564478264843e-15 2.6143343437090094e-29 -1.1082713548340453e-15">
               <geom mesh="TibiaBearingTrack_visual" name="R4_TibiaBearingTrack_TibiaBearingTrack_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="TibiaBearingTrack_mat" />
-              <geom mesh="TibiaBearingTrack_collision00" name="R4_TibiaBearingTrack_TibiaBearingTrack_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-              <geom mesh="TibiaBearingTrack_collision01" name="R4_TibiaBearingTrack_TibiaBearingTrack_collision01_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-              <geom mesh="TibiaBearingTrack_collision02" name="R4_TibiaBearingTrack_TibiaBearingTrack_collision02_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-              <geom mesh="TibiaBearingTrack_collision03" name="R4_TibiaBearingTrack_TibiaBearingTrack_collision03_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
               <inertial mass="0.020518745199399262" pos="0.011811924647872311 0.0011365243000390488 0.045430405842203994" fullinertia="5.9695144521989486e-05 3.190977710397519e-05 2.812183122444375e-05 8.540548231016954e-09 -5.077358625970885e-09 7.359107625731357e-07" />
             </body>
           </body>
@@ -976,12 +888,9 @@
       </body>
       <body name="L4_MainClamp" pos="-0.20571608688276327 0.18144046972349961 -0.13168027618801328" quat="0.0011071131900001574 2.7601582984490714e-34 0.0 0.9999993871500049">
         <geom mesh="MainClamp_visual" name="L4_MainClamp_MainClamp_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="MainClamp_mat" />
-        <geom mesh="MainClamp_collision00" name="L4_MainClamp_MainClamp_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-        <geom mesh="MainClamp_collision01" name="L4_MainClamp_MainClamp_collision01_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
         <inertial mass="0.041263254103619855" pos="9.613160616385486e-07 0.12765894961523508 0.13277126881503842" fullinertia="2.5559823976415517e-05 4.763132647860239e-05 7.194388786003212e-05 -4.8385092289799064e-08 -3.809938426033585e-11 -4.798647641681544e-09" />
         <body name="L4_TopPlate" pos="0.0 -3.552713678800501e-17 0.0" quat="1.0 1.8487405599572604e-53 0.0 1.5595687118311167e-19">
           <geom mesh="TopPlate_visual" name="L4_TopPlate_TopPlate_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="TopPlate_mat" />
-          <geom mesh="TopPlate_collision00" name="L4_TopPlate_TopPlate_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
           <inertial mass="0.05537159447168183" pos="-1.328854554072303e-05 0.1342238182053574 0.14078027618800998" fullinertia="2.5571308401983072e-05 2.3435446508752127e-05 4.891225405616057e-05 4.729275636822957e-09 -5.424223470426729e-19 1.4448897599404192e-19" />
           <body name="L4_95185A620_Zinc-Plated-Steel-Press-Fit-Nut-for-Sheet-Metal" pos="-3.552713678800501e-16 0.12822234157639414 0.1396936095213433" quat="-9.684278906830575e-16 1.0 1.5595687118311167e-19 2.2114255647276122e-14">
             <geom mesh="95185A620_Zinc-Plated Steel Press-Fit Nut for Sheet Metal_visual" name="L4_95185A620_Zinc-Plated-Steel-Press-Fit-Nut-for-Sheet-Metal_95185A620_Zinc-Plated Steel Press-Fit Nut for Sheet Metal_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="95185A620_Zinc-Plated Steel Press-Fit Nut for Sheet Metal_mat" />
@@ -1007,12 +916,9 @@
           <body name="L4_Hip" pos="0.013620638666749408 0.1036768495374217 -0.010559193887263021" quat="0.0007836750244969087 0.7071063469192364 -0.0007836750244923422 -0.7071063469192203">
             <joint type="hinge" name="L4_Hip" axis="7.635823929680056e-18 -6.597734693041348e-15 1.0" pos="-0.010329361332247496 0.10370044247125616 0.03425000000004324" range="-0.3 1.4" limited="true" />
             <geom mesh="Hip_visual" name="L4_Hip_Hip_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Hip_mat" />
-            <geom mesh="Hip_collision00" name="L4_Hip_Hip_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-            <geom mesh="Hip_collision01" name="L4_Hip_Hip_collision01_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
             <inertial mass="0.05983731986282102" pos="-0.011738504414110977 0.05634305715218152 0.03480928715778279" fullinertia="9.07375871774034e-05 4.271454600212081e-05 6.6143611926232e-05 -1.6454301985113877e-06 4.18019448216359e-07 -1.4075454509739149e-05" />
             <body name="L4_TopBearingArm" pos="-0.01043955735272899 -0.02449298333647331 -0.06243027618797082" quat="1.0 3.298810778655128e-15 4.722301127011692e-17 -6.780447160959949e-23">
               <geom mesh="TopBearingArm_visual" name="L4_TopBearingArm_TopBearingArm_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="TopBearingArm_mat" />
-              <geom mesh="TopBearingArm_collision00" name="L4_TopBearingArm_TopBearingArm_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
               <inertial mass="0.010796340418574843" pos="3.1726671119876815e-05 0.10085526964408935 0.14833573828336147" fullinertia="3.667412766496003e-06 1.6226840545666152e-06 5.134350047743567e-06 -3.786917300338339e-08 -9.733222588564793e-10 4.4736486910902574e-08" />
             </body>
             <body name="L4_Femur-assembly_Motor" pos="3.552713678800501e-17 -1.0658141036401502e-16 0.05000000000000029" quat="-6.123233995736752e-17 1.0 -1.1083802086733482e-15 -2.9026537938613904e-29">
@@ -1086,10 +992,6 @@
             </body>
             <body name="L4_TibiaBearingTrack" pos="3.552713678800501e-17 1.0658141036401502e-16 3.552713678800501e-16" quat="1.0 2.6702564478264843e-15 2.613486934533479e-29 -1.1082715285176346e-15">
               <geom mesh="TibiaBearingTrack_visual" name="L4_TibiaBearingTrack_TibiaBearingTrack_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="TibiaBearingTrack_mat" />
-              <geom mesh="TibiaBearingTrack_collision00" name="L4_TibiaBearingTrack_TibiaBearingTrack_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-              <geom mesh="TibiaBearingTrack_collision01" name="L4_TibiaBearingTrack_TibiaBearingTrack_collision01_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-              <geom mesh="TibiaBearingTrack_collision02" name="L4_TibiaBearingTrack_TibiaBearingTrack_collision02_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-              <geom mesh="TibiaBearingTrack_collision03" name="L4_TibiaBearingTrack_TibiaBearingTrack_collision03_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
               <inertial mass="0.020518745199399262" pos="0.011811924647872337 0.0011365243000390863 0.045430405842203994" fullinertia="5.9695144521990136e-05 3.1909777103975735e-05 2.812183122444397e-05 8.540548231017076e-09 -5.077358625961208e-09 7.359107625731234e-07" />
             </body>
           </body>
