@@ -21,6 +21,7 @@ from genesis_forge.mdp import reset, rewards, terminations, observations
 
 
 from spiderbot.environment import BaseSpiderRobotEnv, Terrain, EnvMode
+from spiderbot.motor.power import SUPPLY_VOLTAGE, electrical_power
 from spiderbot.mdp.foot_angle import FootAngleMdp
 from spiderbot.mdp.friction import randomize_terrain_friction
 from spiderbot.mdp.foot_clearance import FootClearanceMdp
@@ -38,6 +39,13 @@ CURRICULUM_COOLDOWN_STEPS = 1200
 RANDOM_POSE_PROBABILITY_START = 0.2
 RANDOM_POSE_PROBABILITY_INC = 0.05
 RANDOM_POSE_PROBABILITY_MAX = 0.8
+
+# Energy penalty, in reward per watt of estimated motor power (see spiderbot/motor/power.py).
+# It starts small and grows with the curriculum, so the policy learns to walk before it
+# learns to save power (too strong too early and lying still wins).
+ENERGY_WEIGHT_START = -2e-05
+ENERGY_WEIGHT_INC = -2e-05
+ENERGY_WEIGHT_MAX = -2e-04
 
 
 class SpiderRobotEnv(BaseSpiderRobotEnv):
@@ -113,11 +121,15 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
             entity=self.robot,
             on_reset={
                 "position": {
-                    "fn": reset.randomize_terrain_position(
-                        terrain_manager=self.terrain_manager,
-                        height_offset=0.118,
-                        subterrain=self.curriculum_terrain,
-                    ) if self.mode == 'train' else reset.position(position=(0.0, 0.0, 0.118)),
+                    "fn": (
+                        reset.randomize_terrain_position(
+                            terrain_manager=self.terrain_manager,
+                            height_offset=0.118,
+                            subterrain=self.curriculum_terrain,
+                        )
+                        if self.mode == "train"
+                        else reset.position(position=(0.0, 0.0, 0.118))
+                    ),
                 },
                 # Must come after "position", since it builds on the position and heading.
                 # The probability is increased by the curriculum.
@@ -150,20 +162,21 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
             self,
             joint_names=".*",
             default_pos={
-                "R1_Hip": NoisyValue(0.9, 0.1),
-                "R2_Hip": NoisyValue(0.2, 0.1),
-                "R3_Hip": NoisyValue(-0.2, 0.1),
-                "R4_Hip": NoisyValue(-0.9, 0.1),
-                "L1_Hip": NoisyValue(-0.9, 0.1),
-                "L2_Hip": NoisyValue(-0.2, 0.1),
-                "L3_Hip": NoisyValue(0.2, 0.1),
-                "L4_Hip": NoisyValue(0.9, 0.1),
-                "[RL][1-4]_Femur": NoisyValue(-0.4, 0.1),
-                "[RL][1-4]_Tibia": NoisyValue(0.5, 0.1),
+                ".*": NoisyValue(0.0, 0.1),
+                # "R1_Hip": NoisyValue(0.9, 0.1),
+                # "R2_Hip": NoisyValue(0.2, 0.1),
+                # "R3_Hip": NoisyValue(-0.2, 0.1),
+                # "R4_Hip": NoisyValue(-0.9, 0.1),
+                # "L1_Hip": NoisyValue(-0.9, 0.1),
+                # "L2_Hip": NoisyValue(-0.2, 0.1),
+                # "L3_Hip": NoisyValue(0.2, 0.1),
+                # "L4_Hip": NoisyValue(0.9, 0.1),
+                # "[RL][1-4]_Femur": NoisyValue(-0.4, 0.1),
+                # "[RL][1-4]_Tibia": NoisyValue(0.5, 0.1),
             },
             kp=NoisyValue(30, 5),
             kv=NoisyValue(2.0, 0.5),
-            max_force=NoisyValue(10.0, 1.0),
+            max_force=NoisyValue(18.0, 1.0),
             armature=0.0020,
             frictionloss=NoisyValue(0.1, 0.05),
             damping=NoisyValue(0.0381, 0.0001),
@@ -225,10 +238,7 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
             resample_time_sec=4.0,
             standing_probability=0.15,
             debug_visualizer=True,
-            debug_visualizer_cfg={
-                "envs_idx": [0],
-                "ang_arc_offset": 0.15
-            },
+            debug_visualizer_cfg={"envs_idx": [0], "ang_arc_offset": 0.15},
         )
 
         ##
@@ -319,6 +329,10 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
                 "action_acceleration": {
                     "weight": -2e-04,
                     "fn": rewards.action_acceleration_l2(),
+                },
+                "energy": {
+                    "weight": ENERGY_WEIGHT_START,
+                    "fn": self.energy_reward,
                 },
             },
         )
@@ -413,7 +427,9 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
                     ),
                 },
                 "control_force": {
-                    "fn": lambda env: self.actuator_manager.get_dofs_control_force(clip_to_max_force=True),
+                    "fn": lambda env: self.actuator_manager.get_dofs_control_force(
+                        clip_to_max_force=True
+                    ),
                     "scale": 0.1,
                 },
                 "force": {
@@ -437,6 +453,7 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
         extras = self.log_curriculum(extras)
         extras = self.log_metrics(extras)
         extras = self.log_actuator_metrics(extras)
+        extras = self.log_power_metrics(extras)
 
         # Finish up
         return obs, reward, terminated, truncated, extras
@@ -471,37 +488,23 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
         vel_range = cast(VelocityCommandRange, self.vel_command_manager.range)
         extras["episode"]["Curriculum / max_velocity_x"] = vel_range["lin_vel_x"][1]
         extras["episode"]["Curriculum / max_velocity_y"] = vel_range["lin_vel_y"][1]
+        extras["episode"]["Curriculum / energy_weight"] = self.reward_manager[
+            "energy"
+        ].weight
         extras["episode"]["Curriculum / random_pose_probability"] = (
             self.robot_manager.on_reset["random_ground_pose"].fn.probability
         )
-        # extras["episode"]["Curriculum / gait_weight"] = self.reward_manager[
-        #     "gait_diagonal"
-        # ].weight
 
         return extras
 
     def log_metrics(self, extras: dict):
-        # extras["episode"]["Metrics / torque_avg"] = (
-        #     self.robot.get_dofs_force().abs().mean()
-        # )
-        # extras["episode"]["Metrics / torque_ctl_avg"] = (
-        #     self.robot.get_dofs_control_force().abs().mean()
-        # )
-
-        # action_rate = torch.abs(self.last_actions - self.actions)
-        # extras["episode"]["Metrics / action_rate_avg"] = action_rate.mean()
-        # extras["episode"]["Metrics / action_rate_max"] = action_rate.max()
-
-        # action_rate = torch.abs(
-        #     self.action_manager.last_actions - self.action_manager.actions
-        # )
-        # extras["episode"]["Metrics / position_delta_avg"] = action_rate.mean()
-        # extras["episode"]["Metrics / position_delta_max"] = action_rate.max()
         base_pos = self.robot_manager.base_pos
         height_offset = self.terrain_manager.get_terrain_height(
             base_pos[:, 0], base_pos[:, 1]
         )
-        extras["episode"]["Metrics / height_avg"] = torch.mean(base_pos[:, 2] - height_offset)
+        extras["episode"]["Metrics / height_avg"] = torch.mean(
+            base_pos[:, 2] - height_offset
+        )
 
         return extras
 
@@ -516,17 +519,62 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
             if group_torque is None:
                 continue
             group_torque = group_torque.abs()
-            # extras["episode"][f"Actuators / {group}_torque_avg"] = group_torque.mean()
-            # extras["episode"][f"Actuators / {group}_torque_max"] = group_torque.max()
-
-            # group_velocity = self.robot.get_dofs_velocity(dofs_idx).abs()
-            # extras["episode"][f"Actuators / {group}_velocity_avg"] = group_velocity.mean()
-            # extras["episode"][f"Actuators / {group}_velocity_max"] = group_velocity.max()
-
             torque_pcts = torch.quantile(group_torque.float().flatten(), q_tensors)
             for i, p in enumerate(percentiles):
                 extras["episode"][f"Actuators / {group}_torque_p{p}"] = torque_pcts[i]
 
+        return extras
+
+    def motor_power(self, dofs_idx: list[int] | None = None):
+        """
+        Estimated electrical power per motor as ``(torque, copper, mechanical)``, each
+        shaped (n_envs, n_dofs). Uses the torque actually applied (clipped to max_force).
+        """
+        torque = self.actuator_manager.get_dofs_control_force(
+            clip_to_max_force=True, dofs_idx=dofs_idx
+        ).float()
+        velocity = self.actuator_manager.get_dofs_velocity(dofs_idx=dofs_idx).float()
+        copper, mech = electrical_power(torque, velocity)
+        return torque, copper, mech
+
+    def energy_reward(self, env: GenesisEnv) -> torch.Tensor:
+        """
+        Estimated electrical power for the whole robot in watts: winding heat plus positive
+        mechanical work. Register with a negative weight.
+
+        Returns:
+            Per-environment power, shape ``(n_envs,)``.
+        """
+        _, copper, mech = self.motor_power()
+        return (copper + mech).sum(dim=-1)
+
+    def log_power_metrics(self, extras: dict):
+        """
+        Estimate the electrical power the real motors would draw (see spiderbot/motor/power.py).
+
+        Uses the torque actually applied (clipped to max_force). Per-motor values are the
+        mean across environments and the motors in each group; robot totals are summed over
+        all motors and averaged across environments.
+        """
+        total_copper = 0.0
+        total_mech = 0.0
+        for group, dofs_idx in self.joint_groups.items():
+            if not dofs_idx:
+                continue
+            torque, copper, mech = self.motor_power(dofs_idx)
+            extras["episode"][f"Actuators / {group}_torque_rms"] = torch.sqrt(
+                torque.square().mean()
+            )
+            extras["episode"][f"Power / {group}_motor_w"] = (copper + mech).mean()
+            total_copper = total_copper + copper.sum(dim=-1)
+            total_mech = total_mech + mech.sum(dim=-1)
+
+        total = total_copper + total_mech
+        extras["episode"]["Power / robot_copper_loss_w"] = total_copper.mean()
+        extras["episode"]["Power / robot_mechanical_w"] = total_mech.mean()
+        extras["episode"]["Power / robot_total_w"] = total.mean()
+        extras["episode"]["Power / robot_total_w_p90"] = torch.quantile(total, 0.9)
+        extras["episode"]["Power / bus_current_a"] = total.mean() / SUPPLY_VOLTAGE
         return extras
 
     def feet_max_air_time_reward(
@@ -633,6 +681,11 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
             random_pose.probability = min(
                 random_pose.probability + RANDOM_POSE_PROBABILITY_INC,
                 RANDOM_POSE_PROBABILITY_MAX,
+            )
+
+            # Ask for more energy efficiency
+            self.reward_manager["energy"].increment_weight(
+                ENERGY_WEIGHT_INC, limit=ENERGY_WEIGHT_MAX
             )
 
             # Increase the gait reward
