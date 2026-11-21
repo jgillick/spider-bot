@@ -108,7 +108,7 @@
         </body>
         <body name="R1_Hip-assembly_Motor" pos="-7.460698725481052e-16 0.12822234157639403 0.07605091485471992" quat="-5.410679340968121e-14 0.7071067811865551 -5.40257969713053e-14 -0.7071067811865398">
           <geom mesh="Motor_visual" name="R1_Hip-assembly_Motor_Motor_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Motor_mat" />
-          <geom mesh="Motor_collision00" name="R1_Hip-assembly_Motor_Motor_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
+          <geom mesh="Motor_collision00" name="R1_Hip-assembly_Motor_Motor_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="2" conaffinity="0" />
           <inertial mass="0.4096463210987154" pos="-0.03569820729651782 0.00047016950890322093 -5.891982746483812e-06" fullinertia="0.0004025220023127293 0.00022651206716561118 0.00023297814211205723 1.5369569971651975e-06 -5.1817508723246794e-08 -2.626263518560188e-08" />
           <body name="R1_Hip" pos="0.013620638666749408 0.10367684953742169 -0.010559193887263021" quat="0.0007836750244969087 0.7071063469192364 -0.0007836750244923422 -0.7071063469192203">
             <joint type="hinge" name="R1_Hip" axis="-1.148288559847196e-16 -6.597734406312645e-15 1.0" pos="-0.010329361332247398 0.1037004424712559 0.03425000000004459" range="-0.3 1.4" limited="true" />
@@ -120,17 +120,17 @@
             </body>
             <body name="R1_Femur-assembly_Motor" pos="0.0 -1.0658141036401502e-16 0.05000000000000027" quat="-6.123233995736772e-17 1.0 -1.108380034989759e-15 -2.9033356485289977e-29">
               <geom mesh="Motor_visual" name="R1_Femur-assembly_Motor_Motor_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Motor_mat" />
-              <geom mesh="Motor_collision00" name="R1_Femur-assembly_Motor_Motor_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
+              <geom mesh="Motor_collision00" name="R1_Femur-assembly_Motor_Motor_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="4" conaffinity="1016" />
               <inertial mass="0.4096463210987154" pos="-0.03569820729651778 0.00047016950890324245 -5.891982746492683e-06" fullinertia="0.0004025220023127307 0.0002265120671656167 0.00023297814211205672 1.536956997164996e-06 -5.181750872286154e-08 -2.6262635187012243e-08" />
               <body name="R1_Femur" pos="3.552713678800501e-17 -1.7763568394002506e-16 0.04999999999999989" quat="-2.609024107869116e-15 0.9999999999999999 -1.08689674375498e-19 1.1903339307591588e-32">
                 <joint type="hinge" name="R1_Femur" axis="-1.0000000000019418 3.413175476775553e-07 -1.1482842687322328e-16" pos="-0.020629604126849097 4.665871108935663e-07 0.050000000000043565" range="-1.570796 0.0" limited="true" />
                 <geom mesh="Femur_visual" name="R1_Femur_Femur_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Femur_mat" />
-                <geom mesh="Femur_collision00" name="R1_Femur_Femur_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
+                <geom mesh="Femur_collision00" name="R1_Femur_Femur_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="4" conaffinity="1016" />
                 <inertial mass="0.2625613312102709" pos="-0.010506842856503768 0.0010903954621603862 0.05573622384797683" fullinertia="0.0009967009720741548 0.000753181381286731 0.0002698639331518808 -1.0858043584869645e-07 -3.987496092127936e-07 -2.128365610365601e-05" />
                 <body name="R1_KneeBearingHolder" pos="-0.010613574659002012 -0.024522026587161197 -0.062430276187971104" quat="0.9999993858532673 6.286062813046965e-16 4.514588925794682e-18 -0.0011082838480557962">
                   <geom mesh="KneeBearingHolder_visual" name="R1_KneeBearingHolder_KneeBearingHolder_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="KneeBearingHolder_mat" />
-                  <geom mesh="KneeBearingHolder_collision00" name="R1_KneeBearingHolder_KneeBearingHolder_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-                  <geom mesh="KneeBearingHolder_collision01" name="R1_KneeBearingHolder_KneeBearingHolder_collision01_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
+                  <geom mesh="KneeBearingHolder_collision00" name="R1_KneeBearingHolder_KneeBearingHolder_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="4" conaffinity="1016" />
+                  <geom mesh="KneeBearingHolder_collision01" name="R1_KneeBearingHolder_KneeBearingHolder_collision01_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="4" conaffinity="1016" />
                   <inertial mass="0.030766427272674" pos="5.851125060874826e-07 0.024430826058459056 0.2775757234448875" fullinertia="3.7979959271169173e-06 8.204908981355342e-06 7.807441147095282e-06 -7.243044475550718e-09 -1.014996661677468e-08 7.97669322618528e-08" />
                 </body>
                 <body name="R1_TibiaMotorSpacer" pos="3.552713678800501e-17 -1.7763568394002505e-17 0.0" quat="1.0 0.0 6.162975822039155e-33 1.0587911840678754e-22">
@@ -138,7 +138,7 @@
                   <inertial mass="0.019276186165043827" pos="0.0011206386667055072 0.00044769616849588985 0.030465747692158356" fullinertia="3.3052283726738435e-05 8.755427749823299e-06 2.4304084546726773e-05 1.8215786170915686e-19 5.275910929910796e-20 -2.6607846031749774e-07" />
                   <body name="R1_Tibia-assembly_Motor" pos="-0.024258722666588392 -1.6573409311604337e-14 0.0500000472403318" quat="-2.3121815833889014e-16 7.204045892723024e-16 0.38268343236509034 0.9238795325112871">
                     <geom mesh="Motor_visual" name="R1_Tibia-assembly_Motor_Motor_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Motor_mat" />
-                    <geom mesh="Motor_collision00" name="R1_Tibia-assembly_Motor_Motor_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
+                    <geom mesh="Motor_collision00" name="R1_Tibia-assembly_Motor_Motor_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="4" conaffinity="1016" />
                     <inertial mass="0.4096463210987154" pos="-0.03569820729651782 0.0004701695089032373 -5.891982746492715e-06" fullinertia="0.0004025220023127319 0.00022651206716562417 0.00023297814211206341 1.5369569971654594e-06 -5.181750872295418e-08 -2.6262635192047358e-08" />
                     <body name="R1_MotorPulley" pos="-0.007129361333247921 -0.033041575943746945 -0.01971490744865232" quat="3.138716760041602e-16 2.1394917792184385e-15 0.7071067811865591 0.7071067811865583">
                       <geom mesh="MotorPulley_visual" name="R1_MotorPulley_MotorPulley_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="MotorPulley_mat" />
@@ -149,11 +149,11 @@
                 <body name="R1_Tibia" pos="3.552713678800501e-17 -1.7763568394002505e-17 0.0" quat="1.0 0.0 6.162975822039155e-33 1.0587911840678754e-22">
                   <joint type="hinge" name="R1_Tibia" axis="-1.0000000000019418 3.413175476775553e-07 -1.1482842687322328e-16" pos="-0.018629604126854594 4.619044755907806e-07 0.21500000000004355" range="-0.20944 2.268928" limited="true" />
                   <geom mesh="Tibia_visual" name="R1_Tibia_Tibia_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Tibia_mat" />
-                  <geom mesh="Tibia_collision00" name="R1_Tibia_Tibia_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
+                  <geom mesh="Tibia_collision00" name="R1_Tibia_Tibia_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="4" conaffinity="1016" />
                   <inertial mass="0.07204696639616184" pos="-0.010129361333294312 -0.044848098855134196 0.13119768648645866" fullinertia="0.0005149405353785737 0.000433685347369725 8.64906009003046e-05 4.949768408689471e-19 5.120247725032811e-19 -0.00017184764215891606" />
                   <body name="R1_Foot" pos="3.552713678800501e-17 -1.7763568394002505e-17 0.0" quat="1.0 0.0 6.162975822039155e-33 1.0587911840678754e-22">
                     <geom mesh="Foot_visual" name="R1_Foot_Foot_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Foot_mat" />
-                    <geom mesh="Foot_collision00" name="R1_Foot_Foot_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" friction="2.0 0.1 0.01" />
+                    <geom mesh="Foot_collision00" name="R1_Foot_Foot_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" friction="2.0 0.1 0.01" contype="4" conaffinity="1016" />
                     <inertial mass="0.005146513107453826" pos="-0.010129361333294177 -0.08110000675989372 -0.022412814246315377" fullinertia="4.269886479416004e-07 3.481560204897191e-07 1.807259964627236e-07 -2.1382616717446687e-20 6.690913941205555e-21 7.873493968235544e-10" />
                   </body>
                   <body name="R1_KneePulley" pos="-0.015129361333294362 -0.01971490744867152 0.18195842405632348" quat="1.0 0.0 8.048094238934683e-20 1.7908852543882205e-15">
@@ -219,7 +219,7 @@
         </body>
         <body name="L1_Hip-assembly_Motor" pos="-7.460698725481052e-16 0.12822234157639403 0.0760509148547199" quat="-5.4106618771691195e-14 0.7071067811865551 -5.402570924638987e-14 -0.7071067811865398">
           <geom mesh="Motor_visual" name="L1_Hip-assembly_Motor_Motor_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Motor_mat" />
-          <geom mesh="Motor_collision00" name="L1_Hip-assembly_Motor_Motor_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
+          <geom mesh="Motor_collision00" name="L1_Hip-assembly_Motor_Motor_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="2" conaffinity="0" />
           <inertial mass="0.4096463210987154" pos="-0.03569820729651781 0.00047016950890324023 -5.891982746496883e-06" fullinertia="0.0004025220023127328 0.0002265120671656266 0.0002329781421120636 1.5369569971652013e-06 -5.1817508723044354e-08 -2.626263518742984e-08" />
           <body name="L1_Hip" pos="0.013620638666749408 0.1036768495374217 -0.010559193887263056" quat="0.0007836750244969087 0.7071063469192364 -0.0007836750244923422 -0.7071063469192203">
             <joint type="hinge" name="L1_Hip" axis="-4.7520306367251106e-14 -6.597623415036186e-15 1.0" pos="-0.010329361332245839 0.10370044247125651 0.03425000000004472" range="-1.4 0.3" limited="true" />
@@ -231,17 +231,17 @@
             </body>
             <body name="L1_Femur-assembly_Motor" pos="-3.552713678800501e-17 -1.0658141036401502e-16 0.05000000000000029" quat="-6.123233995736752e-17 1.0 -1.1083801705986991e-15 -2.785634419266617e-29">
               <geom mesh="Motor_visual" name="L1_Femur-assembly_Motor_Motor_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Motor_mat" />
-              <geom mesh="Motor_collision00" name="L1_Femur-assembly_Motor_Motor_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
+              <geom mesh="Motor_collision00" name="L1_Femur-assembly_Motor_Motor_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="64" conaffinity="956" />
               <inertial mass="0.4096463210987154" pos="-0.03569820729651805 0.00047016950890322635 -5.891982746490152e-06" fullinertia="0.00040252200231273523 0.0002265120671656183 0.00023297814211205325 1.536956997161536e-06 -5.181750872352646e-08 -2.6262635187085177e-08" />
               <body name="L1_Femur" pos="0.0 -1.9539925233402755e-16 0.04999999999999991" quat="-2.609024107869116e-15 0.9999999999999999 -1.0876582373458418e-19 -5.426483952902949e-31">
                 <joint type="hinge" name="L1_Femur" axis="-1.0000000000019453 3.413175476775482e-07 -4.752030593826938e-14" pos="-0.02062960412684832 4.66587111143366e-07 0.050000000000043184" range="-1.570796 0.0" limited="true" />
                 <geom mesh="Femur_visual" name="L1_Femur_Femur_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Femur_mat" />
-                <geom mesh="Femur_collision00" name="L1_Femur_Femur_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
+                <geom mesh="Femur_collision00" name="L1_Femur_Femur_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="64" conaffinity="956" />
                 <inertial mass="0.2625613312102709" pos="-0.010506842856503853 0.0010903954621603723 0.05573622384797682" fullinertia="0.0009967009720741743 0.0007531813812867468 0.0002698639331518842 -1.0858043584768829e-07 -3.987496092131418e-07 -2.1283656103655657e-05" />
                 <body name="L1_KneeBearingHolder" pos="-0.010613574659002012 -0.02452202658716118 -0.0624302761879711" quat="0.9999993858532673 6.286062813046964e-16 4.5145889257979235e-18 -0.0011082838480557962">
                   <geom mesh="KneeBearingHolder_visual" name="L1_KneeBearingHolder_KneeBearingHolder_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="KneeBearingHolder_mat" />
-                  <geom mesh="KneeBearingHolder_collision00" name="L1_KneeBearingHolder_KneeBearingHolder_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-                  <geom mesh="KneeBearingHolder_collision01" name="L1_KneeBearingHolder_KneeBearingHolder_collision01_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
+                  <geom mesh="KneeBearingHolder_collision00" name="L1_KneeBearingHolder_KneeBearingHolder_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="64" conaffinity="956" />
+                  <geom mesh="KneeBearingHolder_collision01" name="L1_KneeBearingHolder_KneeBearingHolder_collision01_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="64" conaffinity="956" />
                   <inertial mass="0.030766427272674" pos="5.85112506109287e-07 0.024430826058459216 0.2775757234448875" fullinertia="3.7979959271269203e-06 8.204908981364507e-06 7.80744114709268e-06 -7.243044475552627e-09 -1.0149966616856605e-08 7.976693226196145e-08" />
                 </body>
                 <body name="L1_TibiaMotorSpacer" pos="0.0 0.0 0.0" quat="1.0 4.930380657631324e-32 0.0 -2.9729821161698706e-23">
@@ -249,7 +249,7 @@
                   <inertial mass="0.019276186165043827" pos="0.0011206386667055234 0.00044769616849589153 0.03046574769215836" fullinertia="3.305228372673899e-05 8.755427749823685e-06 2.4304084546726773e-05 -2.2068775793009466e-20 6.089585622963917e-20 -2.660784603174987e-07" />
                   <body name="L1_Tibia-assembly_Motor" pos="-0.024258722666588427 -1.6573409311604337e-14 0.05000004724033181" quat="-2.31217987582259e-16 7.204632921319201e-16 0.38268343236509034 0.9238795325112871">
                     <geom mesh="Motor_visual" name="L1_Tibia-assembly_Motor_Motor_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Motor_mat" />
-                    <geom mesh="Motor_collision00" name="L1_Tibia-assembly_Motor_Motor_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
+                    <geom mesh="Motor_collision00" name="L1_Tibia-assembly_Motor_Motor_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="64" conaffinity="956" />
                     <inertial mass="0.4096463210987154" pos="-0.03569820729651811 0.00047016950890325096 -5.891982746505927e-06" fullinertia="0.0004025220023127366 0.00022651206716562446 0.00023297814211206295 1.5369569971641667e-06 -5.181750872158841e-08 -2.6262635188553036e-08" />
                     <body name="L1_MotorPulley" pos="-0.007129361333247957 -0.033041575943746924 -0.01971490744865232" quat="3.1387157062974576e-16 2.1394918604309133e-15 0.707106781186559 0.7071067811865585">
                       <geom mesh="MotorPulley_visual" name="L1_MotorPulley_MotorPulley_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="MotorPulley_mat" />
@@ -260,11 +260,11 @@
                 <body name="L1_Tibia" pos="0.0 0.0 0.0" quat="1.0 4.930380657631324e-32 0.0 -2.9729821161698706e-23">
                   <joint type="hinge" name="L1_Tibia" axis="-1.0000000000019453 3.413175476775482e-07 -4.752030593826938e-14" pos="-0.018629604126861633 4.619044758405986e-07 0.21500000000004327" range="-0.20944 2.268928" limited="true" />
                   <geom mesh="Tibia_visual" name="L1_Tibia_Tibia_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Tibia_mat" />
-                  <geom mesh="Tibia_collision00" name="L1_Tibia_Tibia_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
+                  <geom mesh="Tibia_collision00" name="L1_Tibia_Tibia_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="64" conaffinity="956" />
                   <inertial mass="0.07204696639616184" pos="-0.010129361333294421 -0.044848098855134515 0.13119768648645866" fullinertia="0.0005149405353785908 0.000433685347369738 8.6490600900302e-05 -3.2128554249451175e-20 3.314773189314741e-19 -0.00017184764215891733" />
                   <body name="L1_Foot" pos="0.0 0.0 0.0" quat="1.0 4.930380657631324e-32 0.0 -2.9729821161698706e-23">
                     <geom mesh="Foot_visual" name="L1_Foot_Foot_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Foot_mat" />
-                    <geom mesh="Foot_collision00" name="L1_Foot_Foot_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" friction="2.0 0.1 0.01" />
+                    <geom mesh="Foot_collision00" name="L1_Foot_Foot_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" friction="2.0 0.1 0.01" contype="64" conaffinity="956" />
                     <inertial mass="0.005146513107453826" pos="-0.01012936133329425 -0.08110000675989427 -0.022412814246315374" fullinertia="4.269886479417661e-07 3.481560204898301e-07 1.807259964627236e-07 -2.14200675242153e-20 4.812553634610672e-21 7.873493968100046e-10" />
                   </body>
                   <body name="L1_KneePulley" pos="-0.015129361333294433 -0.019714907448671503 0.18195842405632348" quat="1.0 -4.930380657631324e-32 8.048094239187982e-20 1.7908851187792775e-15">
@@ -316,8 +316,8 @@
             <inertial mass="0.014285354686409681" pos="0.06999384453860917 -0.10008940490546579 0.016196796571932674" fullinertia="7.46191606137454e-07 5.417935695176072e-06 5.849954239299602e-06 -8.145979213006335e-10 2.1426387948150437e-12 3.5792848981594437e-10" />
             <body name="TopRods" pos="-0.00020737881416970215 -0.00021911361537963327 1.0462377067473571e-15" quat="0.9999993871500045 -9.321186258734072e-16 -1.045051245017375e-18 0.0011071131900001559">
               <geom mesh="TopRods_visual" name="TopRods_TopRods_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="TopRods_mat" />
-              <geom mesh="TopRods_collision00" name="TopRods_TopRods_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-              <geom mesh="TopRods_collision01" name="TopRods_TopRods_collision01_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
+              <geom mesh="TopRods_collision00" name="TopRods_TopRods_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="2" conaffinity="0" />
+              <geom mesh="TopRods_collision01" name="TopRods_TopRods_collision01_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="2" conaffinity="0" />
               <inertial mass="0.016398856896996432" pos="0.000984909449948774 0.00021668631462764485 0.01569999999999617" fullinertia="0.00016658560841856742 5.6993639764719535e-05 0.00022350594447301456 -2.4266306390809764e-07 -3.22931311140702e-21 2.02334995275371e-19" />
             </body>
           </body>
@@ -340,7 +340,7 @@
         </body>
         <body name="R2_Hip-assembly_Motor" pos="-7.638334409421077e-16 0.12822234157639406 0.07605091485471989" quat="-5.410679340968121e-14 0.7071067811865551 -5.40257969713053e-14 -0.7071067811865398">
           <geom mesh="Motor_visual" name="R2_Hip-assembly_Motor_Motor_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Motor_mat" />
-          <geom mesh="Motor_collision00" name="R2_Hip-assembly_Motor_Motor_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
+          <geom mesh="Motor_collision00" name="R2_Hip-assembly_Motor_Motor_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="2" conaffinity="0" />
           <inertial mass="0.4096463210987154" pos="-0.03569820729651782 0.00047016950890323866 -5.891982746498672e-06" fullinertia="0.0004025220023127293 0.00022651206716561378 0.00023297814211205485 1.536956997165468e-06 -5.181750872293263e-08 -2.62626351869642e-08" />
           <body name="R2_Hip" pos="0.013620638666749408 0.1036768495374217 -0.010559193887263039" quat="0.0007836750244969087 0.7071063469192364 -0.0007836750244923422 -0.7071063469192203">
             <joint type="hinge" name="R2_Hip" axis="-3.279028911242151e-14 -6.597657902684095e-15 1.0" pos="-0.010329361332246186 0.1037004424712559 0.03425000000004337" range="-0.4 0.9" limited="true" />
@@ -352,17 +352,17 @@
             </body>
             <body name="R2_Femur-assembly_Motor" pos="1.7763568394002505e-17 -7.105427357601002e-17 0.050000000000000266" quat="-6.123233995736733e-17 1.0 -1.1083800349897583e-15 -2.791398281316788e-29">
               <geom mesh="Motor_visual" name="R2_Femur-assembly_Motor_Motor_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Motor_mat" />
-              <geom mesh="Motor_collision00" name="R2_Femur-assembly_Motor_Motor_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
+              <geom mesh="Motor_collision00" name="R2_Femur-assembly_Motor_Motor_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="8" conaffinity="1012" />
               <inertial mass="0.4096463210987154" pos="-0.035698207296517764 0.00047016950890322467 -5.891982746491962e-06" fullinertia="0.0004025220023127272 0.00022651206716561877 0.0002329781421120602 1.5369569971667298e-06 -5.181750872287203e-08 -2.626263518727929e-08" />
               <body name="R2_Femur" pos="-1.7763568394002505e-17 -2.1316282072803005e-16 0.049999999999999906" quat="-2.609024107869116e-15 0.9999999999999999 -1.0868967441812355e-19 -4.850097747885527e-31">
                 <joint type="hinge" name="R2_Femur" axis="-1.0000000000019418 3.413175476775553e-07 -3.279028868339958e-14" pos="-0.0206296041268484 4.6658711086580907e-07 0.050000000000042004" range="-1.570796 0.0" limited="true" />
                 <geom mesh="Femur_visual" name="R2_Femur_Femur_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Femur_mat" />
-                <geom mesh="Femur_collision00" name="R2_Femur_Femur_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
+                <geom mesh="Femur_collision00" name="R2_Femur_Femur_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="8" conaffinity="1012" />
                 <inertial mass="0.2625613312102709" pos="-0.010506842856503768 0.0010903954621603507 0.05573622384797683" fullinertia="0.0009967009720741522 0.0007531813812867323 0.00026986393315188244 -1.0858043584886836e-07 -3.987496092130589e-07 -2.128365610365612e-05" />
                 <body name="R2_KneeBearingHolder" pos="-0.010613574659002012 -0.02452202658716118 -0.062430276187971104" quat="0.9999993858532673 6.286062813046965e-16 4.514588925796346e-18 -0.0011082838480557962">
                   <geom mesh="KneeBearingHolder_visual" name="R2_KneeBearingHolder_KneeBearingHolder_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="KneeBearingHolder_mat" />
-                  <geom mesh="KneeBearingHolder_collision00" name="R2_KneeBearingHolder_KneeBearingHolder_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-                  <geom mesh="KneeBearingHolder_collision01" name="R2_KneeBearingHolder_KneeBearingHolder_collision01_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
+                  <geom mesh="KneeBearingHolder_collision00" name="R2_KneeBearingHolder_KneeBearingHolder_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="8" conaffinity="1012" />
+                  <geom mesh="KneeBearingHolder_collision01" name="R2_KneeBearingHolder_KneeBearingHolder_collision01_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="8" conaffinity="1012" />
                   <inertial mass="0.030766427272674" pos="5.851125061301978e-07 0.024430826058459094 0.27757572344488746" fullinertia="3.7979959271175703e-06 8.204908981355126e-06 7.807441147093764e-06 -7.243044475822452e-09 -1.0149966616418519e-08 7.976693226217894e-08" />
                 </body>
                 <body name="R2_TibiaMotorSpacer" pos="0.0 0.0 0.0" quat="1.0 0.0 0.0 1.0587911840678754e-22">
@@ -370,7 +370,7 @@
                   <inertial mass="0.019276186165043827" pos="0.0011206386667055243 0.00044769616849588985 0.03046574769215836" fullinertia="3.3052283726738326e-05 8.755427749823462e-06 2.4304084546726556e-05 1.3664263624446477e-19 4.7231241796265846e-20 -2.660784603174842e-07" />
                   <body name="R2_Tibia-assembly_Motor" pos="-0.024258722666588434 -1.652011860642233e-14 0.05000004724033181" quat="-2.3121814449320866e-16 7.204045754266408e-16 0.38268343236509034 0.9238795325112871">
                     <geom mesh="Motor_visual" name="R2_Tibia-assembly_Motor_Motor_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Motor_mat" />
-                    <geom mesh="Motor_collision00" name="R2_Tibia-assembly_Motor_Motor_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
+                    <geom mesh="Motor_collision00" name="R2_Tibia-assembly_Motor_Motor_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="8" conaffinity="1012" />
                     <inertial mass="0.4096463210987154" pos="-0.03569820729651781 0.0004701695089032614 -5.891982746518933e-06" fullinertia="0.0004025220023127251 0.00022651206716561847 0.00023297814211205778 1.536956997166452e-06 -5.1817508724265544e-08 -2.6262635189888353e-08" />
                     <body name="R2_MotorPulley" pos="-0.007129361333247957 -0.03304157594374694 -0.019714907448652282" quat="3.1387161963061195e-16 2.1394919112663127e-15 0.7071067811865591 0.7071067811865583">
                       <geom mesh="MotorPulley_visual" name="R2_MotorPulley_MotorPulley_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="MotorPulley_mat" />
@@ -381,11 +381,11 @@
                 <body name="R2_Tibia" pos="0.0 0.0 0.0" quat="1.0 0.0 0.0 1.0587911840678754e-22">
                   <joint type="hinge" name="R2_Tibia" axis="-1.0000000000019418 3.413175476775553e-07 -3.279028868339958e-14" pos="-0.018629604126859295 4.61904475563036e-07 0.21500000000004205" range="-0.20944 2.268928" limited="true" />
                   <geom mesh="Tibia_visual" name="R2_Tibia_Tibia_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Tibia_mat" />
-                  <geom mesh="Tibia_collision00" name="R2_Tibia_Tibia_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
+                  <geom mesh="Tibia_collision00" name="R2_Tibia_Tibia_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="8" conaffinity="1012" />
                   <inertial mass="0.07204696639616184" pos="-0.010129361333294317 -0.044848098855134216 0.13119768648645866" fullinertia="0.0005149405353785728 0.00043368534736972403 8.64906009003046e-05 4.723259473603376e-19 5.798261696744499e-19 -0.00017184764215891584" />
                   <body name="R2_Foot" pos="0.0 0.0 0.0" quat="1.0 0.0 0.0 1.0587911840678754e-22">
                     <geom mesh="Foot_visual" name="R2_Foot_Foot_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Foot_mat" />
-                    <geom mesh="Foot_collision00" name="R2_Foot_Foot_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" friction="2.0 0.1 0.01" />
+                    <geom mesh="Foot_collision00" name="R2_Foot_Foot_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" friction="2.0 0.1 0.01" contype="8" conaffinity="1012" />
                     <inertial mass="0.005146513107453826" pos="-0.01012936133329419 -0.08110000675989375 -0.022412814246315384" fullinertia="4.269886479416004e-07 3.481560204897598e-07 1.8072599646283202e-07 5.6968059008407295e-21 7.96136411344077e-21 7.873493968100018e-10" />
                   </body>
                   <body name="R2_KneePulley" pos="-0.015129361333294407 -0.019714907448671503 0.18195842405632345" quat="1.0 -9.860761315262648e-32 8.048094239187982e-20 1.7908852543882205e-15">
@@ -455,7 +455,7 @@
         </body>
         <body name="L2_Hip-assembly_Motor" pos="-7.727152251391089e-16 0.12822234157639398 0.0760509148547199" quat="-5.410686474728392e-14 0.7071067811865551 -5.4025868308908064e-14 -0.7071067811865398">
           <geom mesh="Motor_visual" name="L2_Hip-assembly_Motor_Motor_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Motor_mat" />
-          <geom mesh="Motor_collision00" name="L2_Hip-assembly_Motor_Motor_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
+          <geom mesh="Motor_collision00" name="L2_Hip-assembly_Motor_Motor_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="2" conaffinity="0" />
           <inertial mass="0.4096463210987154" pos="-0.03569820729651782 0.00047016950890322137 -5.891982746488188e-06" fullinertia="0.0004025220023127328 0.00022651206716561593 0.00023297814211205867 1.53695699716482e-06 -5.18175087230084e-08 -2.6262635186910037e-08" />
           <body name="L2_Hip" pos="0.013620638666749408 0.10367684953742172 -0.010559193887263021" quat="0.0007836750244969086 0.7071063469192364 -0.0007836750244923418 -0.7071063469192203">
             <joint type="hinge" name="L2_Hip" axis="7.635823929680056e-18 -6.59773469304135e-15 1.0" pos="-0.010329361332247376 0.10370044247125607 0.03425000000004324" range="-0.9 0.4" limited="true" />
@@ -467,17 +467,17 @@
             </body>
             <body name="L2_Femur-assembly_Motor" pos="0.0 -7.105427357601002e-17 0.05000000000000029" quat="-6.123233995736792e-17 1.0 -1.1081633872761753e-15 -2.9024997194658395e-29">
               <geom mesh="Motor_visual" name="L2_Femur-assembly_Motor_Motor_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Motor_mat" />
-              <geom mesh="Motor_collision00" name="L2_Femur-assembly_Motor_Motor_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
+              <geom mesh="Motor_collision00" name="L2_Femur-assembly_Motor_Motor_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="128" conaffinity="892" />
               <inertial mass="0.4096463210987154" pos="-0.03569820729651783 0.00047016950890318954 -5.891982746490394e-06" fullinertia="0.00040252200231274184 0.00022651206716561885 0.0002329781421120706 1.5369569971684681e-06 -5.181750872284082e-08 -2.6262635187228918e-08" />
               <body name="L2_Femur" pos="-8.881784197001253e-18 -2.1316282072803005e-16 0.049999999999999906" quat="-2.609024107869116e-15 0.9999999999999999 -1.0870871169964955e-19 -3.0781121276572845e-34">
                 <joint type="hinge" name="L2_Femur" axis="-1.0000000000019427 3.413175476775535e-07 7.636253041512052e-18" pos="-0.02062960412684907 4.665871109490777e-07 0.05000000000004219" range="-1.570796 0.0" limited="true" />
                 <geom mesh="Femur_visual" name="L2_Femur_Femur_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Femur_mat" />
-                <geom mesh="Femur_collision00" name="L2_Femur_Femur_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
+                <geom mesh="Femur_collision00" name="L2_Femur_Femur_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="128" conaffinity="892" />
                 <inertial mass="0.2625613312102709" pos="-0.010506842856503778 0.0010903954621604226 0.05573622384797682" fullinertia="0.0009967009720741648 0.0007531813812867362 0.0002698639331518912 -1.0858043584956665e-07 -3.9874960921331657e-07 -2.128365610365614e-05" />
                 <body name="L2_KneeBearingHolder" pos="-0.010613574659002003 -0.024522026587161145 -0.06243027618797111" quat="0.9999993858532673 6.286062813046965e-16 4.5145889257946756e-18 -0.0011082838480557962">
                   <geom mesh="KneeBearingHolder_visual" name="L2_KneeBearingHolder_KneeBearingHolder_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="KneeBearingHolder_mat" />
-                  <geom mesh="KneeBearingHolder_collision00" name="L2_KneeBearingHolder_KneeBearingHolder_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-                  <geom mesh="KneeBearingHolder_collision01" name="L2_KneeBearingHolder_KneeBearingHolder_collision01_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
+                  <geom mesh="KneeBearingHolder_collision00" name="L2_KneeBearingHolder_KneeBearingHolder_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="128" conaffinity="892" />
+                  <geom mesh="KneeBearingHolder_collision01" name="L2_KneeBearingHolder_KneeBearingHolder_collision01_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="128" conaffinity="892" />
                   <inertial mass="0.030766427272674" pos="5.851125061481144e-07 0.024430826058459077 0.2775757234448875" fullinertia="3.7979959271188765e-06 8.204908981357741e-06 7.807441147093981e-06 -7.2430444757143114e-09 -1.0149966616394967e-08 7.976693226196214e-08" />
                 </body>
                 <body name="L2_TibiaMotorSpacer" pos="-8.881784197001253e-18 0.0 0.0" quat="1.0 -9.860761315262648e-32 -3.851859888774472e-34 -8.68417940953005e-23">
@@ -485,7 +485,7 @@
                   <inertial mass="0.019276186165043827" pos="0.0011206386667055295 0.0004476961684958903 0.030465747692158356" fullinertia="3.30522837267386e-05 8.755427749823502e-06 2.4304084546726773e-05 1.279154325266493e-19 5.846405970037537e-20 -2.660784603174844e-07" />
                   <body name="L2_Tibia-assembly_Motor" pos="-0.024258722666588434 -1.652011860642233e-14 0.05000004724033181" quat="-2.311592369564767e-16 7.204633130177835e-16 0.38268343236509034 0.9238795325112871">
                     <geom mesh="Motor_visual" name="L2_Tibia-assembly_Motor_Motor_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Motor_mat" />
-                    <geom mesh="Motor_collision00" name="L2_Tibia-assembly_Motor_Motor_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
+                    <geom mesh="Motor_collision00" name="L2_Tibia-assembly_Motor_Motor_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="128" conaffinity="892" />
                     <inertial mass="0.4096463210987154" pos="-0.0356982072965179 0.0004701695089032376 -5.8919827464928795e-06" fullinertia="0.00040252200231273604 0.00022651206716562026 0.0002329781421120595 1.536956997164787e-06 -5.181750872240387e-08 -2.6262635188117125e-08" />
                     <body name="L2_MotorPulley" pos="-0.007129361333247984 -0.03304157594374695 -0.019714907448652355" quat="3.1387159608025357e-16 2.1394917521760815e-15 0.707106781186559 0.7071067811865585">
                       <geom mesh="MotorPulley_visual" name="L2_MotorPulley_MotorPulley_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="MotorPulley_mat" />
@@ -496,11 +496,11 @@
                 <body name="L2_Tibia" pos="-8.881784197001253e-18 0.0 0.0" quat="1.0 -9.860761315262648e-32 -3.851859888774472e-34 -8.68417940953005e-23">
                   <joint type="hinge" name="L2_Tibia" axis="-1.0000000000019427 3.413175476775535e-07 7.636253041512052e-18" pos="-0.018629604126854545 4.6190447564629197e-07 0.21500000000004219" range="-0.20944 2.268928" limited="true" />
                   <geom mesh="Tibia_visual" name="L2_Tibia_Tibia_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Tibia_mat" />
-                  <geom mesh="Tibia_collision00" name="L2_Tibia_Tibia_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
+                  <geom mesh="Tibia_collision00" name="L2_Tibia_Tibia_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="128" conaffinity="892" />
                   <inertial mass="0.07204696639616184" pos="-0.01012936133329434 -0.04484809885513425 0.13119768648645866" fullinertia="0.0005149405353785763 0.0004336853473697275 8.649060090030374e-05 2.5709152087012994e-19 6.763955331078848e-19 -0.00017184764215891622" />
                   <body name="L2_Foot" pos="-8.881784197001253e-18 0.0 0.0" quat="1.0 -9.860761315262648e-32 -3.851859888774472e-34 -8.68417940953005e-23">
                     <geom mesh="Foot_visual" name="L2_Foot_Foot_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Foot_mat" />
-                    <geom mesh="Foot_collision00" name="L2_Foot_Foot_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" friction="2.0 0.1 0.01" />
+                    <geom mesh="Foot_collision00" name="L2_Foot_Foot_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" friction="2.0 0.1 0.01" contype="128" conaffinity="892" />
                     <inertial mass="0.005146513107453826" pos="-0.010129361333294206 -0.08110000675989389 -0.022412814246315374" fullinertia="4.2698864794149274e-07 3.4815602048974686e-07 1.8072599646261518e-07 -7.829675487079343e-21 -1.1553984596443082e-22 7.873493968100026e-10" />
                   </body>
                   <body name="L2_KneePulley" pos="-0.015129361333294407 -0.01971490744867147 0.18195842405632348" quat="1.0 -9.860761315262648e-32 8.048094238933797e-20 1.7906682212328104e-15">
@@ -570,7 +570,7 @@
         </body>
         <body name="R3_Hip-assembly_Motor" pos="-7.638334409421077e-16 0.12822234157639406 0.0760509148547199" quat="-5.410679340968121e-14 0.7071067811865551 -5.40257969713053e-14 -0.7071067811865398">
           <geom mesh="Motor_visual" name="R3_Hip-assembly_Motor_Motor_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Motor_mat" />
-          <geom mesh="Motor_collision00" name="R3_Hip-assembly_Motor_Motor_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
+          <geom mesh="Motor_collision00" name="R3_Hip-assembly_Motor_Motor_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="2" conaffinity="0" />
           <inertial mass="0.4096463210987154" pos="-0.03569820729651782 0.00047016950890323866 -5.891982746489791e-06" fullinertia="0.00040252200231273105 0.00022651206716561422 0.00023297814211205485 1.536956997165468e-06 -5.181750872293263e-08 -2.6262635186531482e-08" />
           <body name="R3_Hip" pos="0.013620638666749408 0.10367684953742172 -0.010559193887263013" quat="0.0007836750244969087 0.7071063469192364 -0.0007836750244923422 -0.7071063469192203">
             <joint type="hinge" name="R3_Hip" axis="-3.279028911242151e-14 -6.597657902684095e-15 1.0" pos="-0.010329361332246165 0.1037004424712559 0.03425000000004337" range="-0.9 0.4" limited="true" />
@@ -582,17 +582,17 @@
             </body>
             <body name="R3_Femur-assembly_Motor" pos="0.0 -7.105427357601002e-17 0.05000000000000027" quat="-6.123233995736733e-17 1.0 -1.1083800349897583e-15 -2.791398281316788e-29">
               <geom mesh="Motor_visual" name="R3_Femur-assembly_Motor_Motor_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Motor_mat" />
-              <geom mesh="Motor_collision00" name="R3_Femur-assembly_Motor_Motor_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
+              <geom mesh="Motor_collision00" name="R3_Femur-assembly_Motor_Motor_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="16" conaffinity="1004" />
               <inertial mass="0.4096463210987154" pos="-0.03569820729651777 0.00047016950890322467 -5.891982746491962e-06" fullinertia="0.0004025220023127272 0.00022651206716561888 0.0002329781421120602 1.5369569971667298e-06 -5.181750872276361e-08 -2.626263518727929e-08" />
               <body name="R3_Femur" pos="-8.881784197001253e-18 -1.7763568394002506e-16 0.04999999999999989" quat="-2.609024107869116e-15 0.9999999999999999 -1.0868967441812355e-19 -4.850097747885527e-31">
                 <joint type="hinge" name="R3_Femur" axis="-1.0000000000019418 3.413175476775553e-07 -3.279028868339958e-14" pos="-0.02062960412684837 4.66587110865809e-07 0.050000000000042004" range="-1.570796 0.0" limited="true" />
                 <geom mesh="Femur_visual" name="R3_Femur_Femur_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Femur_mat" />
-                <geom mesh="Femur_collision00" name="R3_Femur_Femur_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
+                <geom mesh="Femur_collision00" name="R3_Femur_Femur_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="16" conaffinity="1004" />
                 <inertial mass="0.2625613312102709" pos="-0.01050684285650376 0.0010903954621603507 0.05573622384797683" fullinertia="0.0009967009720741522 0.0007531813812867321 0.0002698639331518842 -1.0858043584886836e-07 -3.9874960921332996e-07 -2.128365610365612e-05" />
                 <body name="R3_KneeBearingHolder" pos="-0.010613574659002003 -0.024522026587161214 -0.062430276187971104" quat="0.9999993858532673 6.286062813046965e-16 4.514588925796346e-18 -0.0011082838480557962">
                   <geom mesh="KneeBearingHolder_visual" name="R3_KneeBearingHolder_KneeBearingHolder_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="KneeBearingHolder_mat" />
-                  <geom mesh="KneeBearingHolder_collision00" name="R3_KneeBearingHolder_KneeBearingHolder_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-                  <geom mesh="KneeBearingHolder_collision01" name="R3_KneeBearingHolder_KneeBearingHolder_collision01_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
+                  <geom mesh="KneeBearingHolder_collision00" name="R3_KneeBearingHolder_KneeBearingHolder_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="16" conaffinity="1004" />
+                  <geom mesh="KneeBearingHolder_collision01" name="R3_KneeBearingHolder_KneeBearingHolder_collision01_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="16" conaffinity="1004" />
                   <inertial mass="0.030766427272674" pos="5.851125061657258e-07 0.024430826058459094 0.27757572344488746" fullinertia="3.797995927117571e-06 8.204908981355124e-06 7.807441147094198e-06 -7.243044475985081e-09 -1.014996661636431e-08 7.976693226217906e-08" />
                 </body>
                 <body name="R3_TibiaMotorSpacer" pos="-8.881784197001253e-18 -3.552713678800501e-17 0.0" quat="1.0 0.0 0.0 1.0587911840678754e-22">
@@ -600,7 +600,7 @@
                   <inertial mass="0.019276186165043827" pos="0.0011206386667055243 0.00044769616849588985 0.03046574769215836" fullinertia="3.3052283726738326e-05 8.755427749823475e-06 2.4304084546726556e-05 1.0953760778179557e-19 6.756003253036905e-20 -2.660784603174842e-07" />
                   <body name="R3_Tibia-assembly_Motor" pos="-0.024258722666588416 -1.6555645743210335e-14 0.05000004724033181" quat="-2.3121814449320866e-16 7.204045754266408e-16 0.38268343236509034 0.9238795325112871">
                     <geom mesh="Motor_visual" name="R3_Tibia-assembly_Motor_Motor_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Motor_mat" />
-                    <geom mesh="Motor_collision00" name="R3_Tibia-assembly_Motor_Motor_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
+                    <geom mesh="Motor_collision00" name="R3_Tibia-assembly_Motor_Motor_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="16" conaffinity="1004" />
                     <inertial mass="0.4096463210987154" pos="-0.035698207296517834 0.0004701695089032614 -5.891982746518933e-06" fullinertia="0.0004025220023127251 0.00022651206716561793 0.00023297814211205723 1.536956997164727e-06 -5.181750872231058e-08 -2.6262635189359805e-08" />
                     <body name="R3_MotorPulley" pos="-0.0071293613332479655 -0.03304157594374694 -0.01971490744865232" quat="3.1387161963061195e-16 2.1394919112663127e-15 0.7071067811865591 0.7071067811865583">
                       <geom mesh="MotorPulley_visual" name="R3_MotorPulley_MotorPulley_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="MotorPulley_mat" />
@@ -611,11 +611,11 @@
                 <body name="R3_Tibia" pos="-8.881784197001253e-18 -3.552713678800501e-17 0.0" quat="1.0 0.0 0.0 1.0587911840678754e-22">
                   <joint type="hinge" name="R3_Tibia" axis="-1.0000000000019418 3.413175476775553e-07 -3.279028868339958e-14" pos="-0.018629604126859274 4.6190447556303594e-07 0.21500000000004205" range="-0.20944 2.268928" limited="true" />
                   <geom mesh="Tibia_visual" name="R3_Tibia_Tibia_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Tibia_mat" />
-                  <geom mesh="Tibia_collision00" name="R3_Tibia_Tibia_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
+                  <geom mesh="Tibia_collision00" name="R3_Tibia_Tibia_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="16" conaffinity="1004" />
                   <inertial mass="0.07204696639616184" pos="-0.010129361333294317 -0.044848098855134216 0.13119768648645866" fullinertia="0.0005149405353785728 0.0004336853473697239 8.64906009003046e-05 4.723257405651843e-19 7.424564955472755e-19 -0.00017184764215891584" />
                   <body name="R3_Foot" pos="-8.881784197001253e-18 -3.552713678800501e-17 0.0" quat="1.0 0.0 0.0 1.0587911840678754e-22">
                     <geom mesh="Foot_visual" name="R3_Foot_Foot_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Foot_mat" />
-                    <geom mesh="Foot_collision00" name="R3_Foot_Foot_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" friction="2.0 0.1 0.01" />
+                    <geom mesh="Foot_collision00" name="R3_Foot_Foot_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" friction="2.0 0.1 0.01" contype="16" conaffinity="1004" />
                     <inertial mass="0.005146513107453826" pos="-0.0101293613332942 -0.08110000675989375 -0.022412814246315384" fullinertia="4.269886479416004e-07 3.481560204897598e-07 1.807259964627236e-07 5.696805900840738e-21 1.1851005354099225e-21 7.873493968100018e-10" />
                   </body>
                   <body name="R3_KneePulley" pos="-0.015129361333294407 -0.01971490744867154 0.18195842405632345" quat="1.0 -9.860761315262648e-32 8.048094239187982e-20 1.7908852543882205e-15">
@@ -685,7 +685,7 @@
         </body>
         <body name="L3_Hip-assembly_Motor" pos="-7.727152251391089e-16 0.128222341576394 0.0760509148547199" quat="-5.410689508901716e-14 0.7071067811865551 -5.4025678905032424e-14 -0.7071067811865398">
           <geom mesh="Motor_visual" name="L3_Hip-assembly_Motor_Motor_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Motor_mat" />
-          <geom mesh="Motor_collision00" name="L3_Hip-assembly_Motor_Motor_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
+          <geom mesh="Motor_collision00" name="L3_Hip-assembly_Motor_Motor_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="2" conaffinity="0" />
           <inertial mass="0.4096463210987154" pos="-0.03569820729651782 0.00047016950890323963 -5.891982746488234e-06" fullinertia="0.00040252200231273105 0.0002265120671656182 0.0002329781421120593 1.5369569971652557e-06 -5.1817508722901e-08 -2.6262635187347635e-08" />
           <body name="L3_Hip" pos="0.013620638666749408 0.1036768495374217 -0.010559193887263021" quat="0.0007836750244969086 0.7071063469192364 -0.0007836750244923422 -0.7071063469192203">
             <joint type="hinge" name="L3_Hip" axis="7.635823929680056e-18 -6.597734693041349e-15 1.0" pos="-0.01032936133224746 0.10370044247125626 0.03425000000004324" range="-0.4 0.9" limited="true" />
@@ -697,17 +697,17 @@
             </body>
             <body name="L3_Femur-assembly_Motor" pos="1.7763568394002505e-17 -1.0658141036401502e-16 0.05000000000000029" quat="-6.123233995736733e-17 1.0 -1.1083799873964495e-15 -2.902576756663615e-29">
               <geom mesh="Motor_visual" name="L3_Femur-assembly_Motor_Motor_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Motor_mat" />
-              <geom mesh="Motor_collision00" name="L3_Femur-assembly_Motor_Motor_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
+              <geom mesh="Motor_collision00" name="L3_Femur-assembly_Motor_Motor_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="256" conaffinity="764" />
               <inertial mass="0.4096463210987154" pos="-0.03569820729651792 0.0004701695089032612 -5.891982746490394e-06" fullinertia="0.0004025220023127256 0.00022651206716562075 0.0002329781421120463 1.536956997167605e-06 -5.181750872278669e-08 -2.6262635186795274e-08" />
               <body name="L3_Femur" pos="0.0 -1.7763568394002506e-16 0.04999999999999989" quat="-2.609024107869116e-15 0.9999999999999999 -1.087372676861165e-19 8.477467538666133e-34">
                 <joint type="hinge" name="L3_Femur" axis="-1.000000000001944 3.4131754767755085e-07 7.636253041512064e-18" pos="-0.02062960412684919 4.665871110601008e-07 0.05000000000004219" range="-1.570796 0.0" limited="true" />
                 <geom mesh="Femur_visual" name="L3_Femur_Femur_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Femur_mat" />
-                <geom mesh="Femur_collision00" name="L3_Femur_Femur_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
+                <geom mesh="Femur_collision00" name="L3_Femur_Femur_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="256" conaffinity="764" />
                 <inertial mass="0.2625613312102709" pos="-0.0105068428565038 0.0010903954621603888 0.05573622384797682" fullinertia="0.000996700972074169 0.0007531813812867422 0.000269863933151886 -1.0858043584956691e-07 -3.987496092132087e-07 -2.128365610365595e-05" />
                 <body name="L3_KneeBearingHolder" pos="-0.010613574659001994 -0.02452202658716118 -0.06243027618797111" quat="0.9999993858532673 6.286062813046965e-16 4.514588925794676e-18 -0.0011082838480557962">
                   <geom mesh="KneeBearingHolder_visual" name="L3_KneeBearingHolder_KneeBearingHolder_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="KneeBearingHolder_mat" />
-                  <geom mesh="KneeBearingHolder_collision00" name="L3_KneeBearingHolder_KneeBearingHolder_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-                  <geom mesh="KneeBearingHolder_collision01" name="L3_KneeBearingHolder_KneeBearingHolder_collision01_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
+                  <geom mesh="KneeBearingHolder_collision00" name="L3_KneeBearingHolder_KneeBearingHolder_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="256" conaffinity="764" />
+                  <geom mesh="KneeBearingHolder_collision01" name="L3_KneeBearingHolder_KneeBearingHolder_collision01_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="256" conaffinity="764" />
                   <inertial mass="0.030766427272674" pos="5.851125061124361e-07 0.02443082605845918 0.2775757234448875" fullinertia="3.7979959271227898e-06 8.204908981361885e-06 7.807441147094198e-06 -7.243044475660598e-09 -1.014996661644919e-08 7.976693226196212e-08" />
                 </body>
                 <body name="L3_TibiaMotorSpacer" pos="0.0 -3.552713678800501e-17 0.0" quat="1.0 -4.930380657631324e-32 3.851859888774472e-34 1.534724291847834e-22">
@@ -715,7 +715,7 @@
                   <inertial mass="0.019276186165043827" pos="0.00112063866670554 0.0004476961684958909 0.030465747692158356" fullinertia="3.305228372673891e-05 8.755427749823661e-06 2.430408454672699e-05 7.370519435669419e-20 5.168786039167376e-20 -2.6607846031745766e-07" />
                   <body name="L3_Tibia-assembly_Motor" pos="-0.024258722666588427 -1.6555645743210335e-14 0.05000004724033181" quat="-2.3127682376724367e-16 7.20404475561523e-16 0.38268343236509034 0.9238795325112871">
                     <geom mesh="Motor_visual" name="L3_Tibia-assembly_Motor_Motor_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Motor_mat" />
-                    <geom mesh="Motor_collision00" name="L3_Tibia-assembly_Motor_Motor_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
+                    <geom mesh="Motor_collision00" name="L3_Tibia-assembly_Motor_Motor_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="256" conaffinity="764" />
                     <inertial mass="0.4096463210987154" pos="-0.03569820729651798 0.0004701695089032128 -5.891982746468078e-06" fullinertia="0.00040252200231274406 0.00022651206716562468 0.0002329781421120635 1.536956997167703e-06 -5.181750872562474e-08 -2.6262635185386863e-08" />
                     <body name="L3_MotorPulley" pos="-0.0071293613332479655 -0.03304157594374694 -0.01971490744865232" quat="3.138715160894413e-16 2.1394919053352833e-15 0.7071067811865591 0.7071067811865583">
                       <geom mesh="MotorPulley_visual" name="L3_MotorPulley_MotorPulley_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="MotorPulley_mat" />
@@ -726,11 +726,11 @@
                 <body name="L3_Tibia" pos="0.0 -3.552713678800501e-17 0.0" quat="1.0 -4.930380657631324e-32 3.851859888774472e-34 1.534724291847834e-22">
                   <joint type="hinge" name="L3_Tibia" axis="-1.000000000001944 3.4131754767755085e-07 7.636253041512064e-18" pos="-0.018629604126854667 4.6190447575731507e-07 0.21500000000004219" range="-0.20944 2.268928" limited="true" />
                   <geom mesh="Tibia_visual" name="L3_Tibia_Tibia_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Tibia_mat" />
-                  <geom mesh="Tibia_collision00" name="L3_Tibia_Tibia_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
+                  <geom mesh="Tibia_collision00" name="L3_Tibia_Tibia_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="256" conaffinity="764" />
                   <inertial mass="0.07204696639616184" pos="-0.010129361333294343 -0.04484809885513438 0.13119768648645866" fullinertia="0.0005149405353785839 0.0004336853473697328 8.64906009003046e-05 4.024669554840984e-20 6.763961017945555e-19 -0.00017184764215891644" />
                   <body name="L3_Foot" pos="0.0 -3.552713678800501e-17 0.0" quat="1.0 -4.930380657631324e-32 3.851859888774472e-34 1.534724291847834e-22">
                     <geom mesh="Foot_visual" name="L3_Foot_Foot_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Foot_mat" />
-                    <geom mesh="Foot_collision00" name="L3_Foot_Foot_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" friction="2.0 0.1 0.01" />
+                    <geom mesh="Foot_collision00" name="L3_Foot_Foot_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" friction="2.0 0.1 0.01" contype="256" conaffinity="764" />
                     <inertial mass="0.005146513107453826" pos="-0.01012936133329422 -0.08110000675989411 -0.022412814246315374" fullinertia="4.2698864794171075e-07 3.4815602048976136e-07 1.807259964627236e-07 -7.830151157291334e-21 -1.3667940081321234e-20 7.873493968642137e-10" />
                   </body>
                   <body name="L3_KneePulley" pos="-0.015129361333294407 -0.019714907448671503 0.18195842405632348" quat="1.0 -4.930380657631324e-32 8.048094238933874e-20 1.790885301981529e-15">
@@ -800,7 +800,7 @@
         </body>
         <body name="R4_Hip-assembly_Motor" pos="-7.105427357601002e-16 0.12822234157639403 0.0760509148547199" quat="-5.410679340968121e-14 0.7071067811865551 -5.40257969713053e-14 -0.7071067811865398">
           <geom mesh="Motor_visual" name="R4_Hip-assembly_Motor_Motor_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Motor_mat" />
-          <geom mesh="Motor_collision00" name="R4_Hip-assembly_Motor_Motor_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
+          <geom mesh="Motor_collision00" name="R4_Hip-assembly_Motor_Motor_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="2" conaffinity="0" />
           <inertial mass="0.4096463210987154" pos="-0.03569820729651782 0.00047016950890322093 -5.891982746483812e-06" fullinertia="0.0004025220023127293 0.00022651206716561118 0.00023297814211205723 1.536956997165198e-06 -5.1817508723029954e-08 -2.6262635187336604e-08" />
           <body name="R4_Hip" pos="0.013620638666749408 0.10367684953742169 -0.010559193887263021" quat="0.0007836750244969087 0.7071063469192364 -0.0007836750244923422 -0.7071063469192203">
             <joint type="hinge" name="R4_Hip" axis="-1.148288559847196e-16 -6.597734406312645e-15 1.0" pos="-0.010329361332247315 0.1037004424712559 0.03425000000004459" range="-1.4 0.3" limited="true" />
@@ -812,17 +812,17 @@
             </body>
             <body name="R4_Femur-assembly_Motor" pos="-3.552713678800501e-17 -1.0658141036401502e-16 0.05000000000000027" quat="-6.123233995736772e-17 1.0 -1.108380034989759e-15 -2.9033356485289977e-29">
               <geom mesh="Motor_visual" name="R4_Femur-assembly_Motor_Motor_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Motor_mat" />
-              <geom mesh="Motor_collision00" name="R4_Femur-assembly_Motor_Motor_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
+              <geom mesh="Motor_collision00" name="R4_Femur-assembly_Motor_Motor_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="32" conaffinity="988" />
               <inertial mass="0.4096463210987154" pos="-0.03569820729651782 0.00047016950890324245 -5.891982746492683e-06" fullinertia="0.0004025220023127307 0.00022651206716560977 0.00023297814211205325 1.5369569971597917e-06 -5.181750872307838e-08 -2.6262635187012243e-08" />
               <body name="R4_Femur" pos="-3.552713678800501e-17 -2.1316282072803005e-16 0.04999999999999989" quat="-2.609024107869116e-15 0.9999999999999999 -1.08689674375498e-19 1.1903339307591588e-32">
                 <joint type="hinge" name="R4_Femur" axis="-1.0000000000019418 3.413175476775553e-07 -1.1482842687322328e-16" pos="-0.020629604126849013 4.665871108935661e-07 0.050000000000043565" range="-1.570796 0.0" limited="true" />
                 <geom mesh="Femur_visual" name="R4_Femur_Femur_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Femur_mat" />
-                <geom mesh="Femur_collision00" name="R4_Femur_Femur_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
+                <geom mesh="Femur_collision00" name="R4_Femur_Femur_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="32" conaffinity="988" />
                 <inertial mass="0.2625613312102709" pos="-0.010506842856503731 0.0010903954621603862 0.05573622384797683" fullinertia="0.0009967009720741548 0.0007531813812867345 0.00026986393315188775 -1.0858043585043118e-07 -3.987496092134441e-07 -2.128365610365601e-05" />
                 <body name="R4_KneeBearingHolder" pos="-0.010613574659002048 -0.02452202658716118 -0.062430276187971104" quat="0.9999993858532673 6.286062813046965e-16 4.514588925794682e-18 -0.0011082838480557962">
                   <geom mesh="KneeBearingHolder_visual" name="R4_KneeBearingHolder_KneeBearingHolder_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="KneeBearingHolder_mat" />
-                  <geom mesh="KneeBearingHolder_collision00" name="R4_KneeBearingHolder_KneeBearingHolder_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-                  <geom mesh="KneeBearingHolder_collision01" name="R4_KneeBearingHolder_KneeBearingHolder_collision01_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
+                  <geom mesh="KneeBearingHolder_collision00" name="R4_KneeBearingHolder_KneeBearingHolder_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="32" conaffinity="988" />
+                  <geom mesh="KneeBearingHolder_collision01" name="R4_KneeBearingHolder_KneeBearingHolder_collision01_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="32" conaffinity="988" />
                   <inertial mass="0.030766427272674" pos="5.851125062295944e-07 0.024430826058459056 0.2775757234448875" fullinertia="3.79799592711692e-06 8.20490898135534e-06 7.807441147094415e-06 -7.243044475984395e-09 -1.014996661612416e-08 7.976693226185425e-08" />
                 </body>
                 <body name="R4_TibiaMotorSpacer" pos="-3.552713678800501e-17 1.7763568394002505e-17 0.0" quat="1.0 0.0 6.162975822039155e-33 1.0587911840678754e-22">
@@ -830,7 +830,7 @@
                   <inertial mass="0.019276186165043827" pos="0.0011206386667055072 0.00044769616849588985 0.030465747692158356" fullinertia="3.3052283726738435e-05 8.755427749823299e-06 2.4304084546726556e-05 1.821578617091569e-19 2.5654054986970374e-20 -2.6607846031749774e-07" />
                   <body name="R4_Tibia-assembly_Motor" pos="-0.024258722666588427 -1.6537882174816333e-14 0.05000004724033181" quat="-2.3121815833889014e-16 7.204045892723024e-16 0.38268343236509034 0.9238795325112871">
                     <geom mesh="Motor_visual" name="R4_Tibia-assembly_Motor_Motor_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Motor_mat" />
-                    <geom mesh="Motor_collision00" name="R4_Tibia-assembly_Motor_Motor_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
+                    <geom mesh="Motor_collision00" name="R4_Tibia-assembly_Motor_Motor_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="32" conaffinity="988" />
                     <inertial mass="0.4096463210987154" pos="-0.03569820729651782 0.0004701695089032373 -5.891982746492715e-06" fullinertia="0.0004025220023127319 0.000226512067165619 0.0002329781421120582 1.5369569971651528e-06 -5.181750872326084e-08 -2.6262635190302867e-08" />
                     <body name="R4_MotorPulley" pos="-0.007129361333247992 -0.033041575943746924 -0.01971490744865232" quat="3.138716760041602e-16 2.1394917792184385e-15 0.7071067811865591 0.7071067811865583">
                       <geom mesh="MotorPulley_visual" name="R4_MotorPulley_MotorPulley_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="MotorPulley_mat" />
@@ -841,11 +841,11 @@
                 <body name="R4_Tibia" pos="-3.552713678800501e-17 1.7763568394002505e-17 0.0" quat="1.0 0.0 6.162975822039155e-33 1.0587911840678754e-22">
                   <joint type="hinge" name="R4_Tibia" axis="-1.0000000000019418 3.413175476775553e-07 -1.1482842687322328e-16" pos="-0.01862960412685451 4.619044755907804e-07 0.21500000000004355" range="-0.20944 2.268928" limited="true" />
                   <geom mesh="Tibia_visual" name="R4_Tibia_Tibia_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Tibia_mat" />
-                  <geom mesh="Tibia_collision00" name="R4_Tibia_Tibia_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
+                  <geom mesh="Tibia_collision00" name="R4_Tibia_Tibia_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="32" conaffinity="988" />
                   <inertial mass="0.07204696639616184" pos="-0.010129361333294312 -0.044848098855134196 0.13119768648645866" fullinertia="0.0005149405353785737 0.000433685347369725 8.64906009003046e-05 9.286577098619601e-19 7.288652070003825e-19 -0.00017184764215891606" />
                   <body name="R4_Foot" pos="-3.552713678800501e-17 1.7763568394002505e-17 0.0" quat="1.0 0.0 6.162975822039155e-33 1.0587911840678754e-22">
                     <geom mesh="Foot_visual" name="R4_Foot_Foot_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Foot_mat" />
-                    <geom mesh="Foot_collision00" name="R4_Foot_Foot_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" friction="2.0 0.1 0.01" />
+                    <geom mesh="Foot_collision00" name="R4_Foot_Foot_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" friction="2.0 0.1 0.01" contype="32" conaffinity="988" />
                     <inertial mass="0.005146513107453826" pos="-0.010129361333294177 -0.08110000675989372 -0.022412814246315377" fullinertia="4.269886479416004e-07 3.4815602048977333e-07 1.8072599646283202e-07 -2.1382489691908266e-20 -6.861613214863263e-21 7.873493968235544e-10" />
                   </body>
                   <body name="R4_KneePulley" pos="-0.015129361333294398 -0.019714907448671503 0.18195842405632348" quat="1.0 0.0 8.048094238934683e-20 1.7908852543882205e-15">
@@ -911,7 +911,7 @@
         </body>
         <body name="L4_Hip-assembly_Motor" pos="-7.815970093361102e-16 0.128222341576394 0.0760509148547199" quat="-5.41066294262033e-14 0.7071067811865551 -5.4025719900901884e-14 -0.7071067811865398">
           <geom mesh="Motor_visual" name="L4_Hip-assembly_Motor_Motor_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Motor_mat" />
-          <geom mesh="Motor_collision00" name="L4_Hip-assembly_Motor_Motor_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
+          <geom mesh="Motor_collision00" name="L4_Hip-assembly_Motor_Motor_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="2" conaffinity="0" />
           <inertial mass="0.4096463210987154" pos="-0.03569820729651782 0.0004701695089032218 -5.891982746452666e-06" fullinertia="0.00040252200231273973 0.0002265120671656293 0.00023297814211206062 1.5369569971652015e-06 -5.18175087225756e-08 -2.6262635185634425e-08" />
           <body name="L4_Hip" pos="0.013620638666749408 0.1036768495374217 -0.010559193887263021" quat="0.0007836750244969087 0.7071063469192364 -0.0007836750244923422 -0.7071063469192203">
             <joint type="hinge" name="L4_Hip" axis="7.635823929680056e-18 -6.597734693041348e-15 1.0" pos="-0.010329361332247496 0.10370044247125616 0.03425000000004324" range="-0.3 1.4" limited="true" />
@@ -923,17 +923,17 @@
             </body>
             <body name="L4_Femur-assembly_Motor" pos="3.552713678800501e-17 -1.0658141036401502e-16 0.05000000000000029" quat="-6.123233995736752e-17 1.0 -1.1083802086733482e-15 -2.9026537938613904e-29">
               <geom mesh="Motor_visual" name="L4_Femur-assembly_Motor_Motor_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Motor_mat" />
-              <geom mesh="Motor_collision00" name="L4_Femur-assembly_Motor_Motor_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
+              <geom mesh="Motor_collision00" name="L4_Femur-assembly_Motor_Motor_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="512" conaffinity="508" />
               <inertial mass="0.4096463210987154" pos="-0.03569820729651792 0.00047016950890324327 -5.891982746490394e-06" fullinertia="0.0004025220023127338 0.0002265120671656262 0.0002329781421120706 1.5369569971632665e-06 -5.1817508723057714e-08 -2.626263518679526e-08" />
               <body name="L4_Femur" pos="0.0 -1.9539925233402755e-16 0.049999999999999906" quat="-2.609024107869116e-15 0.9999999999999999 -1.0872774902396086e-19 4.62560764989166e-34">
                 <joint type="hinge" name="L4_Femur" axis="-1.0000000000019436 3.4131754767755175e-07 7.636253041512061e-18" pos="-0.02062960412684921 4.6658711100458954e-07 0.05000000000004219" range="-1.570796 0.0" limited="true" />
                 <geom mesh="Femur_visual" name="L4_Femur_Femur_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Femur_mat" />
-                <geom mesh="Femur_collision00" name="L4_Femur_Femur_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
+                <geom mesh="Femur_collision00" name="L4_Femur_Femur_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="512" conaffinity="508" />
                 <inertial mass="0.2625613312102709" pos="-0.01050684285650378 0.0010903954621603704 0.05573622384797682" fullinertia="0.000996700972074163 0.0007531813812867407 0.0002698639331518808 -1.0858043585043418e-07 -3.9874960921331694e-07 -2.1283656103655725e-05" />
                 <body name="L4_KneeBearingHolder" pos="-0.010613574659002012 -0.024522026587161214 -0.06243027618797111" quat="0.9999993858532673 6.286062813046965e-16 4.514588925794676e-18 -0.0011082838480557962">
                   <geom mesh="KneeBearingHolder_visual" name="L4_KneeBearingHolder_KneeBearingHolder_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="KneeBearingHolder_mat" />
-                  <geom mesh="KneeBearingHolder_collision00" name="L4_KneeBearingHolder_KneeBearingHolder_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
-                  <geom mesh="KneeBearingHolder_collision01" name="L4_KneeBearingHolder_KneeBearingHolder_collision01_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
+                  <geom mesh="KneeBearingHolder_collision00" name="L4_KneeBearingHolder_KneeBearingHolder_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="512" conaffinity="508" />
+                  <geom mesh="KneeBearingHolder_collision01" name="L4_KneeBearingHolder_KneeBearingHolder_collision01_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="512" conaffinity="508" />
                   <inertial mass="0.030766427272674" pos="5.851125061213907e-07 0.024430826058459136 0.2775757234448875" fullinertia="3.7979959271217026e-06 8.204908981359706e-06 7.807441147094415e-06 -7.2430444757666116e-09 -1.0149966616556886e-08 7.976693226163659e-08" />
                 </body>
                 <body name="L4_TibiaMotorSpacer" pos="0.0 0.0 0.0" quat="1.0 0.0 0.0 -6.780446978410178e-23">
@@ -941,7 +941,7 @@
                   <inertial mass="0.019276186165043827" pos="0.0011206386667055128 0.00044769616849589067 0.030465747692158356" fullinertia="3.305228372673876e-05 8.755427749823763e-06 2.4304084546726773e-05 7.37056899030345e-20 5.1687733165672586e-20 -2.6607846031751177e-07" />
                   <body name="L4_Tibia-assembly_Motor" pos="-0.024258722666588427 -1.6573409311604337e-14 0.0500000472403318" quat="-2.3121791107923096e-16 7.204633257967069e-16 0.38268343236509034 0.9238795325112871">
                     <geom mesh="Motor_visual" name="L4_Tibia-assembly_Motor_Motor_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Motor_mat" />
-                    <geom mesh="Motor_collision00" name="L4_Tibia-assembly_Motor_Motor_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
+                    <geom mesh="Motor_collision00" name="L4_Tibia-assembly_Motor_Motor_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="512" conaffinity="508" />
                     <inertial mass="0.4096463210987154" pos="-0.03569820729651799 0.00047016950890323785 -5.891982746493096e-06" fullinertia="0.00040252200231273507 0.00022651206716561072 0.00023297814211204997 1.5369569971610324e-06 -5.1817508717574916e-08 -2.626263518552822e-08" />
                     <body name="L4_MotorPulley" pos="-0.007129361333247957 -0.033041575943746924 -0.019714907448652303" quat="3.1387168197108543e-16 2.1394918128630855e-15 0.7071067811865591 0.7071067811865583">
                       <geom mesh="MotorPulley_visual" name="L4_MotorPulley_MotorPulley_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="MotorPulley_mat" />
@@ -952,11 +952,11 @@
                 <body name="L4_Tibia" pos="0.0 0.0 0.0" quat="1.0 0.0 0.0 -6.780446978410178e-23">
                   <joint type="hinge" name="L4_Tibia" axis="-1.0000000000019436 3.4131754767755175e-07 7.636253041512061e-18" pos="-0.018629604126854715 4.6190447570180386e-07 0.21500000000004219" range="-0.20944 2.268928" limited="true" />
                   <geom mesh="Tibia_visual" name="L4_Tibia_Tibia_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Tibia_mat" />
-                  <geom mesh="Tibia_collision00" name="L4_Tibia_Tibia_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" />
+                  <geom mesh="Tibia_collision00" name="L4_Tibia_Tibia_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="512" conaffinity="508" />
                   <inertial mass="0.07204696639616184" pos="-0.010129361333294314 -0.04484809885513436 0.13119768648645866" fullinertia="0.0005149405353785811 0.0004336853473697304 8.6490600900302e-05 -3.9343367488024753e-19 6.763953873070874e-19 -0.00017184764215891657" />
                   <body name="L4_Foot" pos="0.0 0.0 0.0" quat="1.0 0.0 0.0 -6.780446978410178e-23">
                     <geom mesh="Foot_visual" name="L4_Foot_Foot_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Foot_mat" />
-                    <geom mesh="Foot_collision00" name="L4_Foot_Foot_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" friction="2.0 0.1 0.01" />
+                    <geom mesh="Foot_collision00" name="L4_Foot_Foot_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" friction="2.0 0.1 0.01" contype="512" conaffinity="508" />
                     <inertial mass="0.005146513107453826" pos="-0.010129361333294232 -0.08110000675989398 -0.022412814246315374" fullinertia="4.269886479416019e-07 3.481560204896662e-07 1.8072599646250676e-07 -2.1382646647491848e-20 6.660787192031524e-21 7.873493968371082e-10" />
                   </body>
                   <body name="L4_KneePulley" pos="-0.015129361333294433 -0.019714907448671503 0.18195842405632348" quat="1.0 -9.860761315262648e-32 8.048094238933874e-20 1.7908850807046306e-15">
