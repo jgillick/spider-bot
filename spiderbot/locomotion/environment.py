@@ -44,7 +44,7 @@ RANDOM_POSE_PROBABILITY_MAX = 0.8
 # It starts small and grows with the curriculum, so the policy learns to walk before it
 # learns to save power (too strong too early and lying still wins).
 ENERGY_WEIGHT_START = -2e-05
-ENERGY_WEIGHT_INC = -2e-05
+ENERGY_WEIGHT_INC = -5e-06
 ENERGY_WEIGHT_MAX = -2e-04
 
 
@@ -73,10 +73,10 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
         self.curriculum_ep_length_samples = []
         self.next_curriculum_check_step = CURRICULUM_CHECK_EVERY_STEPS
 
-        self.max_velocity_x = 1.5
+        self.max_velocity_x = 1.0
         self.max_velocity_y = 1.0
         self.max_velocity_z = 1.0
-        self.velocity_inc = 0.0125
+        self.velocity_inc = 0.025
         if terrain == "flat":
             self.max_velocity_x = 1.2
             self.max_velocity_y = 1.0
@@ -162,17 +162,16 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
             self,
             joint_names=".*",
             default_pos={
-                ".*": NoisyValue(0.0, 0.1),
-                # "R1_Hip": NoisyValue(0.9, 0.1),
-                # "R2_Hip": NoisyValue(0.2, 0.1),
-                # "R3_Hip": NoisyValue(-0.2, 0.1),
-                # "R4_Hip": NoisyValue(-0.9, 0.1),
-                # "L1_Hip": NoisyValue(-0.9, 0.1),
-                # "L2_Hip": NoisyValue(-0.2, 0.1),
-                # "L3_Hip": NoisyValue(0.2, 0.1),
-                # "L4_Hip": NoisyValue(0.9, 0.1),
-                # "[RL][1-4]_Femur": NoisyValue(-0.4, 0.1),
-                # "[RL][1-4]_Tibia": NoisyValue(0.5, 0.1),
+                "R1_Hip": NoisyValue(0.9, 0.1),
+                "R2_Hip": NoisyValue(0.2, 0.1),
+                "R3_Hip": NoisyValue(-0.2, 0.1),
+                "R4_Hip": NoisyValue(-0.9, 0.1),
+                "L1_Hip": NoisyValue(-0.9, 0.1),
+                "L2_Hip": NoisyValue(-0.2, 0.1),
+                "L3_Hip": NoisyValue(0.2, 0.1),
+                "L4_Hip": NoisyValue(0.9, 0.1),
+                "[RL][1-4]_Femur": NoisyValue(-0.4, 0.1),
+                "[RL][1-4]_Tibia": NoisyValue(0.5, 0.1),
             },
             kp=NoisyValue(30, 5),
             kv=NoisyValue(2.0, 0.5),
@@ -709,5 +708,5 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
         Select the terrain type for the environment.
         """
         if self.terrain_type == "mixed" and self.curriculum_level <= 3:
-            return "flat_terrain"
+            return "flat"
         return None
