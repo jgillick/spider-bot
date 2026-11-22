@@ -47,6 +47,9 @@ ENERGY_WEIGHT_START = -2e-05
 ENERGY_WEIGHT_INC = -5e-06
 ENERGY_WEIGHT_MAX = -2e-04
 
+# A joint counts as saturated when its torque is at or above this fraction of max_force
+SATURATION_THRESHOLD = 0.95
+
 
 class SpiderRobotEnv(BaseSpiderRobotEnv):
     """
@@ -508,19 +511,33 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
         return extras
 
     def log_actuator_metrics(self, extras: dict):
-        percentiles = [50, 90, 95, 99]
-        q_tensors = torch.tensor([p / 100.0 for p in percentiles], device=gs.device)
+        """
+        Torque per joint group, from the torque actually applied (clipped to max_force):
 
+        - torque_rms: drives heat and battery use (see log_power_metrics)
+        - torque_p99: how close the peaks get to the limit
+        - saturation_frac: share of samples at or above 95% of max_force
+
+        Each is computed across environments and the joints in the group at this step.
+        """
         for group, dofs_idx in self.joint_groups.items():
             if not dofs_idx:
                 continue
-            group_torque = self.robot.get_dofs_control_force(dofs_idx)
-            if group_torque is None:
-                continue
-            group_torque = group_torque.abs()
-            torque_pcts = torch.quantile(group_torque.float().flatten(), q_tensors)
-            for i, p in enumerate(percentiles):
-                extras["episode"][f"Actuators / {group}_torque_p{p}"] = torque_pcts[i]
+            torque = self.actuator_manager.get_dofs_control_force(
+                clip_to_max_force=True, dofs_idx=dofs_idx
+            ).float()
+            _, upper = self.robot.get_dofs_force_range(dofs_idx)
+            saturated = torque.abs() >= SATURATION_THRESHOLD * upper.float()
+
+            extras["episode"][f"Actuators / {group}_torque_rms"] = torch.sqrt(
+                torque.square().mean()
+            )
+            extras["episode"][f"Actuators / {group}_torque_p99"] = torch.quantile(
+                torque.abs().flatten(), 0.99
+            )
+            extras["episode"][f"Actuators / {group}_saturation_frac"] = (
+                saturated.float().mean()
+            )
 
         return extras
 
@@ -560,10 +577,7 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
         for group, dofs_idx in self.joint_groups.items():
             if not dofs_idx:
                 continue
-            torque, copper, mech = self.motor_power(dofs_idx)
-            extras["episode"][f"Actuators / {group}_torque_rms"] = torch.sqrt(
-                torque.square().mean()
-            )
+            _, copper, mech = self.motor_power(dofs_idx)
             extras["episode"][f"Power / {group}_motor_w"] = (copper + mech).mean()
             total_copper = total_copper + copper.sum(dim=-1)
             total_mech = total_mech + mech.sum(dim=-1)
@@ -572,7 +586,7 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
         extras["episode"]["Power / robot_copper_loss_w"] = total_copper.mean()
         extras["episode"]["Power / robot_mechanical_w"] = total_mech.mean()
         extras["episode"]["Power / robot_total_w"] = total.mean()
-        extras["episode"]["Power / robot_total_w_p90"] = torch.quantile(total, 0.9)
+        extras["episode"]["Power / robot_total_w_p99"] = torch.quantile(total, 0.99)
         extras["episode"]["Power / bus_current_a"] = total.mean() / SUPPLY_VOLTAGE
         return extras
 
