@@ -1,18 +1,18 @@
-import re
 import torch
-import genesis as gs
 
 from genesis_forge import GenesisEnv
 from genesis_forge.managers import (
     PositionActionManager,
     RewardManager,
     TerminationManager,
-    PositionWithinLimitsActionManager,
+    CommandManager,
     ContactManager,
-    TerrainManager,
     EntityManager,
     ObservationManager,
     VelocityCommandManager,
+    ActuatorMonitor,
+    MotorSpec,
+    PowerMonitor,
 )
 from genesis_forge.managers.actuator import ActuatorManager, NoisyValue
 from genesis_forge.managers.command.velocity_command import VelocityCommandRange
@@ -21,11 +21,8 @@ from genesis_forge.mdp import reset, rewards, terminations, observations
 
 
 from spiderbot.environment import BaseSpiderRobotEnv, Terrain, EnvMode
-from spiderbot.motor.power import SUPPLY_VOLTAGE, electrical_power
 from spiderbot.mdp.foot_angle import FootAngleMdp
 from spiderbot.mdp.friction import randomize_terrain_friction
-from spiderbot.mdp.foot_clearance import FootClearanceMdp
-from spiderbot.mdp.gait_reward import GaitReward
 from spiderbot.mdp.reset import random_ground_pose
 from spiderbot.locomotion.ground_positions import RANDOM_GROUND_POSES
 
@@ -44,11 +41,30 @@ RANDOM_POSE_PROBABILITY_MAX = 0.8
 # It starts small and grows with the curriculum, so the policy learns to walk before it
 # learns to save power (too strong too early and lying still wins).
 ENERGY_WEIGHT_START = -2e-05
-ENERGY_WEIGHT_INC = -5e-06
-ENERGY_WEIGHT_MAX = -2e-04
+ENERGY_WEIGHT_INC = -1e-05
+ENERGY_WEIGHT_MAX = -5e-04
 
-# A joint counts as saturated when its torque is at or above this fraction of max_force
-SATURATION_THRESHOLD = 0.95
+# Base height range. It starts around the default pose height (0.118)
+# and widens with the curriculum, toward the effective standing range.
+HEIGHT_RANGE_START = (0.11, 0.13)
+HEIGHT_RANGE_INC = (-0.005, 0.005)
+HEIGHT_RANGE_LIMIT = (0.10, 0.17)
+
+# Joint groups for the power and actuator logs
+JOINT_GROUPS = {
+    "hip": "[RL][1-4]_Hip",
+    "femur": "[RL][1-4]_Femur",
+    "tibia": "[RL][1-4]_Tibia",
+}
+
+# GIM8108-8 leg motors (see spiderbot/motor/power.py)
+TORQUE_CONSTANT =  1.0  # N·m/A, output side
+PHASE_RESISTANCE = 0.439  # ohm
+LEG_MOTOR = MotorSpec(
+    torque_constant=1.0,
+    phase_resistance=0.439,
+)
+SUPPLY_VOLTAGE = 44.4  # V, 12S nominal
 
 
 class SpiderRobotEnv(BaseSpiderRobotEnv):
@@ -66,11 +82,6 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
         terrain: Terrain = "flat",
         height_sensor: bool = False,
     ):
-        self.joint_groups = {
-            "hip": [],
-            "femur": [],
-            "tibia": [],
-        }
         self.curriculum_level = 1
         self.curriculum_samples = []
         self.curriculum_ep_length_samples = []
@@ -99,14 +110,6 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
     """
     Operations
     """
-
-    def construct_scene(self, terrain_type: Terrain) -> gs.Scene:
-        """
-        Construct the environment scene.
-        """
-        super().construct_scene(terrain_type)
-        self.get_joint_groups()
-        return self.scene
 
     def config(self):
         """
@@ -143,10 +146,13 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
                         probability=RANDOM_POSE_PROBABILITY_START,
                     ),
                 },
+                # Setting the mass is slow (~120ms per call), so only re-randomize it
+                # every ~10 iterations, instead of on every reset.
                 "random_mass": {
                     "fn": reset.randomize_link_mass_shift(
                         mass_range=(0.0, 5.0),
                         link_name="Body",
+                        min_step_count_between_reset=250,
                     ),
                 },
                 "friction": {
@@ -183,12 +189,6 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
             frictionloss=NoisyValue(0.1, 0.05),
             damping=NoisyValue(0.0381, 0.0001),
         )
-        # self.action_manager = PositionWithinLimitsActionManager(
-        #     self,
-        #     delay_step=1,
-        #     soft_limit_scale_factor=0.95,
-        #     actuator_manager=self.actuator_manager,
-        # )
         self.action_manager = PositionActionManager(
             self,
             delay_step=1,
@@ -196,6 +196,22 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
             use_default_offset=True,
             soft_limit_scale_factor=0.95,
             actuator_manager=self.actuator_manager,
+        )
+
+        ##
+        # Monitors
+        self.power_monitor = PowerMonitor(
+            self,
+            actuator_manager=self.actuator_manager,
+            motors=LEG_MOTOR,
+            supply_voltage=SUPPLY_VOLTAGE,
+            dof_groups=JOINT_GROUPS,
+        )
+        self.actuator_monitor = ActuatorMonitor(
+            self,
+            actuator_manager=self.actuator_manager,
+            dof_groups=JOINT_GROUPS,
+            saturation_threshold=0.95,
         )
 
         ##
@@ -242,6 +258,11 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
             debug_visualizer=True,
             debug_visualizer_cfg={"envs_idx": [0], "ang_arc_offset": 0.15},
         )
+        self.height_command_manager = CommandManager(
+            self,
+            range={"height": HEIGHT_RANGE_START},
+            resample_time_sec=4.0,
+        )
 
         ##
         # Rewards
@@ -260,13 +281,15 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
                         vel_cmd_manager=self.vel_command_manager,
                     ),
                 },
-                # "height": {
-                #     "weight": -30.0,
-                #     "fn": rewards.base_height(
-                #         target_height=0.11, # 0.12
-                #         terrain_manager=self.terrain_manager,
-                #     ),
-                # },
+                "height": {
+                    "weight": 0.5,
+                    "fn": rewards.base_height_exp(
+                        height_command=self.height_command_manager,
+                        # Reward falls to 1/e at 3cm of error
+                        sensitivity=0.03**2,
+                        terrain_manager=self.terrain_manager,
+                    ),
+                },
                 # "similar_to_default": {
                 #     "weight": -0.01,
                 #     "fn": rewards.dof_similar_to_default(
@@ -304,9 +327,13 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
                         "max_air_time": 1.0,
                     },
                 },
+                # Stand still when the velocity command is stopped
                 "stand_still": {
-                    "weight": -0.08,
-                    "fn": self.stand_still_reward,
+                    "weight": -1.6e-3,
+                    "fn": rewards.dof_velocity_l2(
+                        actuator_manager=self.actuator_manager,
+                    ),
+                    "when": self.vel_command_manager.when_stopped()
                 },
                 "feet_slide": {
                     "weight": -0.1,
@@ -314,27 +341,27 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
                         contact_manager=self.foot_contact_manager,
                     ),
                 },
-                "leg_angle": {
-                    "weight": -0.02,
-                    "fn": self.foot_angle_mdp.reward,
-                },
-                "self_contact": {
-                    "weight": -0.05,
-                    "fn": rewards.contact_force(
-                        contact_manager=self.self_contact,
-                    ),
-                },
+                # "leg_angle": {
+                #     "weight": -0.02,
+                #     "fn": self.foot_angle_mdp.reward,
+                # },
+                # "self_contact": {
+                #     "weight": -0.05,
+                #     "fn": rewards.contact_force(
+                #         contact_manager=self.self_contact,
+                #     ),
+                # },
                 "action_rate": {
-                    "weight": -0.04,
+                    "weight": -0.02,
                     "fn": rewards.action_rate_l2(),
                 },
                 "action_acceleration": {
-                    "weight": -2e-04,
+                    "weight": -4e-03,
                     "fn": rewards.action_acceleration_l2(),
                 },
                 "energy": {
                     "weight": ENERGY_WEIGHT_START,
-                    "fn": self.energy_reward,
+                    "fn": rewards.electrical_power(power_monitor=self.power_monitor),
                 },
             },
         )
@@ -390,6 +417,9 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
                 "command": {
                     "fn": self.vel_command_manager.observation,
                 },
+                "height_command": {
+                    "fn": self.height_command_manager.observation,
+                },
                 "imu_lin_acc_ang_vel": {
                     "fn": self.imu_observation,
                 },
@@ -438,6 +468,12 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
                     "fn": lambda env: self.robot.get_dofs_force(),
                     "scale": 0.1,
                 },
+                "power": {
+                    "fn": observations.dof_power(
+                        power_monitor=self.power_monitor
+                    ),
+                    "scale": 0.01,
+                }
             },
         )
 
@@ -454,8 +490,6 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
         # Logging
         extras = self.log_curriculum(extras)
         extras = self.log_metrics(extras)
-        extras = self.log_actuator_metrics(extras)
-        extras = self.log_power_metrics(extras)
 
         # Finish up
         return obs, reward, terminated, truncated, extras
@@ -470,26 +504,14 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
             self.update_curriculum()
         return result
 
-    def get_joint_groups(self):
-        """
-        Get the link groups.
-        """
-        for joint in self.robot.joints:
-            if joint.type != gs.JOINT_TYPE.REVOLUTE:
-                continue
-            name = joint.name
-            match = re.match(r"^[R|L][1-4]_(Hip|Femur|Tibia)$", name)
-            if match:
-                group = match.group(1).lower()
-                # DOF indices, not joint indices: the free base joint occupies
-                # DOFs 0-5, so joint.idx_local cannot index into DOF arrays.
-                self.joint_groups[group].extend(joint.dofs_idx_local)
-
     def log_curriculum(self, extras: dict):
         extras["episode"]["Curriculum / curriculum_level"] = self.curriculum_level
         vel_range = cast(VelocityCommandRange, self.vel_command_manager.range)
         extras["episode"]["Curriculum / max_velocity_x"] = vel_range["lin_vel_x"][1]
         extras["episode"]["Curriculum / max_velocity_y"] = vel_range["lin_vel_y"][1]
+        height_range = cast(dict, self.height_command_manager.range)["height"]
+        extras["episode"]["Curriculum / min_height"] = height_range[0]
+        extras["episode"]["Curriculum / max_height"] = height_range[1]
         extras["episode"]["Curriculum / energy_weight"] = self.reward_manager[
             "energy"
         ].weight
@@ -508,86 +530,6 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
             base_pos[:, 2] - height_offset
         )
 
-        return extras
-
-    def log_actuator_metrics(self, extras: dict):
-        """
-        Torque per joint group, from the torque actually applied (clipped to max_force):
-
-        - torque_rms: drives heat and battery use (see log_power_metrics)
-        - torque_p99: how close the peaks get to the limit
-        - saturation_frac: share of samples at or above 95% of max_force
-
-        Each is computed across environments and the joints in the group at this step.
-        """
-        for group, dofs_idx in self.joint_groups.items():
-            if not dofs_idx:
-                continue
-            torque = self.actuator_manager.get_dofs_control_force(
-                clip_to_max_force=True, dofs_idx=dofs_idx
-            ).float()
-            _, upper = self.robot.get_dofs_force_range(dofs_idx)
-            saturated = torque.abs() >= SATURATION_THRESHOLD * upper.float()
-
-            extras["episode"][f"Actuators / {group}_torque_rms"] = torch.sqrt(
-                torque.square().mean()
-            )
-            extras["episode"][f"Actuators / {group}_torque_p99"] = torch.quantile(
-                torque.abs().flatten(), 0.99
-            )
-            extras["episode"][f"Actuators / {group}_saturation_frac"] = (
-                saturated.float().mean()
-            )
-
-        return extras
-
-    def motor_power(self, dofs_idx: list[int] | None = None):
-        """
-        Estimated electrical power per motor as ``(torque, copper, mechanical)``, each
-        shaped (n_envs, n_dofs). Uses the torque actually applied (clipped to max_force).
-        """
-        torque = self.actuator_manager.get_dofs_control_force(
-            clip_to_max_force=True, dofs_idx=dofs_idx
-        ).float()
-        velocity = self.actuator_manager.get_dofs_velocity(dofs_idx=dofs_idx).float()
-        copper, mech = electrical_power(torque, velocity)
-        return torque, copper, mech
-
-    def energy_reward(self, env: GenesisEnv) -> torch.Tensor:
-        """
-        Estimated electrical power for the whole robot in watts: winding heat plus positive
-        mechanical work. Register with a negative weight.
-
-        Returns:
-            Per-environment power, shape ``(n_envs,)``.
-        """
-        _, copper, mech = self.motor_power()
-        return (copper + mech).sum(dim=-1)
-
-    def log_power_metrics(self, extras: dict):
-        """
-        Estimate the electrical power the real motors would draw (see spiderbot/motor/power.py).
-
-        Uses the torque actually applied (clipped to max_force). Per-motor values are the
-        mean across environments and the motors in each group; robot totals are summed over
-        all motors and averaged across environments.
-        """
-        total_copper = 0.0
-        total_mech = 0.0
-        for group, dofs_idx in self.joint_groups.items():
-            if not dofs_idx:
-                continue
-            _, copper, mech = self.motor_power(dofs_idx)
-            extras["episode"][f"Power / {group}_motor_w"] = (copper + mech).mean()
-            total_copper = total_copper + copper.sum(dim=-1)
-            total_mech = total_mech + mech.sum(dim=-1)
-
-        total = total_copper + total_mech
-        extras["episode"]["Power / robot_copper_loss_w"] = total_copper.mean()
-        extras["episode"]["Power / robot_mechanical_w"] = total_mech.mean()
-        extras["episode"]["Power / robot_total_w"] = total.mean()
-        extras["episode"]["Power / robot_total_w_p99"] = torch.quantile(total, 0.99)
-        extras["episode"]["Power / bus_current_a"] = total.mean() / SUPPLY_VOLTAGE
         return extras
 
     def feet_max_air_time_reward(
@@ -621,32 +563,6 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
             min=0.0
         )
         return excess.sum(dim=-1)
-
-    def stand_still_reward(self, env: GenesisEnv) -> torch.Tensor:
-        """Penalize lifted feet and joint motion when commanded to stand still.
-
-        With a zero velocity command the ``feet_air_time`` reward gates itself
-        off, leaving no incentive against marching in place.  This term fills
-        that vacuum: each foot not in firm ground contact costs 1.0, and joint
-        motion adds a smaller pressure (0.02 x sum of squared joint velocities,
-        which puts typical marching-level motion on the same scale as a few
-        lifted feet) so the policy can't satisfy the term by jittering with all
-        feet planted.  Zero for environments with an active velocity command,
-        so it cannot distort the walking gait.
-
-        Should be registered with a negative weight.
-
-        Returns:
-            Per-environment penalty, shape ``(n_envs,)``.
-        """
-        standing = self.vel_command_manager.standing_envs.float()
-        feet_in_air = (
-            (self.foot_contact_manager.contacts.norm(dim=-1) < 1.0).float().sum(dim=-1)
-        )
-        dof_vel_sq = torch.sum(
-            torch.square(self.action_manager.get_dofs_velocity()), dim=-1
-        )
-        return standing * (feet_in_air + 0.02 * dof_vel_sq)
 
     def update_curriculum(self):
         """
@@ -687,6 +603,11 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
             )
             self.vel_command_manager.increment_range(
                 "ang_vel_z", self.velocity_inc, limit=self.max_velocity_z
+            )
+
+            # Widen the height range
+            self.height_command_manager.increment_range(
+                "height", HEIGHT_RANGE_INC, limit=HEIGHT_RANGE_LIMIT
             )
 
             # Start more episodes from a random pose
