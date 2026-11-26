@@ -1,5 +1,6 @@
 import re
 import torch
+from typing import cast
 import genesis as gs
 
 from genesis_forge import GenesisEnv
@@ -16,7 +17,6 @@ from genesis_forge.managers import (
 )
 from genesis_forge.managers.actuator import ActuatorManager, NoisyValue
 from genesis_forge.managers.command.velocity_command import VelocityCommandRange
-from typing import cast
 from genesis_forge.mdp import reset, rewards, terminations, observations
 
 
@@ -43,9 +43,11 @@ RANDOM_POSE_PROBABILITY_MAX = 0.8
 # Energy penalty, in reward per watt of estimated motor power (see spiderbot/motor/power.py).
 # It starts small and grows with the curriculum, so the policy learns to walk before it
 # learns to save power (too strong too early and lying still wins).
-ENERGY_WEIGHT_START = -2e-05
-ENERGY_WEIGHT_INC = -5e-06
-ENERGY_WEIGHT_MAX = -2e-04
+# Scaled 5x when power.py's torque constant went from 0.43 to 1.0 N·m/A, which cut
+# estimated walking power about 4.7x, so the penalty stays the same size as before.
+ENERGY_WEIGHT_START = -1e-04
+ENERGY_WEIGHT_INC = -2.5e-05
+ENERGY_WEIGHT_MAX = -1e-03
 
 # A joint counts as saturated when its torque is at or above this fraction of max_force
 SATURATION_THRESHOLD = 0.95
@@ -535,9 +537,9 @@ class SpiderRobotEnv(BaseSpiderRobotEnv):
             extras["episode"][f"Actuators / {group}_torque_p99"] = torch.quantile(
                 torque.abs().flatten(), 0.99
             )
-            extras["episode"][f"Actuators / {group}_saturation_frac"] = (
-                saturated.float().mean()
-            )
+            extras["episode"][
+                f"Actuators / {group}_saturation_frac"
+            ] = saturated.float().mean()
 
         return extras
 
