@@ -11,7 +11,7 @@
     <numeric name="ground_offset" data="0.10502" />
   </custom>
   <asset>
-    <mesh name="Body_visual" file="meshes/Body/visual.stl" />
+    <mesh name="MotorRods_visual" file="meshes/MotorRods/visual.stl" />
     <mesh name="Femur_visual" file="meshes/Femur/visual.stl" />
     <mesh name="Femur_collision00" file="meshes/Femur/collision00.stl" />
     <mesh name="Motor_visual" file="meshes/Motor/visual.stl" />
@@ -36,15 +36,32 @@
     <mesh name="90323A463_18-8 Stainless Steel Low-Profile Precision Shoulder Screw_visual" file="meshes/90323A463_18-8 Stainless Steel Low-Profile Precision Shoulder Screw/visual.stl" />
     <mesh name="91437A181_18-8 Stainless Steel Shims_visual" file="meshes/91437A181_18-8 Stainless Steel Shims/visual.stl" />
     <mesh name="6661K11_Steel Ball Bearing_visual" file="meshes/6661K11_Steel Ball Bearing/visual.stl" />
+    <mesh name="CenterFrontBracket_visual" file="meshes/CenterFrontBracket/visual.stl" />
+    <mesh name="CenterFrontBracket_collision00" file="meshes/CenterFrontBracket/collision00.stl" />
+    <mesh name="CenterFrontBracket_collision01" file="meshes/CenterFrontBracket/collision01.stl" />
+    <mesh name="CenterRearBracket_visual" file="meshes/CenterRearBracket/visual.stl" />
+    <mesh name="CenterRearBracket_collision00" file="meshes/CenterRearBracket/collision00.stl" />
+    <mesh name="CenterRearBracket_collision01" file="meshes/CenterRearBracket/collision01.stl" />
     <mesh name="Rods_visual" file="meshes/Rods/visual.stl" />
-    <mesh name="CenterBracket_visual" file="meshes/CenterBracket/visual.stl" />
     <mesh name="BodyCrossConnector_visual" file="meshes/BodyCrossConnector/visual.stl" />
     <mesh name="TopClamp_visual" file="meshes/TopClamp/visual.stl" />
     <mesh name="TopRods_visual" file="meshes/TopRods/visual.stl" />
-    <mesh name="TopRods_collision00" file="meshes/TopRods/collision00.stl" />
-    <mesh name="TopRods_collision01" file="meshes/TopRods/collision01.stl" />
     <mesh name="Battery_visual" file="meshes/Battery/visual.stl" />
-    <material name="Body_mat" rgba="0.0980 0.0980 0.0980 1.0000" roughness="0.0775" />
+    <mesh name="BatteryCover_visual" file="meshes/BatteryCover/visual.stl" />
+    <mesh name="LeftFront_visual" file="meshes/LeftFront/visual.stl" />
+    <mesh name="LeftFront_collision00" file="meshes/LeftFront/collision00.stl" />
+    <mesh name="RightRear_visual" file="meshes/RightRear/visual.stl" />
+    <mesh name="RightRear_collision00" file="meshes/RightRear/collision00.stl" />
+    <mesh name="Tail_visual" file="meshes/Tail/visual.stl" />
+    <mesh name="Tail_collision00" file="meshes/Tail/collision00.stl" />
+    <mesh name="LeftRear_visual" file="meshes/LeftRear/visual.stl" />
+    <mesh name="LeftRear_collision00" file="meshes/LeftRear/collision00.stl" />
+    <mesh name="RightFront_visual" file="meshes/RightFront/visual.stl" />
+    <mesh name="RightFront_collision00" file="meshes/RightFront/collision00.stl" />
+    <mesh name="Head_visual" file="meshes/Head/visual.stl" />
+    <mesh name="Head_collision00" file="meshes/Head/collision00.stl" />
+    <mesh name="Eyes_visual" file="meshes/Eyes/visual.stl" />
+    <material name="MotorRods_mat" rgba="0.0980 0.0980 0.0980 1.0000" roughness="0.0775" />
     <material name="Femur_mat" rgba="0.5373 0.5373 0.5373 1.0000" roughness="0.1225" />
     <material name="Motor_mat" rgba="0.0980 0.0980 0.0980 1.0000" roughness="0.0775" />
     <material name="KneeBearingHolder_mat" rgba="0.2471 0.2471 0.2471 1.0000" roughness="0.2600" />
@@ -63,30 +80,50 @@
     <material name="90323A463_18-8 Stainless Steel Low-Profile Precision Shoulder Screw_mat" rgba="0.7529 0.7529 0.7529 1.0000" roughness="0.2000" />
     <material name="91437A181_18-8 Stainless Steel Shims_mat" rgba="0.7529 0.7529 0.7529 1.0000" roughness="0.2000" />
     <material name="6661K11_Steel Ball Bearing_mat" rgba="0.7529 0.7529 0.7529 1.0000" roughness="0.2000" />
+    <material name="CenterFrontBracket_mat" rgba="0.2471 0.2471 0.2471 1.0000" roughness="0.2600" />
+    <material name="CenterRearBracket_mat" rgba="0.2471 0.2471 0.2471 1.0000" roughness="0.2600" />
     <material name="Rods_mat" rgba="0.0980 0.0980 0.0980 1.0000" roughness="0.0775" />
-    <material name="CenterBracket_mat" rgba="0.2471 0.2471 0.2471 1.0000" roughness="0.2600" />
     <material name="BodyCrossConnector_mat" rgba="0.2471 0.2471 0.2471 1.0000" roughness="0.2600" />
     <material name="TopClamp_mat" rgba="0.2471 0.2471 0.2471 1.0000" roughness="0.2600" />
     <material name="TopRods_mat" rgba="0.0980 0.0980 0.0980 1.0000" roughness="0.0775" />
     <material name="Battery_mat" rgba="0.1294 0.1294 0.1294 1.0000" roughness="0.2600" />
+    <material name="BatteryCover_mat" rgba="0.0980 0.0980 0.0980 1.0000" roughness="0.0775" />
+    <material name="LeftFront_mat" rgba="0.0980 0.0980 0.0980 1.0000" roughness="0.0775" />
+    <material name="RightRear_mat" rgba="0.0980 0.0980 0.0980 1.0000" roughness="0.0775" />
+    <material name="Tail_mat" rgba="0.0980 0.0980 0.0980 1.0000" roughness="0.0775" />
+    <material name="LeftRear_mat" rgba="0.0980 0.0980 0.0980 1.0000" roughness="0.0775" />
+    <material name="RightFront_mat" rgba="0.0980 0.0980 0.0980 1.0000" roughness="0.0775" />
+    <material name="Head_mat" rgba="0.2471 0.2471 0.2471 1.0000" roughness="0.2600" />
+    <material name="Eyes_mat" rgba="0.7686 0.2078 0.1529 1.0000" roughness="0.7071" />
   </asset>
   <worldbody>
     <body name="Body" pos="0.0 0.0 0.0" quat="1.0 0.0 0.0 0.0">
       <freejoint />
-      <geom mesh="Body_visual" name="Body_Body_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Body_mat" />
-      <inertial mass="0.08470973881771371" pos="0.0009181295872686507 7.187354035723147e-08 0.016850022506815016" fullinertia="0.000820337159402764 0.001656178552784288 0.002103475666853155 4.5679003885287184e-07 9.052561929314645e-07 -7.947189376308341e-10" />
+      <geom mesh="MotorRods_visual" name="MotorRods_MotorRods_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="MotorRods_mat" />
+      <inertial mass="0.08470973881771371" pos="0.0009181295872686507 7.187354035886974e-08 0.016850022506815016" fullinertia="0.000820337159402764 0.001656178552784288 0.002103475666853155 4.5679003885287195e-07 9.052561929314645e-07 -7.947189376062912e-10" />
       <body name="R1_MainClamp" pos="0.20771608688276316 -0.18144046972349948 -0.13168027618801464" quat="0.9999993871500045 -6.779113122137469e-20 6.12323024311284e-17 -0.0011071131900001559">
         <geom mesh="MainClamp_visual" name="R1_MainClamp_MainClamp_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="MainClamp_mat" />
         <inertial mass="0.041263254103619855" pos="9.613160616582985e-07 0.12765894961523463 0.13277126881503842" fullinertia="2.555982397641284e-05 4.7631326478598535e-05 7.194388786003385e-05 -4.8385092289796457e-08 -3.8099384279789993e-11 -4.79864764158163e-09" />
         <body name="R1_TopPlate" pos="0.0 0.0 0.0" quat="1.0 -1.2037062152420224e-35 6.162975822039155e-33 1.4088911579575866e-19">
           <geom mesh="TopPlate_visual" name="R1_TopPlate_TopPlate_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="TopPlate_mat" />
           <inertial mass="0.05537159447168183" pos="-1.3288545540704119e-05 0.13422381820535692 0.14078027618800998" fullinertia="2.557130840197821e-05 2.3435446508748576e-05 4.8912254056163174e-05 4.729275636928478e-09 -5.31675771654793e-19 1.2079579072094785e-19" />
-          <body name="CenterBracket-1" pos="-0.20807965089554298 0.18148244166989103 0.13168027618801506" quat="1.0 2.4485343113124373e-17 -5.911512812347819e-17 1.553833444408839e-19">
-            <geom mesh="CenterBracket_visual" name="CenterBracket-1_CenterBracket_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="CenterBracket_mat" />
-            <inertial mass="0.0630276573979288" pos="0.2080000001110599 -6.669327454379393e-14 -0.007316479091913721" fullinertia="2.0798392550286713e-05 4.852937026452115e-05 3.469623794734181e-05 -7.987686837839584e-20 -1.4359640952622344e-13 5.431310216647021e-18" />
-            <body name="Rods" pos="3.5522799979315066e-17 6.938893903907229e-19 0.0" quat="1.0 -1.0631133293017542e-31 -1.332936114510406e-30 1.6987757308600611e-19">
+          <body name="CenterFrontBracket" pos="-0.20811732771595629 0.1809800947832137 0.13168027618801462" quat="0.9999993871500047 6.779113122137471e-20 -6.123230243112839e-17 0.001107113190000156">
+            <geom mesh="CenterFrontBracket_visual" name="CenterFrontBracket_CenterFrontBracket_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="CenterFrontBracket_mat" />
+            <geom mesh="CenterFrontBracket_collision00" name="CenterFrontBracket_CenterFrontBracket_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="2" conaffinity="0" />
+            <geom mesh="CenterFrontBracket_collision01" name="CenterFrontBracket_CenterFrontBracket_collision01_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="2" conaffinity="0" />
+            <inertial mass="0.09021908058992532" pos="0.20618201548363785 1.854958657258959e-11 -0.0002657839548098015" fullinertia="4.478955352995896e-05 8.572784103957638e-05 7.334719123779912e-05 3.5055996869725563e-13 2.604858428700346e-06 -2.982935412292085e-14" />
+            <body name="Head" pos="0.0 0.0 0.0" quat="1.0 0.0 0.0 0.0">
+              <geom mesh="Head_visual" name="Head_Head_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Head_mat" />
+              <geom mesh="Head_collision00" name="Head_Head_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="2" conaffinity="0" />
+              <inertial mass="0.10137751268535775" pos="0.1967330588339995 -3.295573858716462e-14 0.03345377958532019" fullinertia="0.00020066011098275025 0.00013412515906212428 0.0002985005565954322 -1.0536933188124718e-15 1.0167504356523613e-05 -7.70812175574976e-17" />
+              <body name="Eyes" pos="0.0 0.0 0.0" quat="1.0 0.0 0.0 0.0">
+                <geom mesh="Eyes_visual" name="Eyes_Eyes_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Eyes_mat" />
+                <inertial mass="0.0039018580757584696" pos="0.21281297991357165 -5.801887439767213e-16 0.04181533680533938" fullinertia="6.8365176767010806e-06 1.0242307374247136e-06 7.638287619347146e-06 -4.373131695675311e-21 2.74308701696656e-07 1.7884746965209726e-21" />
+              </body>
+            </body>
+            <body name="Rods" pos="0.0 0.0 0.0" quat="1.0 0.0 0.0 0.0">
               <geom mesh="Rods_visual" name="Rods_Rods_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Rods_mat" />
-              <inertial mass="0.07308978507268149" pos="0.0010190893573843347 -1.8308052210788832e-08 -0.006010000000000006" fullinertia="1.7044629241156174e-05 0.001514831462617098 0.0014983862609757193 -3.3181771116016577e-10 -6.077809378513989e-20 -1.0715406005572162e-20" />
+              <inertial mass="0.0730954116943944" pos="0.000999999999999741 -2.710633092745802e-17 -0.006010000000000006" fullinertia="1.7045941376397384e-05 0.0015151787561436749 0.0014987322885124362 1.4275869375524565e-20 -1.5775988642611344e-20 -9.683713386721126e-21" />
             </body>
           </body>
           <body name="R1_95185A620_Zinc-Plated-Steel-Press-Fit-Nut-for-Sheet-Metal" pos="-3.1974423109204507e-16 0.12822234157639417 0.1396936095213433" quat="-9.684278906830575e-16 1.0 1.40889115795815e-19 2.2114255647276122e-14">
@@ -313,11 +350,9 @@
           <inertial mass="0.05537159447168183" pos="-1.3288545540712355e-05 0.13422381820535692 0.14078027618800998" fullinertia="2.557130840197886e-05 2.3435446508748414e-05 4.891225405616296e-05 4.7292756369302716e-09 -5.285437696649783e-19 8.014504331727884e-20" />
           <body name="TopClamp-1" pos="-0.07005753315891074 0.24800460843372013 0.13168027618801006" quat="1.0 9.684278906830575e-16 -1.639684525638666e-14 1.5538334445616817e-19">
             <geom mesh="TopClamp_visual" name="TopClamp-1_TopClamp_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="TopClamp_mat" />
-            <inertial mass="0.014285354686409681" pos="0.06999384453860917 -0.10008940490546579 0.016196796571932674" fullinertia="7.46191606137454e-07 5.417935695176072e-06 5.849954239299602e-06 -8.145979213006335e-10 2.1426387948150437e-12 3.5792848981594437e-10" />
+            <inertial mass="0.024773275150933444" pos="0.06999464784811879 -0.09963076039978198 0.020172545680599285" fullinertia="1.7110626490050343e-06 9.514118310495543e-06 9.705507184846248e-06 -1.289680080343657e-09 -1.4910706284760198e-10 -1.0421461031865602e-07" />
             <body name="TopRods" pos="-0.00020737881416970215 -0.00021911361537963327 1.0462377067473571e-15" quat="0.9999993871500045 -9.321186258734072e-16 -1.045051245017375e-18 0.0011071131900001559">
               <geom mesh="TopRods_visual" name="TopRods_TopRods_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="TopRods_mat" />
-              <geom mesh="TopRods_collision00" name="TopRods_TopRods_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="2" conaffinity="0" />
-              <geom mesh="TopRods_collision01" name="TopRods_TopRods_collision01_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="2" conaffinity="0" />
               <inertial mass="0.016398856896996432" pos="0.000984909449948774 0.00021668631462764485 0.01569999999999617" fullinertia="0.00016658560841856742 5.6993639764719535e-05 0.00022350594447301456 -2.4266306390809764e-07 -3.22931311140702e-21 2.02334995275371e-19" />
             </body>
           </body>
@@ -434,7 +469,7 @@
           <inertial mass="0.05537159447168183" pos="-1.328854554072276e-05 0.13422381820535714 0.14078027618800998" fullinertia="2.557130840198118e-05 2.3435446508749972e-05 4.8912254056161656e-05 4.729275636986183e-09 -5.355335687831377e-19 9.368212791611568e-20" />
           <body name="TopClamp-6" pos="-0.07002639254827427 0.24787686674775675 0.13168027618801198" quat="1.0 9.442712221628821e-16 1.5953708403268555e-17 -6.032106844500528e-17">
             <geom mesh="TopClamp_visual" name="TopClamp-6_TopClamp_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="TopClamp_mat" />
-            <inertial mass="0.014285354686409681" pos="0.06999384453860942 -0.100089404905466 0.016196796571932685" fullinertia="7.461916061378091e-07 5.417935695176029e-06 5.849954239298726e-06 -8.145979212317961e-10 2.1426389116493243e-12 3.5792848981622473e-10" />
+            <inertial mass="0.024773275150933444" pos="0.06999464784811905 -0.0996307603997822 0.020172545680599292" fullinertia="1.7110626490056372e-06 9.514118310495428e-06 9.705507184844825e-06 -1.2896800803145542e-09 -1.4910706264147124e-10 -1.042146103186488e-07" />
           </body>
           <body name="L2_95185A620_Zinc-Plated-Steel-Press-Fit-Nut-for-Sheet-Metal" pos="-3.4638958368304885e-16 0.12822234157639412 0.1396936095213433" quat="-9.684278906830575e-16 1.0 -6.841744100766564e-20 2.2114255647276122e-14">
             <geom mesh="95185A620_Zinc-Plated Steel Press-Fit Nut for Sheet Metal_visual" name="L2_95185A620_Zinc-Plated-Steel-Press-Fit-Nut-for-Sheet-Metal_95185A620_Zinc-Plated Steel Press-Fit Nut for Sheet Metal_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="95185A620_Zinc-Plated Steel Press-Fit Nut for Sheet Metal_mat" />
@@ -549,7 +584,7 @@
           <inertial mass="0.05537159447168183" pos="-1.3288545540703465e-05 0.13422381820535692 0.14078027618800998" fullinertia="2.557130840197886e-05 2.3435446508748414e-05 4.891225405616339e-05 4.729275636821852e-09 -5.217675226982854e-19 8.016004748965226e-20" />
           <body name="TopClamp-2" pos="-0.07005753315891071 0.24800460843372021 0.13168027618801006" quat="1.0 9.802511976547468e-16 -1.639681907686033e-14 1.6987757310148578e-19">
             <geom mesh="TopClamp_visual" name="TopClamp-2_TopClamp_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="TopClamp_mat" />
-            <inertial mass="0.014285354686409681" pos="0.06999384453860918 -0.10008940490546582 0.016196796571932674" fullinertia="7.461916061375354e-07 5.417935695176061e-06 5.849954239299575e-06 -8.145979212462144e-10 2.142638794799792e-12 3.5792848982273087e-10" />
+            <inertial mass="0.024773275150933444" pos="0.06999464784811882 -0.09963076039978204 0.020172545680599285" fullinertia="1.7110626490050353e-06 9.51411831049552e-06 9.705507184846085e-06 -1.2896800803978077e-09 -1.4910706285436362e-10 -1.0421461031866283e-07" />
           </body>
           <body name="R3_95185A620_Zinc-Plated-Steel-Press-Fit-Nut-for-Sheet-Metal" pos="-3.2862601528904633e-16 0.1282223415763942 0.1396936095213433" quat="-9.684278906830575e-16 1.0 1.4088911581083686e-19 2.2114255647276122e-14">
             <geom mesh="95185A620_Zinc-Plated Steel Press-Fit Nut for Sheet Metal_visual" name="R3_95185A620_Zinc-Plated-Steel-Press-Fit-Nut-for-Sheet-Metal_95185A620_Zinc-Plated Steel Press-Fit Nut for Sheet Metal_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="95185A620_Zinc-Plated Steel Press-Fit Nut for Sheet Metal_mat" />
@@ -664,7 +699,7 @@
           <inertial mass="0.05537159447168183" pos="-1.328854554071427e-05 0.1342238182053575 0.14078027618800998" fullinertia="2.5571308401984393e-05 2.3435446508753343e-05 4.891225405615938e-05 4.729275636931619e-09 -5.423398240945995e-19 1.0721961767715297e-19" />
           <body name="TopClamp-5" pos="-0.0700263925482742 0.24787686674775683 0.13168027618801195" quat="1.0000000000000002 9.44402925466908e-16 -4.8629680547180845e-18 -6.121684564510416e-17">
             <geom mesh="TopClamp_visual" name="TopClamp-5_TopClamp_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="TopClamp_mat" />
-            <inertial mass="0.014285354686409681" pos="0.06999384453860957 -0.10008940490546632 0.0161967965719327" fullinertia="7.46191606137648e-07 5.417935695176141e-06 5.849954239298518e-06 -8.145979212188152e-10 2.14263886721711e-12 3.5792848981612785e-10" />
+            <inertial mass="0.024773275150933444" pos="0.06999464784811919 -0.09963076039978251 0.020172545680599313" fullinertia="1.7110626490054783e-06 9.51411831049562e-06 9.705507184844242e-06 -1.2896800802610578e-09 -1.4910706270990805e-10 -1.0421461031866275e-07" />
           </body>
           <body name="L3_95185A620_Zinc-Plated-Steel-Press-Fit-Nut-for-Sheet-Metal" pos="-3.4638958368304885e-16 0.12822234157639417 0.1396936095213433" quat="-9.684278906830575e-16 1.0 -2.9066487334943358e-21 2.2114255647276122e-14">
             <geom mesh="95185A620_Zinc-Plated Steel Press-Fit Nut for Sheet Metal_visual" name="L3_95185A620_Zinc-Plated-Steel-Press-Fit-Nut-for-Sheet-Metal_95185A620_Zinc-Plated Steel Press-Fit Nut for Sheet Metal_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="95185A620_Zinc-Plated Steel Press-Fit Nut for Sheet Metal_mat" />
@@ -777,9 +812,16 @@
         <body name="R4_TopPlate" pos="3.552713678800501e-17 0.0 0.0" quat="1.0 -1.2037062152420224e-35 6.162975822039155e-33 1.4088911579575866e-19">
           <geom mesh="TopPlate_visual" name="R4_TopPlate_TopPlate_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="TopPlate_mat" />
           <inertial mass="0.05537159447168183" pos="-1.3288545540704119e-05 0.13422381820535692 0.14078027618800998" fullinertia="2.557130840197821e-05 2.3435446508748576e-05 4.8912254056163174e-05 4.729275636928478e-09 -5.31675771654793e-19 1.2079579072094785e-19" />
-          <body name="CenterBracket-3" pos="-0.20807955846242576 0.181398950165351 0.13168027618801417" quat="1.0 1.3336587688120821e-19 -5.918689244876341e-17 1.553833444408824e-19">
-            <geom mesh="CenterBracket_visual" name="CenterBracket-3_CenterBracket_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="CenterBracket_mat" />
-            <inertial mass="0.0630276573979288" pos="0.2080000001110599 -6.669324346218374e-14 -0.007316479091913721" fullinertia="2.0798392550286716e-05 4.852937026452028e-05 3.469623794734094e-05 -7.826883318632288e-20 -1.4359643662779525e-13 5.431282037622326e-18" />
+          <body name="CenterRearBracket" pos="-0.20811732771595626 0.1809800947832137 0.13168027618801462" quat="0.9999993871500047 6.779113122137471e-20 -6.123230243112839e-17 0.001107113190000156">
+            <geom mesh="CenterRearBracket_visual" name="CenterRearBracket_CenterRearBracket_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="CenterRearBracket_mat" />
+            <geom mesh="CenterRearBracket_collision00" name="CenterRearBracket_CenterRearBracket_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="2" conaffinity="0" />
+            <geom mesh="CenterRearBracket_collision01" name="CenterRearBracket_CenterRearBracket_collision01_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="2" conaffinity="0" />
+            <inertial mass="0.11016508256436672" pos="0.21841772066592455 -1.379640853555379e-10 0.006354070759912364" fullinertia="7.330709852276642e-05 0.00011269739208850417 9.057968064547783e-05 4.0426479866386873e-13 -2.2467796095159833e-05 2.911000145414811e-13" />
+            <body name="Tail" pos="0.45805967380981927 -5.132806545148718e-10 -0.006892277133062157" quat="0.9920599199341992 8.708139361888108e-17 -0.12576611332211352 4.873033635402338e-17">
+              <geom mesh="Tail_visual" name="Tail_Tail_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Tail_mat" />
+              <geom mesh="Tail_collision00" name="Tail_Tail_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="2" conaffinity="0" />
+              <inertial mass="0.0265385080132133" pos="-0.22997769049766553 -2.096122130626618e-06 0.10100000000000006" fullinertia="2.7346183554075086e-05 1.846659414150615e-05 4.579508535690648e-05 -4.723013821096143e-11 -3.376290354563096e-19 -2.3320399540057993e-20" />
+            </body>
           </body>
           <body name="R4_95185A620_Zinc-Plated-Steel-Press-Fit-Nut-for-Sheet-Metal" pos="-2.842170943040401e-16 0.12822234157639417 0.1396936095213433" quat="-9.684278906830575e-16 1.0 1.40889115795815e-19 2.2114255647276122e-14">
             <geom mesh="95185A620_Zinc-Plated Steel Press-Fit Nut for Sheet Metal_visual" name="R4_95185A620_Zinc-Plated-Steel-Press-Fit-Nut-for-Sheet-Metal_95185A620_Zinc-Plated Steel Press-Fit Nut for Sheet Metal_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="95185A620_Zinc-Plated Steel Press-Fit Nut for Sheet Metal_mat" />
@@ -999,22 +1041,46 @@
       </body>
       <body name="BodyCrossConnector-1" pos="0.0 0.0 0.0" quat="1.0 0.0 0.0 0.0">
         <geom mesh="BodyCrossConnector_visual" name="BodyCrossConnector-1_BodyCrossConnector_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="BodyCrossConnector_mat" />
-        <inertial mass="0.050044733647112136" pos="0.03600000000002137 1.2371038684145077e-14 0.0023216771131276243" fullinertia="4.5348312305036114e-05 7.97841507211406e-06 3.9093728642583336e-05 2.131400834928007e-20 2.4860417001913715e-18 1.130973819111392e-18" />
+        <inertial mass="0.06043892707990108" pos="0.036000000000020155 -1.0248996750844133e-15 0.006976983324466056" fullinertia="8.140065905062926e-05 1.5714978241869487e-05 6.77378169048055e-05 -1.0523791616048811e-19 6.974469287691909e-18 -1.191492662866954e-18" />
       </body>
       <body name="BodyCrossConnector-2" pos="-0.07000000000000026 1.7810289313131307e-17 6.933347799794049e-34" quat="1.0 0.0 0.0 0.0">
         <geom mesh="BodyCrossConnector_visual" name="BodyCrossConnector-2_BodyCrossConnector_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="BodyCrossConnector_mat" />
-        <inertial mass="0.050044733647112136" pos="0.03600000000002137 1.2371038684145077e-14 0.0023216771131276243" fullinertia="4.5348312305036114e-05 7.978415072114073e-06 3.9093728642583356e-05 2.131400834928007e-20 2.4860417001913715e-18 1.1309738191113918e-18" />
+        <inertial mass="0.06043892707990108" pos="0.036000000000020155 -1.0248996750844133e-15 0.006976983324466056" fullinertia="8.140065905062926e-05 1.5714978241869514e-05 6.77378169048055e-05 -1.0523791616048888e-19 6.976163353586418e-18 -1.191492662866954e-18" />
+        <body name="LeftRear" pos="0.07 -0.042534147109020266 -0.03738570229007441" quat="0.9923319378854888 -0.12360147674049288 0.0 0.0">
+          <geom mesh="LeftRear_visual" name="LeftRear_LeftRear_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="LeftRear_mat" />
+          <geom mesh="LeftRear_collision00" name="LeftRear_LeftRear_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="2" conaffinity="0" />
+          <inertial mass="0.033177270625682695" pos="-0.07496082308568552 0.10192014246788064 0.10099999999999998" fullinertia="1.610485201655016e-05 7.497288997301862e-05 9.105562380915135e-05 -1.0685083108438573e-05 1.6817221334731425e-20 -7.408061049278853e-20" />
+        </body>
       </body>
       <body name="BodyCrossConnector-3" pos="-0.1380000000000003 3.6143405862088426e-17 0.0" quat="1.0 0.0 0.0 0.0">
         <geom mesh="BodyCrossConnector_visual" name="BodyCrossConnector-3_BodyCrossConnector_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="BodyCrossConnector_mat" />
-        <inertial mass="0.050044733647112136" pos="0.03600000000002137 1.2371038684145077e-14 0.0023216771131276243" fullinertia="4.5348312305036114e-05 7.978415072114006e-06 3.909372864258336e-05 2.131400834928007e-20 2.4868887331386258e-18 1.1309738191113922e-18" />
+        <inertial mass="0.06043892707990108" pos="0.03600000000002016 -1.0248996750844133e-15 0.006976983324466056" fullinertia="8.140065905062926e-05 1.571497824186946e-05 6.773781690480552e-05 -1.0523791616048773e-19 6.965998958219366e-18 -1.191492662866954e-18" />
+        <body name="RightRear" pos="0.138 0.04253414710902028 -0.037385702290074416" quat="0.9923319378854888 0.12360147674049278 0.0 0.0">
+          <geom mesh="RightRear_visual" name="RightRear_RightRear_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="RightRear_mat" />
+          <geom mesh="RightRear_collision00" name="RightRear_RightRear_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="2" conaffinity="0" />
+          <inertial mass="0.033258133145168484" pos="-0.07494456433054225 -0.10186914368793948 0.10099999999999996" fullinertia="1.6184571103549088e-05 7.530772266512249e-05 9.147012167990795e-05 1.0725866012565324e-05 1.3623384055012584e-19 -8.261069036731835e-20" />
+        </body>
       </body>
       <body name="BodyCrossConnector-4" pos="0.06799999999999978 -3.735356810190346e-17 6.933347799794049e-34" quat="1.0 0.0 0.0 0.0">
         <geom mesh="BodyCrossConnector_visual" name="BodyCrossConnector-4_BodyCrossConnector_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="BodyCrossConnector_mat" />
-        <inertial mass="0.050044733647112136" pos="0.03600000000002137 1.2371038684145077e-14 0.0023216771131276243" fullinertia="4.5348312305036114e-05 7.978415072114006e-06 3.9093728642583254e-05 2.131400834928007e-20 2.4851946672441172e-18 1.1309738191113918e-18" />
-        <body name="Battery" pos="-0.064 4.440892098500626e-18 -0.012999999999999998" quat="1.0 0.0 0.0 0.0">
+        <inertial mass="0.06043892707990108" pos="0.03600000000002016 -1.0248996750844135e-15 0.006976983324466056" fullinertia="8.140065905062926e-05 1.571497824186946e-05 6.773781690480542e-05 -1.0523791616049004e-19 6.965998958219366e-18 -1.1914926628669542e-18" />
+        <body name="Battery" pos="-0.06400000000000003 8.333036814801525e-18 -6.933347799794049e-34" quat="1.0 6.599092431842826e-17 0.0 0.0">
           <geom mesh="Battery_visual" name="Battery_Battery_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="Battery_mat" />
-          <inertial mass="1.052856669169517" pos="-3.2513524183255814e-05 -7.671967301129134e-06 0.04250000000000001" fullinertia="0.000498043643189789 0.00774123501947669 0.008132038364132425 -1.189016658831626e-06 -5.421010862427522e-20 -2.0469080565992202e-19" />
+          <inertial mass="0.9746009172505679" pos="-3.250021794671543e-05 -8.287989263762793e-06 0.027989999999999994" fullinertia="0.00046097724434201125 0.006147416116566877 0.00650915669803137 -1.100164464987416e-06 -3.9287808578610172e-19 -1.030286739426103e-19" />
+        </body>
+        <body name="BatteryCover" pos="-0.068 1.826431313898447e-18 -0.05651" quat="1.0 0.0 0.0 0.0">
+          <geom mesh="BatteryCover_visual" name="BatteryCover_BatteryCover_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="BatteryCover_mat" />
+          <inertial mass="0.06746754158410939" pos="-0.01865371143537104 -2.0528477560919762e-07 0.10099999999999999" fullinertia="4.75611833176862e-05 0.000461434125748691 0.0005089503307053216 -6.664348048962214e-11 -8.809142651444724e-20 -4.877056891612651e-21" />
+        </body>
+        <body name="LeftFront" pos="-0.08000000000000002 -0.042534147109020266 -0.03738570229007441" quat="0.9923319378854888 -0.12360147674049288 0.0 0.0">
+          <geom mesh="LeftFront_visual" name="LeftFront_LeftFront_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="LeftFront_mat" />
+          <geom mesh="LeftFront_collision00" name="LeftFront_LeftFront_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="2" conaffinity="0" />
+          <inertial mass="0.026117810959445074" pos="0.07112793662132123 0.1028282129549307 0.10100000000000002" fullinertia="1.4005115619714282e-05 3.322428752294101e-05 4.7211991268682385e-05 6.62257388633857e-06 7.517559350550812e-20 -3.544379291781474e-20" />
+        </body>
+        <body name="RightFront" pos="-0.08000000000000002 0.04253414710902028 -0.037385702290074416" quat="0.9923319378854888 0.12360147674049278 0.0 0.0">
+          <geom mesh="RightFront_visual" name="RightFront_RightFront_visual_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" material="RightFront_mat" />
+          <geom mesh="RightFront_collision00" name="RightFront_RightFront_collision00_geom" type="mesh" pos="0 0 0" quat="1 0 0 0" class="collision" contype="2" conaffinity="0" />
+          <inertial mass="0.026117084265410352" pos="0.07112655623909514 -0.10282818616992068 0.10100000000000002" fullinertia="1.4005444102587128e-05 3.322266329979552e-05 4.72106960128724e-05 -6.6232873182267005e-06 6.186808272937247e-20 -2.2168263770426462e-20" />
         </body>
       </body>
     </body>
