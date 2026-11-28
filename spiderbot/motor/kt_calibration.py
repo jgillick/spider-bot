@@ -47,6 +47,8 @@ GRAVITY = 9.80665  # m/s²
 
 DEFAULT_STEPS = (0.5, 1.0, 1.5, 2.0, 2.5, 3.0)  # commanded N·m
 DEFAULT_MAX_TORQUE = 4.0  # refuse any commanded step above this (N·m)
+DEFAULT_TORQUE_LIMIT = 18.0  # N·m, the sim's max_force; used for the suggested limits
+CURRENT_LIMIT_MARGIN = 1.2  # current_lim headroom over what torque_lim needs
 DEFAULT_RAMP_RATE = 2.0  # N·m/s between steps
 DEFAULT_RELEASE_RATE = 0.75  # N·m/s back to zero after the last step
 
@@ -148,7 +150,17 @@ def analyze(results: list[StepResult]) -> Calibration:
     )
 
 
-def format_report(results: list[StepResult], cal: Calibration, sim_kt: float | None) -> str:
+def current_limit_for(torque_limit: float, kt: float, margin: float = CURRENT_LIMIT_MARGIN) -> float:
+    """Phase current limit that lets the motor reach *torque_limit*, with some headroom."""
+    return margin * torque_limit / kt
+
+
+def format_report(
+    results: list[StepResult],
+    cal: Calibration,
+    sim: dict[str, float] | None = None,
+    torque_limit: float = DEFAULT_TORQUE_LIMIT,
+) -> str:
     lines = [
         "",
         f"{'cmd N·m':>8}{'Iq A':>8}{'scale kg':>10}{'real N·m':>10}{'fw N·m':>8}"
@@ -168,10 +180,6 @@ def format_report(results: list[StepResult], cal: Calibration, sim_kt: float | N
         f"Firmware torque_constant:  {cal.firmware_kt:.3f} now -> {cal.suggested_firmware_kt:.3f} "
         f"(real torque is {cal.firmware_ratio:.2f}× what the firmware reports)",
     ]
-    if sim_kt is not None:
-        lines.append(
-            f"Sim MotorSpec:             torque_constant {sim_kt:.3f} -> {cal.kt.slope:.3f}"
-        )
     if cal.kt.r2 < 0.99:
         lines.append(
             "⚠️  The Kt fit is loose (r² < 0.99). Check the arm stays perpendicular, "
@@ -181,6 +189,36 @@ def format_report(results: list[StepResult], cal: Calibration, sim_kt: float | N
         lines.append(
             "⚠️  Large torque offset. Usually a tare error, friction, or the arm's own weight."
         )
+
+    kt = cal.kt.slope
+    current_lim = current_limit_for(torque_limit, kt)
+    lines += [
+        "",
+        "Set on the motor controller (odrivetool, then save_configuration()):",
+        f"  axis0.motor.config.torque_constant = {cal.suggested_firmware_kt:.4f}"
+        f"   # was {cal.firmware_kt:.4f}",
+        f"  axis0.motor.config.torque_lim      = {torque_limit:.1f}"
+        f"      # N·m, the sim's max_force",
+        f"  axis0.motor.config.current_lim     = {current_lim:.1f}"
+        f"      # A, {CURRENT_LIMIT_MARGIN:.1f}× what {torque_limit:.0f} N·m needs at Kt {kt:.3f}",
+    ]
+    if sim:
+        lines += [
+            "",
+            "Set in the sim (LEG_MOTOR in spiderbot/locomotion/environment.py):",
+            f"  torque_constant = {kt:.3f}   # was {sim['torque_constant']:.3f}",
+        ]
+        if "phase_resistance" in sim:
+            predicted = 1.5 * sim["phase_resistance"] / kt**2
+            lines.append(
+                f"  Power model check: phase_resistance {sim['phase_resistance']:.3f} Ω with this Kt "
+                f"predicts {predicted:.3f} W/N·m²; measured {cal.power.slope:.3f}."
+            )
+            if not 0.8 <= cal.power.slope / predicted <= 1.25:
+                lines.append(
+                    "  ⚠️  They differ by more than ~20%. The sim's power numbers will be off by "
+                    "about that much; check phase_resistance (and measure it at room temperature)."
+                )
     return "\n".join(lines)
 
 
@@ -375,15 +413,21 @@ def write_csv(path: str, results: list[StepResult]) -> None:
                         r.firmware_torque, r.bus_voltage, r.bus_current, r.bus_power])
 
 
-def sim_torque_constant() -> float | None:
-    """Read LEG_MOTOR's torque_constant from the locomotion env without importing Genesis."""
+def sim_motor_spec() -> dict[str, float] | None:
+    """Read LEG_MOTOR's constants from the locomotion env without importing Genesis."""
     path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "locomotion", "environment.py")
     try:
         with open(path) as f:
-            match = re.search(r"LEG_MOTOR\s*=\s*MotorSpec\([^)]*?torque_constant\s*=\s*([0-9.]+)", f.read(), re.S)
-        return float(match.group(1)) if match else None
+            block = re.search(r"LEG_MOTOR\s*=\s*MotorSpec\((.*?)\)", f.read(), re.S)
     except OSError:
         return None
+    if not block:
+        return None
+    spec = {
+        name: float(value)
+        for name, value in re.findall(r"(\w+)\s*=\s*([0-9.]+(?:[eE][-+]?\d+)?)", block.group(1))
+    }
+    return spec if "torque_constant" in spec else None
 
 
 def parse_args():
@@ -397,6 +441,8 @@ def parse_args():
                    help="torque sign that presses the arm into the scale (default 1)")
     p.add_argument("--max-torque", type=float, default=DEFAULT_MAX_TORQUE,
                    help="refuse steps above this commanded torque (default %(default)s)")
+    p.add_argument("--torque-limit", type=float, default=DEFAULT_TORQUE_LIMIT,
+                   help="output torque limit to suggest for the controller (default %(default)s N·m)")
     p.add_argument("--ramp-rate", type=float, default=DEFAULT_RAMP_RATE,
                    help="N·m/s between steps (default %(default)s)")
     p.add_argument("--release-rate", type=float, default=DEFAULT_RELEASE_RATE,
@@ -475,7 +521,7 @@ def main():
         LOG_DIR, f"kt_calibration_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
     )
     write_csv(out, results)
-    print(format_report(results, analyze(results), sim_torque_constant()))
+    print(format_report(results, analyze(results), sim_motor_spec(), args.torque_limit))
     print(f"\nSaved to {out}")
 
 
