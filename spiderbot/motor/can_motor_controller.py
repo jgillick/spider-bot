@@ -53,6 +53,21 @@ from .protocol import (
 )
 from .utils import make_can_id, rad_to_rev
 
+# Telemetry replies: each carries two little-endian floats.
+_TELEMETRY_FIELDS: dict[int, tuple[str, str]] = {
+    CANCommand.GET_BUS_VOLTAGE_CURRENT: ("bus_voltage", "bus_current"),
+    CANCommand.GET_IQ: ("iq_setpoint", "iq_measured"),
+    CANCommand.GET_TORQUES: ("torque_target", "torque_estimate"),
+    CANCommand.GET_TEMPERATURE: ("fet_temperature", "motor_temperature"),
+    CANCommand.GET_POWERS: ("electrical_power", "mechanical_power"),
+}
+
+TELEMETRY_COMMANDS: tuple[CANCommand, ...] = (
+    CANCommand.GET_BUS_VOLTAGE_CURRENT,
+    CANCommand.GET_IQ,
+    CANCommand.GET_TORQUES,
+    CANCommand.GET_TEMPERATURE,
+)
 
 
 
@@ -335,6 +350,15 @@ class CanMotorController:
         data = struct.pack("<fhh", motor_pos, vel_ff_units, int(torque_ff / 0.001))
         self._send(CANCommand.SET_INPUT_POS, node_id, data)
 
+    def send_torque(self, node_id: int, torque: float) -> None:
+        """
+        Send a torque setpoint (SET_INPUT_TORQUE) in Nm to *node_id*.
+
+        Requires TORQUE_CONTROL mode. The firmware turns it into current with its own
+        torque_constant, so the delivered torque is only as accurate as that constant.
+        """
+        self._send(CANCommand.SET_INPUT_TORQUE, node_id, struct.pack("<f", torque))
+
     def send_set_state(self, node_id: int, state: AxisState) -> None:
         """Set axis state on *node_id* (e.g. CLOSED_LOOP_CONTROL, IDLE)."""
         data = struct.pack("<I", int(state))
@@ -358,6 +382,34 @@ class CanMotorController:
     def send_save_configuration(self, node_id: int) -> None:
         """Save configuration to flash on *node_id* (motor will reboot)."""
         self._send(CANCommand.SAVE_CONFIGURATION, node_id)
+
+    def request_telemetry(
+        self, node_id: int, commands: tuple[CANCommand, ...] = TELEMETRY_COMMANDS
+    ) -> None:
+        """
+        Ask *node_id* for telemetry by sending a remote (RTR) frame per command.
+
+        The replies arrive on the background reader and show up in
+        :meth:`get_telemetry`.  Supported: GET_BUS_VOLTAGE_CURRENT, GET_IQ,
+        GET_TORQUES, GET_TEMPERATURE, GET_POWERS.
+        """
+        if self._bus is None:
+            raise RuntimeError("Bus is not started")
+        for cmd in commands:
+            self._bus.send(
+                can.Message(
+                    arbitration_id=make_can_id(cmd, node_id),
+                    is_remote_frame=True,
+                    dlc=8,
+                    is_extended_id=False,
+                )
+            )
+
+    def get_telemetry(self, node_id: int) -> "MotorTelemetry":
+        """Return the latest telemetry replies received from *node_id*."""
+        node = self._get_node(node_id)
+        with node.lock:
+            return MotorTelemetry(node_id=node_id, **node.telemetry)
 
     # -- SDO read / write -------------------------------------------------
 
@@ -467,6 +519,14 @@ class CanMotorController:
                         "<ff", msg.data
                     )
 
+                elif cmd_id in _TELEMETRY_FIELDS and len(msg.data) >= 8 and not msg.is_remote_frame:
+                    first, second = _TELEMETRY_FIELDS[cmd_id]
+                    a, b = struct.unpack("<ff", msg.data[:8])
+                    now = time.monotonic()
+                    node.telemetry[first] = a
+                    node.telemetry[second] = b
+                    node.telemetry[f"{first}_time"] = now
+
                 elif (
                     cmd_id in (CANCommand.TXSDO, CANCommand.RXSDO)
                     and len(msg.data) >= 8
@@ -501,6 +561,31 @@ class NodeSnapshot:
         return (time.monotonic() - self.last_heartbeat) < self.heartbeat_timeout
 
 
+@dataclass(frozen=True)
+class MotorTelemetry:
+    """
+    Latest telemetry replies from a node.  Values are NaN until the first
+    reply; each ``*_time`` is the monotonic time the reply arrived (None if never).
+    """
+
+    node_id: int
+    bus_voltage: float = float("nan")  # V
+    bus_current: float = float("nan")  # A, positive = drawing from the bus
+    iq_setpoint: float = float("nan")  # A
+    iq_measured: float = float("nan")  # A
+    torque_target: float = float("nan")  # Nm
+    torque_estimate: float = float("nan")  # Nm
+    fet_temperature: float = float("nan")  # °C
+    motor_temperature: float = float("nan")  # °C
+    electrical_power: float = float("nan")  # W
+    mechanical_power: float = float("nan")  # W
+    bus_voltage_time: Optional[float] = None
+    iq_setpoint_time: Optional[float] = None
+    torque_target_time: Optional[float] = None
+    fet_temperature_time: Optional[float] = None
+    electrical_power_time: Optional[float] = None
+
+
 class NodeData:
     """Mutable internal state for a single node, protected by its own lock."""
 
@@ -514,6 +599,9 @@ class NodeData:
         self.axis_error = 0
         self.mit_torque = 0.0
         self.last_heartbeat: Optional[float] = None
+
+        # Telemetry replies, keyed by MotorTelemetry field name
+        self.telemetry: dict[str, Optional[float]] = {}
 
         # SDO request-response: endpoint_id -> (Event, result_value)
         self.sdo_waiters: dict[int, threading.Event] = {}
